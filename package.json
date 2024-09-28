@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@api/waapi": "file:.api/apis/waapi",
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
     "connect-mongo": "^5.1.0",

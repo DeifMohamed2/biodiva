@@ -3,7 +3,7 @@
 <aside>
   <div class="top">
     <div class="logo">
-      <img src="/images/logo.png" alt="logo" />
+      <!-- <img src="/images/logo.png" alt="logo" /> -->
     </div>
     <div class="close" id="close-btn">
       <i class="fa-solid fa-xmark"></i>
@@ -12,7 +12,8 @@
   <div class="sidebar">
     <p class="me-3 Name">اهلا بك،<b class="UserName">
        <%= userData.Username %>
-      </b></p>
+      </b>
+    </p>
     <a href=""><i class="fa-solid fa-brain"><span class="ms-2" style="font-size: 1.3rem">
           <%= userData.totalScore %>
         </span></i></a><a href="/student/dash" class="<%= path === '/dash' ? 'active' : '' %>"><i class="fa-solid fa-gauge"></i>
