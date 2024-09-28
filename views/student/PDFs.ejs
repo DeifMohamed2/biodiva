@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <%- include("./partials/head.ejs") %>
+
+
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-lg-2">
+          <%- include("./partials/aside.ejs") %>
+        </div>
+        <div class="col-lg-10">
+          <main>
+            <div class="row">
+              <div class="col-lg-12">
+                <div class="left float-start">
+                  <%- include("./partials/top.ejs") %>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <div class="row courses" id="Files">
+
+                  <% if (PDFs) { %>
+                   <% PDFs.forEach(PDF => { %>
+                    <div class="col-md-4">
+                      <article class="course">
+                        <div class="price-tag">
+                          <i class="fa-solid fa-tag"></i>
+                        
+                          <% if (PDF.pdfStatus == "Paid") { %>
+                            <span>L.E</span> <h3><%= PDF.pdfPrice %></h3>
+                          <% } else { %>
+                            <h3>الدخول مجاني</h3>
+                          <% } %>
+                 
+                      </div>
+                         
+                          <div class="course__info" style="margin-top: 60px !important;">
+                              <h3><%= PDF.pdfName %></h3>
+                              <hr>
+                              <% if (PDF.isPaid) { %>
+                                <button  class="btn btn-primary" onclick="window.location.href='/student/PDFs/<%=PDF._id %>'" >فتح الملزمه</button> 
+
+                              <% } else { %>
+
+                                <% if (PDF.pdfStatus == "Paid") { %>
+                                  <form action="/student/buyPDF/<%= PDF._id %>" method="post" id="l<%= PDF._id %>" onsubmit="handleFormSubmission(event)">
+          
+                                    <input type="text"  name="code" placeholder="ادخل الكود" required>
+                                    <button type="submit" class="btn btn-primary" >استخدام الكود</button> 
+                                
+    
+                                  </form>
+                                  <% } else {%>
+                          
+                                
+                                  <button  class="btn btn-primary" onclick="window.location.href='/student/PDFs/<%=PDF._id %>'" >فتح الملزمه</button> 
+    
+                                  <% }%>
+                                <% } %>
+                          </div>
+                      </article>
+                  </div> 
+                   <% }) %>
+                  
+
+                  <% } %>
+
+
+
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+    <script src="../assest/bootstrap.min.js"></script>
+    <script src="../assest/bootstrap.bundle.min.js"></script>
+    
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"
+      integrity="sha512-ElRFoEQdI5Ht6kZvyzXhYG9NqjtkmlkfYk0wr6wHxU9JEHakS7UJZNeml5ALk+8IKlU6jDgMabC3vkumRokgJA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      module = {};
+    </script>
+    <script type="module" src="./js/allfiles.js"></script>
+  </body>
+</html>
