@@ -102,10 +102,10 @@ const public_Register_post = async (req, res) => {
 
 
   
-  // Validate verification code
-  if (req.session.verificationCode !== parseInt(verificationCode)) {
-    errors.verificationCode = '- كود التفعيل غير صحيح';
-  }
+  // // Validate verification code
+  // if (req.session.verificationCode !== parseInt(verificationCode)) {
+  //   errors.verificationCode = '- كود التفعيل غير صحيح';
+  // }
 
   // Check if the password is at least 7 characters long
   if (Password.length < 7) {
