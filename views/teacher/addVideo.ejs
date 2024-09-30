@@ -136,7 +136,7 @@
                         </div>
 
                         <div class="row addToChapterStructure">
-                          <h1>Add To Chapter - > عدد الفيديوهات : <span id="mediaCount"></span></h1>
+                          <h1>Add To Chapter </h1>
 
 
                             <h2 id="waiting" style="display: none;">wait please ...</h2>
@@ -213,8 +213,7 @@
                                                     </div>
                                                     <div class="selction">
 
-                                                        <input type="text" name="videoURL" style="width: 1px !important; background: transparent;" id="videoURL"
-                                                            value="">
+                                                  
                                                         <input type="text" name="imgURL" class="d-none" id="imgURL"
                                                             value="">
                                                         <select name="paymentStatus" id="paymentStatus" class="Grade"
@@ -284,6 +283,8 @@
                                     </div>
 
 
+                                    <input type="text" name="videoURL" style="background-color: transparent; border: 1px solid #fff; color: #fff; border-radius: 10px; width: 272px !important; text-align: center;height: 30px;" id="videoURL" value="" placeholder="اضف لينك الفيديو هنا" required>
+
                                     <div class="col-md-3 mt-2 mx-auto">
                                         <button class="generate_Video_Boxs_Btn" id="generate_Video_Box_Btn"> Add Video
                                         </button>
@@ -308,20 +309,7 @@
                                 </div>
 
                             </div>
-                            <div class="col-6">
-                                <div class="video-uploder">
-                                    <div class="upload">
-                                        <button class="warning BTN_Upload" type="button" id="BtnVideoUpload"
-                                            onclick="uploadVideo()">رفع فيديو <i
-                                                class="fa-solid fa-upload me-2"></i></button>
-                                        <input type="file" id="selbtnVideo"><br>
-
-
-                                    </div>
-                                </div>
-
-                            </div>
-
+                      
 
                             <!-- <div class="col-6">
                                 <div class="row">
@@ -474,7 +462,7 @@ const getQueryStringParameter = (name) => {
    
         </script>
 
-
+<!-- 
 <script >
     const BTNvideoUpload = document.getElementById("BtnVideoUpload");
 
@@ -551,7 +539,7 @@ function uploadVideo() {
 }
 
 
-</script>
+</script> -->
 
  <!-- Include Dropzone JS
  <script>
