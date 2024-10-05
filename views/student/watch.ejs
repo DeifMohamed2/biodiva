@@ -17,7 +17,17 @@
     width: 100%;
     height: 100%;
 }
+.pdfURL {
+  margin-bottom: 2.4rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.pdfURL:hover a{
 
+  color: black;
+  }
 </style>
   <body id="body">
     <%- include("./partials/preloader.ejs") %>
@@ -123,15 +133,20 @@
                 </div>
                 <hr />
                 <ul class="list-group list-group-horizontal mx-auto">
-                  <li>
-                    <form action="" method="post">
+                      <li>
+                  
 
                       
-                      <button type="submit" class="listbtn btn btn-outline-warning" id="UploadHomeWorkBtn">
-                        رفع الواجب
+            <a href="<%=video.PDFURL  %>" target="_blank" >
+                      <button  class="listbtn btn btn-outline-warning pdfURL " id="UploadHomeWorkBtn">
+                
+                          PDF الحصه
+                          <i class="fas fa-file-pdf"></i>
+                      
                       </button>
+                        </a>
 
-                  </form>
+             
 
                   </li>
                 </ul>
