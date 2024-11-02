@@ -31,6 +31,10 @@ const dash_get = (req, res) => {
   //       console.error("Error deleting users:", error);
   //   });
 
+    // User.updateMany({}, { $set: { subscribe: false } }).then((result) => {
+    //   console.log(result);
+    // });
+
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
 
