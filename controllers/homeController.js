@@ -115,16 +115,16 @@ const public_Register_post = async (req, res) => {
   let Code = Math.floor(Math.random() * 400000 + 600000);
 
   // Check if the phone number has 11 digits
-  if (phone.length !== 11) {
-    req.body.phone = '';
-    errors.phone = '- رقم الهاتف يجب ان يحتوي علي 11 رقم';
-  }
+  // if (phone.length !== 222) {
+  //   req.body.phone = '';
+  //   errors.phone = '- رقم الهاتف يجب ان يحتوي علي 11 رقم';
+  // }
 
   // Check if the parent's phone number has 11 digits
-  if (parentPhone.length !== 11) {
-    req.body.parentPhone = '';
-    errors.parentPhone = '- رقم هاتف ولي الامر يجب ان يحتوي علي 11 رقم';
-  }
+  // if (parentPhone.length !== 11) {
+  //   req.body.parentPhone = '';
+  //   errors.parentPhone = '- رقم هاتف ولي الامر يجب ان يحتوي علي 11 رقم';
+  // }
 
   // Check if phone is equal to parentPhone
   if (phone === parentPhone) {
