@@ -14,6 +14,15 @@ const Chapterschema = new Schema({
         type: String, 
         required: true,  
     },
+    chapterIMG:
+    {
+        type: String,
+        required: true,
+    },
+    chapterDescription:{
+        type: String,
+        required: true,
+    },
     chapterAccessibility :{
         type: String, 
         required: true,  

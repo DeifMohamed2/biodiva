@@ -71,6 +71,8 @@ const chapter_post = (req, res) => {
     chapterGrade,
     chapterAccessibility,
     chapterPrice,
+    chapterIMG,
+    chapterDescription,
     ARorEN,
   } = req.body;
 
@@ -79,13 +81,15 @@ const chapter_post = (req, res) => {
     chapterGrade: chapterGrade || '',
     chapterAccessibility: chapterAccessibility || ' ',
     chapterPrice: chapterPrice || 0,
+    chapterIMG: chapterIMG || '',
+    chapterDescription: chapterDescription || '',
     ARorEN: ARorEN,
     chapterLectures: [],
     chapterSummaries: [],
     chapterSolvings: [],
   });
 
-  if (!chapterName || !chapterGrade || !chapterAccessibility || !ARorEN) {
+  if (!chapterName || !chapterGrade || !chapterAccessibility || !ARorEN || !chapterIMG || !chapterDescription) {
     return res.status(400).send('Missing required fields');
   }
 
@@ -137,6 +141,7 @@ const addVideo_post = async (req, res) => {
       videoPrice,
       imgURL,
       videoURL,
+      PDFURL,
     } = req.body;
 
     // Validate input data
@@ -163,6 +168,7 @@ const addVideo_post = async (req, res) => {
       videoPrice: videoPrice || 0,
       videoURL: videoURL || '',
       imgURL: imgURL || '',
+      PDFURL : PDFURL || '', 
     };
 
     const videosInfo = {};
