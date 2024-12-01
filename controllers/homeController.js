@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Chapter = require('../models/Chapter');
 
 const waapi = require('@api/waapi');
 const bcrypt = require('bcrypt');
@@ -8,9 +9,27 @@ const jwtSecret = process.env.JWTSECRET;
 const waapiAPI = process.env.WAAPIAPI;
 waapi.auth(`${waapiAPI}`);
 
-const home_page = (req, res) => {
+const home_page = async (req, res) => {
+
   res.render('index', { title: 'Home Page' });
 };
+
+const getChaptersByGrade = async (req, res) => {
+  const { grade } = req.query; // Extract grade from query params
+  console.log('grade', grade);
+  try {
+    const chapters = await Chapter.find({
+      chapterGrade: grade,
+    }).sort({ createdAt: 1 });
+    res.json(chapters); // Send the filtered chapters as JSON
+  } catch (error) {
+    console.error('Error fetching chapters by grade:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// const changeChapters = async (req, res) => {
+// }
 
 const public_login_get = (req, res) => {
   res.render('login', {
@@ -23,11 +42,9 @@ const public_login_get = (req, res) => {
 
 const public_login_post = async (req, res) => {
   try {
-    const { emailOrPhone, password } = req.body;
+    const { phone, password } = req.body;
 
-    const user = await User.findOne({
-      $or: [{ phone: emailOrPhone }],
-    });
+    const user = await User.findOne({ phone: phone});
 
     if (!user) {
       return res
@@ -36,21 +53,19 @@ const public_login_post = async (req, res) => {
           title: 'Login Page',
           Email: '',
           Password: null,
-          error: 'البريد الالكتروني او كلمه المرور خاطئه',
+          error: ' رقم الهاتف او كلمه المرور خاطئ او الاكونت غير مفعل',
         });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.Password);
 
     if (!isPasswordValid) {
-      return res
-        .status(401)
-        .render('login', {
-          title: 'Login Page',
-          Email: '',
-          Password: null,
-          error: 'البريد الالكتروني او كلمه المرور خاطئه',
-        });
+      return res.status(401).render('login', {
+        title: 'Login Page',
+        Email: '',
+        Password: null,
+        error: ' رقم الهاتف او كلمه المرور خاطئ او الاكونت غير مفعل',
+      });
     }
 
     const token = jwt.sign({ userId: user._id }, jwtSecret);
@@ -84,7 +99,8 @@ const public_Register_get = (req, res) => {
 
 const public_Register_post = async (req, res) => {
   const {
-    Password,
+    password,
+    password2,
     Username,
     gov,
     Markez,
@@ -93,25 +109,25 @@ const public_Register_post = async (req, res) => {
     gender,
     phone,
     parentPhone,
-    place,
-    verificationCode,
+  
+
   } = req.body;
 
   // Create an object to store validation errors
   const errors = {};
 
-
-  
-  // // Validate verification code
-  // if (req.session.verificationCode !== parseInt(verificationCode)) {
-  //   errors.verificationCode = '- كود التفعيل غير صحيح';
-  // }
-
-  // Check if the password is at least 7 characters long
-  if (Password.length < 7) {
+  if (password.length < 7) {
     req.body.Password = '';
     errors.password = '- كلمة المرور يجب ان لا تقل عن 7';
   }
+
+  if (password !== password2) {
+    req.body.Password = '';
+    req.body.Password2 = '';
+    errors.password = '- كلمة المرور غير متطابقة';
+  }
+
+
   let Code = Math.floor(Math.random() * 400000 + 600000);
 
   // Check if the phone number has 11 digits
@@ -135,19 +151,24 @@ const public_Register_post = async (req, res) => {
     // Set an error message for this condition
     errors.phone = '- رقم هاتف الطالب لا يجب ان يساوي رقم هاتف ولي الامر';
   }
-  if (!gender) {
-    errors.gender = '- يجب اختيار نوع الجنس';
-  }
   if (!gov) {
     errors.gov = '- يجب اختيار محافظة';
   }
   if (!Grade) {
     errors.Grade = '- يجب اختيار الصف الدراسي';
   }
-  // if (!ARorEN) {
-  //   errors.Grade = "- يجب اختيار انت عربي ولا لغات";
-  // }
-  // If there are validation errors, render the registration form again with error messages
+
+  if (!Markez) {
+    errors.Markez = '- يجب اختيار المركز';
+  }
+  if (!schoolName) {
+    errors.schoolName = '- يجب ادخال اسم المدرسة';
+
+  }
+  console.log('req.body', req.body);
+
+  console.log('errors', errors);
+
   if (Object.keys(errors).length > 0) {
     return res.render('Register', {
       title: 'Register Page',
@@ -156,6 +177,8 @@ const public_Register_post = async (req, res) => {
       formData: req.body, // Pass the form data back to pre-fill the form
     });
   }
+
+
 
   // auth Of jwt
 
@@ -179,21 +202,21 @@ const public_Register_post = async (req, res) => {
     });
   }
 
-  const hashedPassword = await bcrypt.hash(Password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
     const user = new User({
       Username: Username,
       Password: hashedPassword,
-      PasswordWithOutHash: Password,
+      PasswordWithOutHash: password,
       gov: gov,
       Markez: Markez,
       schoolName: schoolName,
       Grade: Grade,
-      gender: gender,
+      gender: 'male',
       phone: phone,
       parentPhone: parentPhone,
-      place: place,
+      place: 'online',
       Code: Code,
       subscribe: false,
       quizesInfo: quizesInfo,
@@ -378,6 +401,7 @@ const reset_password_post = async (req, res) => {
 
 module.exports = {
   home_page,
+  getChaptersByGrade,
   public_login_get,
   public_Register_get,
   public_Register_post,
