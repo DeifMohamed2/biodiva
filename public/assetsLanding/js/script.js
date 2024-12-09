@@ -136,7 +136,7 @@ function closeVideo() {
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const defaultGrade = 'Grade3'; // Set default grade to Grade 3
+  const defaultGrade = 'Grade1'; // Set default grade to Grade 3
   fetchChaptersByGrade(defaultGrade); // Load Grade 3 chapters on page load
 });
 
