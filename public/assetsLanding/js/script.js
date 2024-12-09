@@ -171,8 +171,8 @@ function updateCourseList(chapters) {
       <div class="slider-content-wrapper-box">
         <div class="image-content">
           <img src="${chapter.chapterIMG}" loading="lazy" alt="${
-            chapter.chapterName
-          }" />
+      chapter.chapterName
+    }" />
         </div>
         <div class="course-content">
           <div class="course-content-title">
@@ -182,7 +182,7 @@ function updateCourseList(chapters) {
             </div>
           </div>
           <div class="line-divid"></div>
-          <p>${chapter.description}</p>
+          <p>${chapter.chapterDescription}</p>
           <div class="line-break"></div>
           <label for="explainVideos">فيديوهات الشرح</label>
           <span id="explainVideos">: ${
