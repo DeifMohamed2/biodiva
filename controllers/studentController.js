@@ -729,7 +729,7 @@ const buyQuiz = async (req, res) => {
     const quizObectId = new mongoose.Types.ObjectId(quizId);
     console.log(quizId, quizObectId);
     const CodeData = await Code.findOneAndUpdate(
-      { Code: code, codeType: 'Quiz', isUsed: false, codeFor: quizId },
+      { Code: code, codeType: 'Quiz', isUsed: false },
       { isUsed: true, usedBy: req.userData.Code },
       { new: true }
     );
