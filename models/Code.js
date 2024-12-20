@@ -26,7 +26,7 @@ const CodeSchema = new Schema({
         // required: true,  
     },
     usedIn: {
-        type: Number, 
+        type: String, 
         // required: true, 
     },
 
