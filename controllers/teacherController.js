@@ -42,6 +42,27 @@ const dash_get = (req, res) => {
   //       console.error("Error deleting users:", error);
   //   });
 
+
+  // Quiz.findById('6762da4ad29f724bc18fd9f9').then(quiz1 => {
+  //   Quiz.findById('6762eea1d29f724bc18fe3d5').then(quiz2 => {
+  //     const tempQuestions = quiz1.Questions;
+  //     quiz1.Questions = quiz2.Questions;
+  //     quiz2.Questions = tempQuestions;
+
+  //     Promise.all([quiz1.save(), quiz2.save()])
+  //       .then(() => {
+  //         console.log('Questions swapped successfully');
+  //       })
+  //       .catch(error => {
+  //         console.error('Error saving quizzes:', error);
+  //       });
+  //   }).catch(error => {
+  //     console.error('Error finding quiz2:', error);
+  //   });
+  // }).catch(error => {
+  //   console.error('Error finding quiz1:', error);
+  // });
+
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
 
