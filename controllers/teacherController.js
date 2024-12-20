@@ -1496,14 +1496,14 @@ const getStudentsDataOfQuiz = async (req, res) => {
 
     const objectId = new mongoose.Types.ObjectId(quizID);
     QuizId = objectId;
-
+    console.log(quizGrade, objectId, quizID);
     await User.aggregate([
       {
         $match: {
           Grade: quizGrade,
           quizesInfo: {
             $elemMatch: {
-              _id: objectId,
+              quizId: objectId,
               isEnterd: true,
             },
           },
@@ -1519,7 +1519,7 @@ const getStudentsDataOfQuiz = async (req, res) => {
               input: '$quizesInfo',
               as: 'quiz',
               cond: {
-                $eq: ['$$quiz._id', QuizId],
+                $eq: ['$$quiz.quizId', QuizId],
               },
             },
           },
