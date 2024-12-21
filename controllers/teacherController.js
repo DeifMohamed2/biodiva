@@ -1716,12 +1716,12 @@ const changeEnterToQuiz = async (req, res) => {
       throw new Error('User not found');
     }
 
-    const quiz = user.quizesInfo.find((q) => q._id.equals(QuizId));
+    const quiz = user.quizesInfo.find((q) => q.quizId.equals(QuizId));
     if (!quiz) {
       throw new Error('Quiz not found');
     }
 
-    const newTotalscore = user.totalscore - quiz.score;
+    const newTotalscore = user.totalScore - quiz.score;
 
     User.findOneAndUpdate(
       {
@@ -1735,11 +1735,11 @@ const changeEnterToQuiz = async (req, res) => {
         'quizesInfo.$[elem].answers': [],
         'quizesInfo.$[elem].score': 0,
         'quizesInfo.$[elem].endTime': null,
-        totalscore: newTotalscore,
+        totalScore: newTotalscore,
       },
       {
         new: true,
-        arrayFilters: [{ 'elem._id': QuizId }],
+        arrayFilters: [{ 'elem.quizId': QuizId }],
       }
     ).then((result) => {
       console.log(result);
