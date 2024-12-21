@@ -128,7 +128,7 @@
                                                 <% if (student['quizesInfo'][0].solvedAt) { %>
                                                     
                                                 <td><%=student['quizesInfo'][0].questionsCount %> / <%=  student['quizesInfo'][0].score %> </td>
-                                                <form action="/teacher/changeEnterToQuiz/<%= student['quizesInfo'][0]['_id'] %>?UserId=<%= student._id %>" method="post">
+                                                <form action="/teacher/changeEnterToQuiz/<%= student['quizesInfo'][0]['quizId'] %>?UserId=<%= student._id %>" method="post">
                                                     <div class="text-center">
                                                         <td><button class="btn btn-outline-light" style="border-radius: 10px !important;">فتح من جديد</button></td>
                                                     </div>

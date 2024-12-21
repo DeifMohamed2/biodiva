@@ -952,6 +952,7 @@ const quizFinish = async (req, res) => {
                 'quizesInfo.$.isEnterd': false,
                 'quizesInfo.$.solvedAt': null,
                 'quizesInfo.$.endTime': null,
+                'quizesInfo.$.score': 0,
               },
             }
           )
