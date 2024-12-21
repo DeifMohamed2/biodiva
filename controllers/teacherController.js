@@ -1147,7 +1147,7 @@ const convertToExcelAllUserData = async (req, res) => {
             data.quizName,
             new Date(data.solvedAt).toLocaleDateString() || 'لم يحل',
             data.solveTime || 'لم يحل',
-            data.questionsCount + '/' + data.Score,
+            data.questionsCount + '/' + data.score,
             data.isQuizPrepaid
               ? data.quizPurchaseStatus
                 ? 'تم الشراء'
@@ -1357,8 +1357,8 @@ const deleteQuiz = (req, res) => {
     console.log(quizID);
     let QuizID = new mongoose.Types.ObjectId(quizID);
     User.updateMany(
-      { 'quizesInfo._id': QuizID }, // Match users where the quiz is present in quizesInfo array
-      { $pull: { quizesInfo: { _id: QuizID } } } // Pull the quiz from quizesInfo array
+      { 'quizesInfo.quizId': QuizID }, // Match users where the quiz is present in quizesInfo array
+      { $pull: { quizesInfo: { quizId: QuizID } } } // Pull the quiz from quizesInfo array
     ).then((result) => {
       console.log(result);
       Quiz.findByIdAndDelete({ _id: quizID })
@@ -1527,7 +1527,7 @@ const getStudentsDataOfQuiz = async (req, res) => {
       },
       {
         $sort: {
-          'quizesInfo.Score': -1,
+          'quizesInfo.score': -1,
         },
       },
     ])
@@ -1565,7 +1565,7 @@ const searchForUserInQuiz = async (req, res) => {
           [`${searchBy}`]: searchBy == 'Code' ? +searchInput : searchInput,
           quizesInfo: {
             $elemMatch: {
-              _id: QuizId,
+              quizId: QuizId,
             },
           },
         },
@@ -1579,7 +1579,7 @@ const searchForUserInQuiz = async (req, res) => {
               input: '$quizesInfo',
               as: 'quiz',
               cond: {
-                $eq: ['$$quiz._id', QuizId],
+                $eq: ['$$quiz.quizId', QuizId],
               },
             },
           },
@@ -1615,7 +1615,7 @@ const convertToExcelQuiz = async (req, res) => {
           Grade: quizGrade,
           quizesInfo: {
             $elemMatch: {
-              _id: QuizId,
+              quizId: QuizId,
               isEnterd: true,
             },
           },
@@ -1633,19 +1633,16 @@ const convertToExcelQuiz = async (req, res) => {
               input: '$quizesInfo',
               as: 'quiz',
               cond: {
-                $eq: ['$$quiz._id', QuizId],
+                $eq: ['$$quiz.quizId', QuizId],
               },
             },
           },
         },
-      
       },
       {
-        
         $sort: {
-          'quizesInfo.Score': -1,
+          'quizesInfo.score': -1,
         },
-      
       },
     ]);
 
@@ -1677,7 +1674,7 @@ const convertToExcelQuiz = async (req, res) => {
         user.Code,
         user.phone,
         user.parentPhone,
-        user['quizesInfo'][0]['Score'],
+        user['quizesInfo'][0]['score'],
       ]);
       // Apply alternating row colors
       if (c % 2 === 0) {
@@ -1724,7 +1721,7 @@ const changeEnterToQuiz = async (req, res) => {
       throw new Error('Quiz not found');
     }
 
-    const newTotalScore = user.totalScore - quiz.Score;
+    const newTotalscore = user.totalscore - quiz.score;
 
     User.findOneAndUpdate(
       {
@@ -1736,9 +1733,9 @@ const changeEnterToQuiz = async (req, res) => {
         'quizesInfo.$[elem].solvedAt': null,
         'quizesInfo.$[elem].solveTime': null,
         'quizesInfo.$[elem].answers': [],
-        'quizesInfo.$[elem].Score': 0,
+        'quizesInfo.$[elem].score': 0,
         'quizesInfo.$[elem].endTime': null,
-        totalScore: newTotalScore,
+        totalscore: newTotalscore,
       },
       {
         new: true,
