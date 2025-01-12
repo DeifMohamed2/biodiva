@@ -27,6 +27,7 @@ async function authenticateUser(req, res, next) {
     const user = await User.findOne({'_id': decode.userId});
     req.userData = user; // Attach user data to request object
     if(!user.subscribe){
+      res.clearCookie('token');
       return res.status(401).redirect('../login');
     }
 
