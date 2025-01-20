@@ -219,89 +219,73 @@
                                 <% if (chaptersData) { %>
 
 
-                                    <div class="row Addvideos">
-
-                                        <div class="VideoData">
-                                            <!-- <h1>Video 1</h1> -->
-                                            <div class="row">
-                                                <div class="col-md-12">
-
-                                                    <div class="product-info">
-                                                        <textarea name="videoTitle" cols="50" rows="3"
-                                                            placeholder="عنوان الفيديو" required></textarea>
-                                                    </div>
-                                                    <div class="selction">
-
-                                                  
-                                                        <input type="text" name="imgURL" class="d-none" id="imgURL"
-                                                            value="">
-                                                        <input type="text" name="PDFURL" class="d-none" id="PDFURL"
-                                                            value="">    
-                                                        <select name="paymentStatus" id="paymentStatus" class="Grade"
-                                                            required>
-                                                            <option value="">حاله الفيديو</option>
-                                                            <option selected value="Free">مجاني</option>
-                                                            <option value="Pay">مدفوع</option>
-
-                                                        </select>
-
-
-
-                                                        <select name="prerequisites" id="prerequisites" class="Grade"
-                                                            required>
-                                                            <option value="">السماح بالدخول </option>
-                                                            <option value="WithExam">بامتحان فقط</option>
-                                                            <option value="WithHw"> بواجب فقط</option>
-                                                            <option value="WithExamaAndHw"> بامتحان وواجب</option>
-                                                            <option selected value="WithOutExamAndHW">بدون امتحان و واجب
-                                                            </option>
-                                                        </select>
-                                                        <select name="permissionToShow" id="permissionToShow"
-                                                            class="Grade" required>
-                                                            <option value="">حاله الفيديو للطلاب</option>
-                                                            <option selected value="apper">ظهور الفيديو</option>
-                                                            <option value="disapper">اخفاء الفيديو</option>
-                                                        </select>
-
-                                                        <select name="AccessibleAfterViewing"
-                                                            id="AccessibleAfterViewing" class="Grade" disabled required>
-                                                            <option >يفتح بعد </option>
-
-
-                                                            <% if (chaptersData) { %>
-                                                                <% chaptersData.forEach(chapter=> { %>
-                                                                    <% chapter['chapterLectures'].forEach(lec=> { %>
-                                                                        <option value="<%= lec._id %>">
-                                                                            <%= lec.videoTitle %>
-                                                                        </option>
-                                                                        <% }) %>
-                                                                            <% }) %>
-                                                                                <% } %>
-
-                                                        </select>
-
-                                                    </div>
-
-                                                    <div class="prodct-budjet">
-                                                        <input type="number" name="videoAllowedAttemps" class="salary"
-                                                            value="100" placeholder="عدد المشاهدات" required>
-
-                                                        <input type="number" name="videoPrice" class="salary" disabled
-                                                            id="videoPrice" placeholder="سعر الفيديو" >
-
-                                                    </div>
-
-
-
-                                                </div>
-
+                                <div class="row Addvideos">
+                                    <div class="VideoData">
+                                        <!-- Video Title Section -->
+                                        <div class="row">
+                                        <div class="col-md-12">
+                                            <!-- Video Title Input -->
+                                            <div class="product-info">
+                                            <textarea name="videoTitle" cols="50" rows="3" placeholder="عنوان الفيديو" required></textarea>
                                             </div>
 
+                                            <!-- Selection and Input Fields -->
+                                            <div class="selction">
+                                            <!-- Hidden Inputs for Image and PDF URLs -->
+                                            <input type="text" name="imgURL" class="d-none" id="imgURL" value="">
+                                            <input type="text" name="PDFURL" class="d-none" id="PDFURL" value="">
+
+                                            <!-- Payment Status Dropdown -->
+                                            <select name="paymentStatus" id="paymentStatus" class="Grade" required>
+                                                <option value="">حاله الفيديو</option>
+                                                <option selected value="Free">مجاني</option>
+                                                <option value="Pay">مدفوع</option>
+                                            </select>
+
+                                            <!-- Prerequisites Dropdown -->
+                                            <select name="prerequisites" id="prerequisites" class="Grade" required>
+                                                <option value="">السماح بالدخول</option>
+                                                <option value="WithExam">بامتحان فقط</option>
+                                                <option value="WithHw">بواجب فقط</option>
+                                                <option value="WithExamaAndHw">بامتحان وواجب</option>
+                                                <option selected value="WithOutExamAndHW">بدون امتحان و واجب</option>
+                                            </select>
+
+                                            <!-- Permission to Show Dropdown -->
+                                            <select name="permissionToShow" id="permissionToShow" class="Grade" required>
+                                                <option value="">حاله الفيديو للطلاب</option>
+                                                <option selected value="apper">ظهور الفيديو</option>
+                                                <option value="disapper">اخفاء الفيديو</option>
+                                            </select>
+
+                                            <!-- Scheduled Date and Time Input -->
+                                            <input type="datetime-local" name="scheduledTime" id="scheduledTime" class="form-control w-25 mx-auto mt-2" required>
+
+                                            <!-- Accessible After Viewing Dropdown -->
+                                            <select name="AccessibleAfterViewing" id="AccessibleAfterViewing" class="Grade" disabled required>
+                                                <option>يفتح بعد</option>
+                                                <% if (chaptersData) { %>
+                                                <% chaptersData.forEach(chapter => { %>
+                                                <% chapter['chapterLectures'].forEach(lec => { %>
+                                                <option value="<%= lec._id %>"><%= lec.videoTitle %></option>
+                                                <% }) %>
+                                                <% }) %>
+                                                <% } %>
+                                            </select>
+                                            </div>
+
+                                            <!-- Video Budget and Attempts Section -->
+                                            <div class="prodct-budjet">
+                                            <!-- Allowed Attempts Input -->
+                                            <input type="number" name="videoAllowedAttemps" class="salary" value="100" placeholder="عدد المشاهدات" required>
+
+                                            <!-- Video Price Input -->
+                                            <input type="number" name="videoPrice" class="salary" disabled id="videoPrice" placeholder="سعر الفيديو">
+                                            </div>
                                         </div>
-
-
-
+                                        </div>
                                     </div>
+                                </div>
 
 
                                     <input type="text" name="videoURL" style="background-color: transparent; border: 1px solid #fff; color: #fff; border-radius: 10px; width: 272px !important; text-align: center;height: 30px;" id="videoURL" value="" placeholder="اضف لينك الفيديو هنا" required>

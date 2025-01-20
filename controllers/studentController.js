@@ -362,6 +362,96 @@ const solv_get = async (req, res) => {
   }
 };
 
+
+// const getVideos = async (req, res) => {
+// //   try {
+// //     const { cahpterId } = req.params;
+
+// //     // Fetch the chapter with the required fields
+// //     const chapter = await Chapter.findById(cahpterId, {
+// //       chapterLectures: 1,
+// //       chapterSummaries: 1,
+// //       chapterSolvings: 1,
+// //       chapterAccessibility: 1,
+// //     });
+
+// //     if (!chapter) {
+// //       return res.status(404).send('Chapter not found');
+// //     }
+
+// //     const isPaid = req.userData.chaptersPaid.includes(cahpterId);
+
+// //     // Combine all videos into a single array
+// //     const allVideos = [
+// //       ...(chapter.chapterLectures || []),
+// //       ...(chapter.chapterSummaries || []),
+// //       ...(chapter.chapterSolvings || []),
+// //     ];
+
+// //     // Sort videos by creation date (oldest to newest)
+// //     allVideos.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+// //     // Process videos to include additional data
+// //     const processedVideos = allVideos.map((video) => {
+// //       const isPaidVideo = req.userData.videosPaid.includes(video._id);
+// //       const videoUser = req.userData.videosInfo.find((v) => v._id == video._id);
+// //       let videoPrerequisitesName = null;
+// //       let isUserCanEnter = true;
+
+// //       // Handle prerequisites logic
+// //       if (
+// //         video.prerequisites === 'WithExamaAndHw' ||
+// //         video.prerequisites === 'WithExam' ||
+// //         video.prerequisites === 'WithHw'
+// //       ) {
+// //         const prerequisiteVideo = req.userData.videosInfo.find(
+// //           (v) => v._id == video.AccessibleAfterViewing
+// //         );
+// //         videoPrerequisitesName = prerequisiteVideo
+// //           ? prerequisiteVideo.videoName
+// //           : null;
+
+// //         if (video.prerequisites === 'WithExamaAndHw') {
+// //           isUserCanEnter =
+// //             videoUser?.isUserEnterQuiz &&
+// //             videoUser?.isUserUploadPerviousHWAndApproved;
+// //         } else if (video.prerequisites === 'WithExam') {
+// //           isUserCanEnter = videoUser?.isUserEnterQuiz;
+// //         } else if (video.prerequisites === 'WithHw') {
+// //           isUserCanEnter = videoUser?.isUserUploadPerviousHWAndApproved;
+// //         }
+// //       }
+
+// //       return {
+// //         ...video, // No need for .toObject() since video is already a plain object
+// //         isPaid: isPaidVideo,
+// //         Attemps: videoUser?.videoAllowedAttemps ?? 0,
+// //         videoPrerequisitesName,
+// //         isUserCanEnter,
+// //         videoType: video.videoType || 'lecture', // Add a type field to distinguish between video types
+// //       };
+// //     });
+// //     console.log(processedVideos);
+
+// //     // Check chapter accessibility
+// //     if (chapter.chapterAccessibility === 'EnterInFree' || isPaid) {
+// //       res.render('student/videos', {
+// //         title: 'Videos',
+// //         path: req.path,
+// //         chapterVideos: processedVideos, // Pass all videos to the template
+// //         userData: req.userData,
+// //         chapterId: cahpterId,
+// //       });
+// //     } else {
+// //       res.redirect('/student/chapters');
+// //     }
+// //   } catch (error) {
+// //     console.error('Error fetching videos:', error.message);
+// //     res.status(500).send('Internal Server Error');
+// //   }
+// // };
+
+
 const buyVideo = async (req, res) => {
   try {
     const videoId = req.params.videoId;
@@ -1076,6 +1166,7 @@ module.exports = {
 
   chapters_get,
   buyChapter,
+  // getVideos,
   lecture_get,
   sum_get,
   solv_get,

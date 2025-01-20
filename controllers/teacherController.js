@@ -5,6 +5,8 @@ const Code = require('../models/Code');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance'); 
 const mongoose = require('mongoose');
+const schedule = require('node-schedule');
+
 
 const waapi = require('@api/waapi');
 const waapiAPI = process.env.WAAPIAPI;
@@ -141,11 +143,12 @@ const addVideo_post = async (req, res) => {
       videoPrice,
       imgURL,
       videoURL,
+      scheduledTime,
       PDFURL,
     } = req.body;
 
     // Validate input data
-    if (!ChaptersIds || !VideoType || !videoTitle || !paymentStatus) {
+    if (!ChaptersIds || !VideoType || !videoTitle || !paymentStatus ) {
       throw new Error('Missing required fields');
     }
 
@@ -168,7 +171,8 @@ const addVideo_post = async (req, res) => {
       videoPrice: videoPrice || 0,
       videoURL: videoURL || '',
       imgURL: imgURL || '',
-      PDFURL : PDFURL || '', 
+      PDFURL: PDFURL || '',
+      scheduledTime: scheduledTime || '',
     };
 
     const videosInfo = {};
@@ -244,6 +248,21 @@ const addVideo_post = async (req, res) => {
           res.send('error can you refresh and try again');
         });
     });
+
+
+    const scheduledDateTime = new Date(scheduledTime);
+    const job = schedule.scheduleJob(scheduledDateTime, async () => {
+      await Chapter.findOneAndUpdate(
+        { _id: ChaptersIds },
+        { $set: { [`${VideoType}.$[elem].permissionToShow`]: 'apper' } },
+        { arrayFilters: [{ 'elem._id': videoId }] }
+      );
+      
+    });
+
+    console.log('Job scheduled for:', job);
+
+
   } catch (error) {
     // Handle errors
     console.error('Error adding video:', error.message);
