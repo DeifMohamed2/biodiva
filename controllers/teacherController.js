@@ -15,7 +15,6 @@ waapi.auth(`${waapiAPI}`);
 const Excel = require('exceljs');
 
 const { v4: uuidv4 } = require('uuid');
-const { result } = require('lodash');
 
 const dash_get = (req, res) => {
   //   const idsToKeep = [
@@ -2026,7 +2025,9 @@ const createGeneralCodes = async (req, res) => {
       await Code.create({
         Code: code,
         isUsed: false,
-        codeType: 'General',
+        codeType: 'Chapter',
+        chapterName:'Chapter1',
+        codeGrade :'Grade3',
         codeFor: null,
         usedBy: null,
         usedIn: null,

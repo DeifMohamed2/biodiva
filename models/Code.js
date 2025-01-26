@@ -17,6 +17,14 @@ const CodeSchema = new Schema({
         type : String,
         required: true,
     },
+    chapterName:{
+        type:String,
+        required: true,
+    },
+    codeGrade:{
+        type: String,
+        required: true,
+    },
     codeFor:{
         type:String,
         // required: true,

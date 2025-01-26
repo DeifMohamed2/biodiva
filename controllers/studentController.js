@@ -68,7 +68,7 @@ const buyChapter = async (req, res) => {
       chapterName: 1,
     });
     const CodeData = await Code.findOneAndUpdate(
-      { Code: code, isUsed: false, codeType: 'General' },
+      { Code: code, isUsed: false, codeType: 'Chapter' },
       {
         isUsed: true,
         usedBy: req.userData.Code,
