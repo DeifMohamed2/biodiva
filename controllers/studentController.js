@@ -68,7 +68,7 @@ const buyChapter = async (req, res) => {
       chapterName: 1,
     });
     const CodeData = await Code.findOneAndUpdate(
-      { Code: code, isUsed: false, codeType: 'Chapter' },
+      { Code: code, isUsed: false, codeType: 'Chapter', codeGrade: req.userData.Grade },
       {
         isUsed: true,
         usedBy: req.userData.Code,
@@ -76,6 +76,7 @@ const buyChapter = async (req, res) => {
       },
       { new: true }
     );
+    console.log(CodeData);
     if (CodeData) {
       await User.findByIdAndUpdate(req.userData._id, {
         $push: { chaptersPaid: cahpterId },
@@ -84,8 +85,6 @@ const buyChapter = async (req, res) => {
     } else {
       res.redirect('/student/chapters?error=true');
     }
-
-    console.log(CodeData);
   } catch (error) {
     res.send(error.message);
   }

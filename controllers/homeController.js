@@ -74,11 +74,11 @@ const public_login_post = async (req, res) => {
     if (user.isTeacher) {
       return res.redirect('/teacher/dash');
     } else {
-      if (user.subscribe) {
-        return res.redirect('/student/dash');
-      } else {
-        return res.redirect('/login?StudentCode=' + user.Code);
-      }
+      return res.redirect('/student/dash');
+      // if (user.subscribe) {
+      // } else {
+      //   return res.redirect('/login?StudentCode=' + user.Code);
+      // }
     }
   } catch (error) {
     console.log(error);
