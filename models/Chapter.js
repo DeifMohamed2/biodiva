@@ -44,7 +44,10 @@ const Chapterschema = new Schema({
         type:Array
     },
 
-
+    ischapterNew:{
+        type:Boolean
+    },
+    
 },{timestamps:true});
 
 const Chapter = mongoose.model('Chapter',Chapterschema)

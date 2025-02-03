@@ -17,6 +17,12 @@ const { v4: uuidv4 } = require('uuid');
 
 const dash_get = async (req, res) => {
   try {
+
+    // await Code.updateMany(
+    //   {},
+    //   { $set: { codeType: 'Chapter' } }
+    // );
+
     const rankedUsers = await User.find(
       { Grade: req.userData.Grade },
       { Username: 1, userPhoto: 1 }
@@ -62,13 +68,19 @@ const chapters_get = async (req, res) => {
 
 const buyChapter = async (req, res) => {
   try {
+    
+
     const cahpterId = req.params.cahpterId;
     const code = req.body.code;
     const chapterData = await Chapter.findById(cahpterId, {
       chapterName: 1,
+      ischapterNew :1 ,
     });
-    const CodeData = await Code.findOneAndUpdate(
-      { Code: code, isUsed: false, codeType: 'Chapter', codeGrade: req.userData.Grade },
+
+    let CodeData = null ;
+    if(chapterData.ischapterNew){
+     CodeData = await Code.findOneAndUpdate(
+      { Code: code, isUsed: false, codeType: 'Chapter' ,codeGrade:req.userData.Grade},
       {
         isUsed: true,
         usedBy: req.userData.Code,
@@ -76,6 +88,18 @@ const buyChapter = async (req, res) => {
       },
       { new: true }
     );
+  }
+  else{ 
+      CodeData = await Code.findOneAndUpdate(
+      { Code: code, isUsed: false, codeType: 'Chapter'},
+      {
+        isUsed: true,
+        usedBy: req.userData.Code,
+        usedIn: chapterData.chapterName,
+      },
+      { new: true }
+    );
+  }
     console.log(CodeData);
     if (CodeData) {
       await User.findByIdAndUpdate(req.userData._id, {
