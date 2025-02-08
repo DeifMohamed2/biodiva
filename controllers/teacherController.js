@@ -16,7 +16,7 @@ const Excel = require('exceljs');
 const { v4: uuidv4 } = require('uuid');
 const { result } = require('lodash');
 
-const dash_get = (req, res) => {
+const dash_get = async (req, res) => {
 
 //   User.updateMany({}, {
 //     $set: {
@@ -42,6 +42,18 @@ const dash_get = (req, res) => {
   //       console.error("Error deleting users:", error);
   //   });
 
+
+  // const users = await User.updateMany
+  // ({}, {
+  //   $set: {
+  //     quizesInfo: [],
+  //     videosInfo: [],
+  //     chaptersPaid: [],
+  //     videosPaid: [],
+  //     examsPaid: [],
+  //     PDFsPaid: []
+  //   }
+  // });
 
   // Quiz.findById('6762da4ad29f724bc18fd9f9').then(quiz1 => {
   //   Quiz.findById('6762eea1d29f724bc18fe3d5').then(quiz2 => {
