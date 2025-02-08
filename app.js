@@ -32,7 +32,7 @@ const path = require('path');
 // CONECT to mongodb
 let io
 const dbURI =
-  'mongodb+srv://3devWay:1qaz2wsx@cluster0.5orkagp.mongodb.net/biodiva2?retryWrites=true&w=majority&appName=Cluster0';
+  'mongodb+srv://3devWay:1qaz2wsx@cluster0.5orkagp.mongodb.net/biodiva3?retryWrites=true&w=majority&appName=Cluster0';
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then((result) => {
         let server = app.listen(8000);
