@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 
 const waapi = require('@api/waapi');
 const waapiAPI = process.env.WAAPIAPI;
+const instanceID = process.env.instanceId;
 waapi.auth(`${waapiAPI}`);
 
 const Excel = require('exceljs');
@@ -2624,7 +2625,7 @@ const convertAttendanceToExcel = async (req, res) => {
             chatId: `2${student.parentPhone}@c.us`,
             message: message,
           },
-          { id: '23175' }
+          { id: instanceID }
         )
         .then((result) => {
           req.io.emit('sendingToParents', {
@@ -2902,7 +2903,7 @@ const sendGradeMessages = async (req, res) => {
             chatId: `20${student[phoneCloumnName]}@c.us`,
             message: message,
           },
-          { id: '23175' }
+          { id: instanceID }
         );
 
         console.log('Message sent successfully');
@@ -2932,8 +2933,13 @@ const sendGradeMessages = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getRandomDelay = () => {
+  const min = 2000; // Minimum delay of 2 seconds
+  const max = 5000; // Maximum delay of 5 seconds
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
 const sendMessages = async (req, res) => {
   const { phoneCloumnName, nameCloumnName, dataToSend, message } = req.body;
@@ -2958,7 +2964,7 @@ const sendMessages = async (req, res) => {
             chatId: `2${student[phoneCloumnName]}@c.us`,
             message: theMessage,
           },
-          { id: '23175' }
+          { id: instanceID }
         )
         .then((result) => {
           console.log(result);
@@ -2970,8 +2976,8 @@ const sendMessages = async (req, res) => {
           console.error(err);
         });
 
-      // Add delay to avoid getting banned
-      await delay(2300); // 10 seconds delay
+      // Add random delay to avoid getting banned
+      await delay(getRandomDelay());
     }
 
     res.status(200).json({ message: 'Messages sent successfully' });
