@@ -6,7 +6,6 @@ const Card = require('../models/Card');
 const PDF = require('../models/PDFs');
 const Attendance = require('../models/Attendance');
 const mongoose = require('mongoose');
-
 const waapi = require('@api/waapi');
 const waapiAPI = process.env.WAAPIAPI;
 const instanceID = process.env.instanceId;
@@ -2942,7 +2941,8 @@ const getRandomDelay = () => {
 };
 
 const sendMessages = async (req, res) => {
-  const { phoneCloumnName, nameCloumnName, dataToSend, message } = req.body;
+  const { phoneCloumnName, nameCloumnName, dataToSend, message, imageCaption } =
+    req.body;
 
   let n = 0;
   req.io.emit('sendingMessages', {
@@ -2954,27 +2954,53 @@ const sendMessages = async (req, res) => {
       console.log(student, student[phoneCloumnName], message);
 
       let theMessage = `
-      عزيزي الطالب : ${student[nameCloumnName]}.
+      عزيزي الطالب : ${student[nameCloumnName]}
       ${message}
       `;
 
-      await waapi
-        .postInstancesIdClientActionSendMessage(
-          {
-            chatId: `20${student[phoneCloumnName]}@c.us`,
-            message: theMessage,
-          },
-          { id: instanceID }
-        )
-        .then((result) => {
-          console.log(result);
-          req.io.emit('sendingMessages', {
-            nMessages: ++n,
+      // Send the message to the student
+      // const base64Image = fs.readFileSync(imageCaption, { encoding: 'base64' });
+
+      if (imageCaption) {
+        await waapi
+          .postInstancesIdClientActionSendMedia(
+            {
+              chatId: `20${student[phoneCloumnName]}@c.us`, // Target chat ID
+              mediaBase64: imageCaption,
+              mediaName: 'image.png', // ✅ Added file extension (important)
+              mediaCaption: theMessage,
+              asSticker: false, // Set true if you want to send as a sticker
+            },
+            { id: instanceID } // Replace with your actual instance ID
+          )
+          .then((result) => {
+            console.log(result);
+            req.io.emit('sendingMessages', {
+              nMessages: ++n,
+            });
+          })
+          .catch((err) => {
+            console.error(err);
           });
-        })
-        .catch((err) => {
-          console.error(err);
-        });
+      } else {
+        await waapi
+          .postInstancesIdClientActionSendMessage(
+            {
+              chatId: `20${student[phoneCloumnName]}@c.us`,
+              message: theMessage,
+            },
+            { id: instanceID }
+          )
+          .then((result) => {
+            console.log(result);
+            req.io.emit('sendingMessages', {
+              nMessages: ++n,
+            });
+          })
+          .catch((err) => {
+            console.error(err);
+          });
+      }
 
       // Add random delay to avoid getting banned
       await delay(getRandomDelay());

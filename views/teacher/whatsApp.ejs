@@ -105,8 +105,7 @@
                         <div class="col-md-2 mb-4">
                             <select name="chapterGrade" id="optionSelect" class="Grade w-100 text-center" required>
                                 <option value="">اختر نوع الارسال </option>
-                                <option value="msgWithoutPhoto">ارسال رسائل بدون صوره</option>
-                                <option value="msgWithPhoto">ارسال رسائل بصوره</option>
+                                <option value="msgWithoutPhoto">ارسال رسائل  </option>
                                 <option value="gradeMsg">ارسال درجات</option>
                             </select>
                         </div>
@@ -115,7 +114,9 @@
                         <!-- Section for "ارسال رسائل بدون صوره" -->
                         <div id="msgWithoutPhotoSection" class="hidden">
                             <div class="row">
-                                
+                                 <div class="col-md-4 mb-4">
+                                   <input type="file" id="imageCaption" class="form-control" placeholder="اختر الصورة">
+                                 </div>
                             </div>
                             <div class="col-md-4 mb-4">
                               <textarea name="theMessage" id="theMessage" class="form-control" placeholder="يرجي كتابه الرساله هنا "  rows="10" ></textarea>
@@ -142,15 +143,11 @@
                         
                         </div>
 
-                        <!-- Section for "ارسال رسائل بصوره" -->
-                        <div id="msgWithPhotoSection" class="hidden">
-                            <div class="col-md-4 mb-4">
-                                <input type="file" class="form-control" placeholder="اختر الصورة">
-                            </div>
-                        </div>
+                    
 
                         <!-- Section for "ارسال درجات" -->
                         <div id="gradeMsgSection" class="hidden">
+                           
                             <div class="col-md-4 mb-4">
                                 <input type="text" id="quizName" class="form-control" placeholder="اسم الامتحان">
                             </div>
@@ -193,7 +190,6 @@
     <script>
         const optionSelect = document.getElementById('optionSelect');
         const msgWithoutPhotoSection = document.getElementById('msgWithoutPhotoSection');
-        const msgWithPhotoSection = document.getElementById('msgWithPhotoSection');
         const gradeMsgSection = document.getElementById('gradeMsgSection');
 
         // Event listener to show/hide sections based on selection
@@ -202,14 +198,11 @@
 
             // Hide all sections initially
             msgWithoutPhotoSection.classList.add('hidden');
-            msgWithPhotoSection.classList.add('hidden');
             gradeMsgSection.classList.add('hidden');
 
             // Show corresponding section
             if (selectedValue === 'msgWithoutPhoto') {
                 msgWithoutPhotoSection.classList.remove('hidden');
-            } else if (selectedValue === 'msgWithPhoto') {
-                msgWithPhotoSection.classList.remove('hidden');
             } else if (selectedValue === 'gradeMsg') {
                 gradeMsgSection.classList.remove('hidden');
             }
@@ -354,52 +347,70 @@
         }
 
         // Function to send the data
-        async function displayDataAndSendMSG(data) {
-            const output = document.getElementById('outputMSG');
+async function displayDataAndSendMSG(data) {
+  const output = document.getElementById('outputMSG');
+  output.innerHTML = 'data is being sent...';
 
-            output.innerHTML = 'data is being sent...';
-            const phoneCloumnName = document.getElementById('phoneCloumnNameMSG');
-            const nameCloumnNameMSG = document.getElementById('nameCloumnNameMSG');
-            const theMessage = document.getElementById('theMessage');
+  const phoneCloumnName = document.getElementById('phoneCloumnNameMSG');
+  const nameCloumnNameMSG = document.getElementById('nameCloumnNameMSG');
+  const theMessage = document.getElementById('theMessage');
+  const imageInput = document.getElementById('imageCaption');
 
+  if (!phoneCloumnName.value || !nameCloumnNameMSG.value) {
+    alert('ادخل اسامي ال cloumn');
+    return;
+  }
 
-            if (!phoneCloumnName.value  , !nameCloumnNameMSG.value) {
-                alert('ادخل اسامي ال cloumn');
-                return;
-            }
+  // Read image as base64
+  let imageCaptionData = '';
+  if (imageInput.files.length > 0) {
+    const file = imageInput.files[0];
+    imageCaptionData = await readFileAsBase64(file);
+  }
 
-            const dataSend = {
-                phoneCloumnName: phoneCloumnName.value,
-                nameCloumnName: nameCloumnNameMSG.value,
-                message : theMessage.value ,
-                dataToSend: data
-            };
+  const dataSend = {
+    phoneCloumnName: phoneCloumnName.value,
+    nameCloumnName: nameCloumnNameMSG.value,
+    message: theMessage.value,
+    imageCaption: imageCaptionData,
+    dataToSend: data,
+  };
 
-            try {
-                const response = await fetch('/teacher/sendMessages', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(dataSend)
-                });
+  try {
+    const response = await fetch('/teacher/sendMessages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dataSend),
+    });
 
-                const responseData = await response.json();
+    const responseData = await response.json();
 
-                if (response.ok) {
-                    output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
-                    output.style.color = "green";
-                } else {
-                    output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                    output.style.color = "red";
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                output.style.color = "red";
-            }
-        }
-    
+    if (response.ok) {
+      output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
+      output.style.color = "green";
+    } else {
+      output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+      output.style.color = "red";
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+    output.style.color = "red";
+  }
+}
+
+// Helper function to convert image file to base64
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]); // Remove base64 prefix
+    reader.onerror = (error) => reject(error);
+  });
+}
+
 
         
     </script>
