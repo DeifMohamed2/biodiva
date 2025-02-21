@@ -230,8 +230,8 @@
                                                             required>
                                                             <option value="">السماح بالدخول </option>
                                                             <option value="WithExam">بامتحان فقط</option>
-                                                            <option value="WithHw"> بواجب فقط</option>
-                                                            <option value="WithExamaAndHw"> بامتحان وواجب</option>
+                                                            <!-- <option value="WithHw"> بواجب فقط</option> -->
+                                                            <!-- <option value="WithExamaAndHw"> بامتحان وواجب</option> -->
                                                             <option selected value="WithOutExamAndHW">بدون امتحان و واجب
                                                             </option>
                                                         </select>
@@ -241,6 +241,18 @@
                                                             <option selected value="apper">ظهور الفيديو</option>
                                                             <option value="disapper">اخفاء الفيديو</option>
                                                         </select>
+                                                        <select name="accessibleAfterPassExam" id="accessibleAfterPassExam" class="Grade" disabled required>
+                                                                <option >اختر اسم الامتحان</option> 
+                                                                <% if (quizzes) { %>
+                                                                    <% quizzes.forEach(quiz=> { %>
+                                                                        <option value="<%= quiz._id %>">
+                                                                            <%= quiz.quizName %>
+                                                                        </option>
+                                                                        <% }) %>
+                                                                <% } %>
+                                                                
+                                                        </select>
+
 
                                                         <select name="AccessibleAfterViewing"
                                                             id="AccessibleAfterViewing" class="Grade" disabled required>
@@ -466,10 +478,12 @@ const sdieMenu = document.querySelector("aside");
 
             const prerequisites = document.getElementById('prerequisites')
             prerequisites.addEventListener('change', () => {
-                if (prerequisites.value == "WithHw" || prerequisites.value == "WithExamaAndHw") {
-                    document.getElementById('AccessibleAfterViewing').removeAttribute('disabled')
+                if (prerequisites.value == "WithExam") {
+                    // document.getElementById('AccessibleAfterViewing').removeAttribute('disabled')
+                    document.getElementById('accessibleAfterPassExam').removeAttribute('disabled')
                 } else {
-                    document.getElementById('AccessibleAfterViewing').setAttribute('disabled', true)
+                    // document.getElementById('AccessibleAfterViewing').setAttribute('disabled', true)
+                    document.getElementById('accessibleAfterPassExam').setAttribute('disabled', true)
 
                 }
             })

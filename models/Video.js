@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-const { required } = require('nodemon/lib/config')
 const Schema = mongoose.Schema
 
 const VideoSchema = new Schema({

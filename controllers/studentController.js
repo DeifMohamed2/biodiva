@@ -5,14 +5,12 @@ const Code = require('../models/Code');
 const PDFs = require('../models/PDFs');
 const mongoose = require('mongoose');
 
-const jwt = require('jsonwebtoken');
-const jwtSecret = process.env.JWTSECRET;
 
-// const waapi = require('@api/waapi');
-// const waapiAPI = process.env.WAAPIAPI;
-// waapi.auth(`${waapiAPI}`);
+const waapi = require('@api/waapi');
+const waapiAPI = process.env.WAAPIAPI;
+const instanceID = process.env.instanceId;
+waapi.auth(`${waapiAPI}`);
 
-const { v4: uuidv4 } = require('uuid');
 
 // ==================  Dash  ====================== //
 
@@ -755,6 +753,29 @@ const buyQuiz = async (req, res) => {
 // ================== END Exams  ====================== //
 
 // ================== quiz  ====================== //
+
+// Send wahtsApp message Function to Parents for quiz grade
+const sendWhatsAppMessage = async (message, parentPhone) => {
+  try {
+    await waapi
+      .postInstancesIdClientActionSendMessage(
+        {
+          chatId: `2${parentPhone}@c.us`,
+          message: message,
+        },
+        { id: instanceID }
+      )
+      .then((response) => {
+        // console.log(response);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 const quiz_get = async (req, res) => {
   try {
     const quizId = req.params.quizId;
@@ -924,23 +945,32 @@ const quizFinish = async (req, res) => {
     const quizObjId = new mongoose.Types.ObjectId(quizId);
 
     const quiz = await Quiz.findById(quizId);
+    const isThereVideoWillBeOpen = await Chapter.findOne({
+      'chapterLectures.accessibleAfterPassExam': quizId,
+    }, {
+      'chapterLectures.$': 1
+    });
+
+    const videoId = isThereVideoWillBeOpen ? isThereVideoWillBeOpen.chapterLectures[0]._id : null;
+
+    console.log(videoId);
     const userQuizInfo = req.userData.quizesInfo.find(
       (q) => q.quizId.toString() === quiz._id.toString()
     );
     const quizData = req.body;
     let answers = quizData.answers;
     const score = quizData.score;
+ 
 
-    console.log(answers, score);
     // Calculate the percentage score
-    const scorePercentage = (score / quiz.questionsCount) * 100;
-
+    const scorePercentage = (score / quiz.sampleQuestions) * 100;
+    console.log(score, scorePercentage);
     // If user has already entered and quiz is not in progress, redirect
     if (userQuizInfo.isEnterd && !userQuizInfo.inProgress) {
       return res.redirect('/student/exams');
     }
 
-    // If the score is less than 60%, don't update quiz info, allow retry
+    // If the score is less than 50%, don't update quiz info, allow retry
     if (scorePercentage < 50) {
        
           User.findOneAndUpdate(
@@ -956,8 +986,17 @@ const quizFinish = async (req, res) => {
               },
             }
           )
-            .then((result) => {
-              console.log(result);
+            .then(async (result) => {
+let message = 
+`اهلا وسهلا معاك اسستنت *BIODIVA* 
+حبين نبلغ حضرتك بأن ابنك ${req.userData.Username}
+دخل امتحان *${quiz.quizName}* ولكن لم يحقق النسبة المطلوبة للنجاح
+وجاب اقل من *50%* من الدرجة
+النتيجة: *${score}* من *${quiz.sampleQuestions}*
+بس يقدر يدخل الامتحان مره تانيه وهنبلغك بكل النتائج
+شكرا لتعاونكم`
+
+             await sendWhatsAppMessage(message, req.userData.parentPhone);
             })
             .catch((error) => {
               res.send({ error: error.message });
@@ -973,7 +1012,7 @@ const quizFinish = async (req, res) => {
         $set: {
           'quizesInfo.$.answers': answers,
           'quizesInfo.$.score': +score,
-          'quizesInfo.$.inProgress': true,
+          'quizesInfo.$.inProgress': false,
           'quizesInfo.$.isEnterd': true,
           'quizesInfo.$.solvedAt': Date.now(),
           'quizesInfo.$.endTime': null,
@@ -981,6 +1020,16 @@ const quizFinish = async (req, res) => {
         $inc: { totalScore: +score, totalQuestions: +quiz.sampleQuestions },
       }
     ).then(async (result) => {
+      let message = 
+`اهلا وسهلا معاك اسستنت *BIODIVA*
+حبين نبلغ حضرتك بأن ابنك ${req.userData.Username}
+انهى امتحان *${quiz.quizName}* بنجاح
+النتيجة: *${score}* من *${quiz.sampleQuestions}*
+شكرا لتعاونكم
+`;      
+
+      await sendWhatsAppMessage(message, req.userData.parentPhone);
+    
       console.log(result);
       // Check if there's a corresponding video for the quiz in user's videosInfo
       // const videoInfo = req.userData.videosInfo.find(
@@ -995,8 +1044,19 @@ const quizFinish = async (req, res) => {
       //     res.status(204).send({ message: 'Quiz finished successfully' });
       //   });
       // } else {
-     return res.status(200).send({ message: 'Quiz finished successfully' });
-      // }
+
+      if (videoId) {
+        await User.findOneAndUpdate(
+          { _id: req.userData._id, 'videosInfo._id': videoId },
+          { $set: { 'videosInfo.$.isUserEnterQuiz': true } }
+        ).then((result) => {
+          return res.status(200).send({ message: 'Quiz finished successfully' });
+        });
+      } else {
+        return res.status(200).send({ message: 'Quiz finished successfully' });
+      }
+
+ 
     });
   } catch (error) {
     return res.status(200).send({error : error.message});

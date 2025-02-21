@@ -97,11 +97,13 @@ const homeWork_get = (req, res) => {
 
 // =================================================== Add Video ================================================ //
 
-const addVideo_get = (req, res) => {
+const addVideo_get =(req, res) => {
+
   res.render('teacher/addVideo', {
     title: 'AddVideo',
     path: req.path,
     chaptersData: null,
+    quizzes: null,
   });
 };
 
@@ -139,6 +141,8 @@ const getAllChapters = async (req, res) => {
   try {
     const data = [];
     const { chapterGrade } = req.body;
+    const quizzes = await Quiz.find({ Grade: chapterGrade }, { quizName: 1 });
+
     await Chapter.find({
       chapterGrade: chapterGrade,
     }).then((result) => {
@@ -154,6 +158,7 @@ const getAllChapters = async (req, res) => {
         title: 'AddVideo',
         path: req.path,
         chaptersData: data,
+        quizzes,
       });
     });
   } catch (error) {
@@ -172,6 +177,7 @@ const addVideo_post = async (req, res) => {
       permissionToShow,
       AccessibleAfterViewing,
       videoAllowedAttemps,
+      accessibleAfterPassExam,
       videoPrice,
       imgURL,
       videoURL,
@@ -201,6 +207,7 @@ const addVideo_post = async (req, res) => {
       videoPrice: videoPrice || 0,
       videoURL: videoURL || '',
       imgURL: imgURL || '',
+      accessibleAfterPassExam : accessibleAfterPassExam || '',
     };
 
     const videosInfo = {};
