@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 
 const waapi = require('@api/waapi');
 const waapiAPI = process.env.WAAPIAPI;
-const instanceID = process.env.instanceId;
+const instanceID2 = process.env.instanceId2;
 waapi.auth(`${waapiAPI}`);
 
 
@@ -94,6 +94,27 @@ const buyChapter = async (req, res) => {
 
 // ==================  Lecture  ====================== //
 
+async function updateStatusOfEnterVideoForWithExam(req,res,lectureID,examID){
+  const quizeInfo = req.userData.quizesInfo.find(q => q.quizId.toString() === examID.toString());
+  const totalQuestions = quizeInfo.questionsCount;
+  console.log(totalQuestions);
+  const score = (quizeInfo.score / totalQuestions) * 100;
+  console.log(score, quizeInfo.score);
+  if (quizeInfo && score >= 60) {
+    await User.findOneAndUpdate(
+      { _id: req.userData._id, 'videosInfo._id': lectureID },
+      {
+        $set: { 'videosInfo.$.isUserEnterQuiz': true },  
+      } 
+    );
+
+    return true;
+
+  }else{
+    return false;
+  }         
+}
+
 const lecture_get = async (req, res) => {
   try {
     const cahpterId = req.params.cahpterId;
@@ -103,57 +124,56 @@ const lecture_get = async (req, res) => {
     });
     const isPaid = req.userData.chaptersPaid.includes(cahpterId);
     // console.log(chapter,chapter.chapterAccessibility, isPaid);
-    const paidVideos = chapter.chapterLectures.map((lecture) => {
-      const isPaid = req.userData.videosPaid.includes(lecture._id);
-      const vidoeUser = req.userData.videosInfo.find(
-        (video) => video._id == lecture._id
-      );
-      let videoPrerequisitesName;
-
-      let isUserCanEnter = true;
-      if (
-        lecture.prerequisites == 'WithExamaAndHw' ||
-        lecture.prerequisites == 'WithExam' ||
-        lecture.prerequisites == 'WithHw'
-      ) {
-        const video = req.userData.videosInfo.find(
-          (video) => video._id == lecture.AccessibleAfterViewing
+    const paidVideos = await Promise.all(
+      chapter.chapterLectures.map(async (lecture) => {
+        const isPaid = req.userData.videosPaid.includes(lecture._id);
+        const vidoeUser = req.userData.videosInfo.find(
+          (video) => video._id == lecture._id
         );
-        videoPrerequisitesName = video ? video.videoName : null;
-        if (lecture.prerequisites == 'WithExamaAndHw') {
-          if (
-            vidoeUser.isUserEnterQuiz &&
-            vidoeUser.isUserUploadPerviousHWAndApproved
-          ) {
-            isUserCanEnter = true;
-          } else {
-            isUserCanEnter = false;
-          }
-        } else if (lecture.prerequisites == 'WithExam') {
-          if (vidoeUser.isUserEnterQuiz) {
-            isUserCanEnter = true;
-          } else {
-            isUserCanEnter = false;
-          }
-        } else if (lecture.prerequisites == 'WithHw') {
-          if (vidoeUser.isUserUploadPerviousHWAndApproved) {
-            isUserCanEnter = true;
-          } else {
-            isUserCanEnter = false;
-          }
-        } else {
-          isUserCanEnter = true;
-        }
-      }
+        let videoPrerequisitesName;
+        let isUserCanEnter = true;
 
-      return {
-        ...lecture,
-        isPaid,
-        Attemps: vidoeUser?.videoAllowedAttemps ?? 0,
-        videoPrerequisitesName: videoPrerequisitesName || null,
-        isUserCanEnter: isUserCanEnter,
-      };
-    });
+        if (
+          lecture.prerequisites === 'WithExamaAndHw' ||
+          lecture.prerequisites === 'WithExam' ||
+          lecture.prerequisites === 'WithHw'
+        ) {
+          const video = req.userData.videosInfo.find(
+            (video) => video._id == lecture.AccessibleAfterViewing
+          );
+          videoPrerequisitesName = video ? video.videoName : null;
+
+          if (lecture.prerequisites === 'WithExamaAndHw') {
+            isUserCanEnter =
+              vidoeUser.isUserEnterQuiz &&
+              vidoeUser.isUserUploadPerviousHWAndApproved;
+          } else if (lecture.prerequisites === 'WithExam') {
+            if (vidoeUser.isUserEnterQuiz) {
+              isUserCanEnter = true;
+            } else {
+              const result = await updateStatusOfEnterVideoForWithExam(
+                req,
+                res,
+                lecture._id,
+                lecture.accessibleAfterPassExam
+              );
+              isUserCanEnter = result;
+            }
+          } else if (lecture.prerequisites === 'WithHw') {
+            isUserCanEnter = vidoeUser.isUserUploadPerviousHWAndApproved;
+          }
+        }
+
+        return {
+          ...lecture,
+          isPaid,
+          Attemps: vidoeUser?.videoAllowedAttemps ?? 0,
+          videoPrerequisitesName: videoPrerequisitesName || null,
+          isUserCanEnter,
+        };
+      })
+    );
+
 
     console.log(paidVideos);
 
@@ -757,16 +777,17 @@ const buyQuiz = async (req, res) => {
 // Send wahtsApp message Function to Parents for quiz grade
 const sendWhatsAppMessage = async (message, parentPhone) => {
   try {
+    console.log( parentPhone);
     await waapi
       .postInstancesIdClientActionSendMessage(
         {
           chatId: `2${parentPhone}@c.us`,
           message: message,
         },
-        { id: instanceID }
+        { id: instanceID2 }
       )
       .then((response) => {
-        // console.log(response);
+        console.log(response);
       })
       .catch((error) => {
         console.log(error);
@@ -971,7 +992,7 @@ const quizFinish = async (req, res) => {
     }
 
     // If the score is less than 50%, don't update quiz info, allow retry
-    if (scorePercentage < 50) {
+    if (scorePercentage < 60) {
        
           User.findOneAndUpdate(
             { _id: req.userData._id, 'quizesInfo.quizId': quizObjId },
@@ -991,7 +1012,7 @@ let message =
 `اهلا وسهلا معاك اسستنت *BIODIVA* 
 حبين نبلغ حضرتك بأن ابنك ${req.userData.Username}
 دخل امتحان *${quiz.quizName}* ولكن لم يحقق النسبة المطلوبة للنجاح
-وجاب اقل من *50%* من الدرجة
+وجاب اقل من *60%* من الدرجة
 النتيجة: *${score}* من *${quiz.sampleQuestions}*
 بس يقدر يدخل الامتحان مره تانيه وهنبلغك بكل النتائج
 شكرا لتعاونكم`

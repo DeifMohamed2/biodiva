@@ -14,13 +14,13 @@ waapi.auth(`${waapiAPI}`);
 const Excel = require('exceljs');
 
 const { v4: uuidv4 } = require('uuid');
-const { result } = require('lodash');
 
 const dash_get = async (req, res) => {
 
 //   User.updateMany({}, {
 //     $set: {
-//       quizesInfo: []
+//       totalScore: 0 ,
+//       totalQuestions : 0,
 //     }
 // }).then((result) => {
 //     console.log(result);
