@@ -834,7 +834,7 @@ main .courses .course .price-tag{
   color: #000;
   position: absolute;
   padding-left: 1.7rem;
-  margin-top: 1rem;
+  margin-top: 0rem;
   padding-top: 1rem;
   padding-bottom: 0.5rem;
   border-bottom-left-radius: 1rem;

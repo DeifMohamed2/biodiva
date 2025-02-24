@@ -387,29 +387,14 @@
 
                                   
                                     <select name="prerequisites" id="prerequisites" class="Grade" required> 
-                                        <option  >السماح بالدخول </option>
-                                        <% if (videoData.prerequisites=="WithExam") { %>
+                                        <option>السماح بالدخول</option>
+                                        <% if (videoData.prerequisites == "WithExam") { %>
                                             <option selected value="WithExam">بامتحان فقط</option>
-                                            <option  value="WithHw"> بواجب فقط</option>
-                                            <option  value="WithExamaAndHw"> بامتحان وواجب</option>
-                                            <option  value="WithOutExamAndHW">بدون امتحان و واجب</option>
-                                        <% } else if(videoData.prerequisites=="WithHw") {%>
-                                            <option  value="WithExam">بامتحان فقط</option>
-                                            <option selected value="WithHw"> بواجب فقط</option>
-                                            <option  value="WithExamaAndHw"> بامتحان وواجب</option>
-                                            <option  value="WithOutExamAndHW">بدون امتحان و واجب</option>
-                                        <% }else if (videoData.prerequisites=="WithExamaAndHw"){  %>
-                                            <option  value="WithExam">بامتحان فقط</option>
-                                            <option  value="WithHw"> بواجب فقط</option>
-                                            <option selected value="WithExamaAndHw"> بامتحان وواجب</option>
-                                            <option  value="WithOutExamAndHW">بدون امتحان و واجب</option>
-                                            <% }else{ %>
-                                                <option  value="WithExam">بامتحان فقط</option>
-                                                <option  value="WithHw"> بواجب فقط</option>
-                                                <option  value="WithExamaAndHw"> بامتحان وواجب</option>
-                                                <option selected value="WithOutExamAndHW">بدون امتحان و واجب</option>
-                                            <% } %>
-                                   
+                                            <option value="WithOutExam">بدون امتحان</option>
+                                        <% } else { %>
+                                            <option value="WithExam">بامتحان فقط</option>
+                                            <option selected value="WithOutExam">بدون امتحان</option>
+                                        <% } %>
                                     </select>
 
                                     <select name="permissionToShow" id="permissionToShow" class="Grade"  required> 
@@ -451,7 +436,7 @@
                                 </div>
     
                                 <div class="prodct-budjet">
-                                    <input type="number" name="videoAllowedAttemps" class="salary" value="<%= videoData.videoAllowedAttemps %>"  placeholder="عدد المشاهدات"  required>
+                                    <!-- <input type="number" name="videoAllowedAttemps" class="salary" value="<%= videoData.videoAllowedAttemps %>"  placeholder="عدد المشاهدات"  required> -->
 
                                     <% if (videoData.paymentStatus=="Free") { %>
                                         <input type="number" name="videoPrice" class="salary" value="<%= videoData.videoPrice %>" disabled id="videoPrice" placeholder="سعر الفيديو"  required>
