@@ -775,7 +775,7 @@ const buyQuiz = async (req, res) => {
 // ================== quiz  ====================== //
 
 // Send wahtsApp message Function to Parents for quiz grade
-const sendWhatsAppMessage = async (message, parentPhone) => {
+const sendWhatsAppMessage = async (message, studentMessage, parentPhone,studentPhone) => {
   try {
     console.log( parentPhone);
     await waapi
@@ -783,6 +783,20 @@ const sendWhatsAppMessage = async (message, parentPhone) => {
         {
           chatId: `2${parentPhone}@c.us`,
           message: message,
+        },
+        { id: instanceID2 }
+      )
+      .then((response) => {
+        console.log(response);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+      await waapi
+      .postInstancesIdClientActionSendMessage(
+        {
+          chatId: `2${studentPhone}@c.us`,
+          message: studentMessage,
         },
         { id: instanceID2 }
       )
@@ -1016,8 +1030,17 @@ let message =
 النتيجة: *${score}* من *${quiz.sampleQuestions}*
 بس يقدر يدخل الامتحان مره تانيه وهنبلغك بكل النتائج
 شكرا لتعاونكم`
+let studentMessage =
+`
+اهلا وسهلا معاك اسستنت *BIODIVA*
+حبين نبلغك بأنك دخلت امتحان *${quiz.quizName}*
+وحصلت على *${score}* من *${quiz.sampleQuestions}*
+لكن لم تحقق النسبة المطلوبة للنجاح
+وهي *60%*
+حاول مره تانيه وهتوصلك النتيجة
+`
 
-             await sendWhatsAppMessage(message, req.userData.parentPhone);
+             await sendWhatsAppMessage(message,studentMessage, req.userData.parentPhone,req.userData.phone);
             })
             .catch((error) => {
               res.send({ error: error.message });
@@ -1048,8 +1071,14 @@ let message =
 النتيجة: *${score}* من *${quiz.sampleQuestions}*
 شكرا لتعاونكم
 `;      
-
-      await sendWhatsAppMessage(message, req.userData.parentPhone);
+let studentMessage =
+`
+اهلا وسهلا معاك اسستنت *BIODIVA*
+حبين نبلغك بأنك انهيت امتحان *${quiz.quizName}*
+وحصلت على *${score}* من *${quiz.sampleQuestions}*
+شكرا لتعاونكم
+`
+      await sendWhatsAppMessage(message,studentMessage, req.userData.parentPhone,req.userData.phone);
     
       console.log(result);
       // Check if there's a corresponding video for the quiz in user's videosInfo
