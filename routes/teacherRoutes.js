@@ -154,7 +154,7 @@ router.post("/convertToExcelQuiz/:QuizID",authMiddleware, teacherController.conv
 
 router.post("/changeEnterToQuiz/:quizID", authMiddleware,teacherController.changeEnterToQuiz);
 
-
+router.post('/exportQuizDataToExcel' , authMiddleware, teacherController.exportStudentsQuizDataToExcel);
 
 
 // ================ End handle Quizzes ===================//

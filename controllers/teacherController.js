@@ -1765,6 +1765,114 @@ const changeEnterToQuiz = async (req, res) => {
   } catch (error) {}
 };
 
+const exportStudentsQuizDataToExcel = async (req, res) => {
+  try {
+    const {quizID} =req.body;
+    const users = await User.aggregate([
+      {
+        $match: {
+          Grade: quizGrade,
+          quizesInfo: {
+            $elemMatch: {
+              quizId: QuizId,
+              isEnterd: true,
+            },
+          },
+        },
+      },
+      {
+        $project: {
+
+          Username: 1,
+          Code: 1,
+          quizesInfo: 1,
+          phone: 1,
+          parentPhone: 1,
+          quizesInfo: {
+            $filter: {
+              input: '$quizesInfo',
+              as: 'quiz',
+              cond: {
+                $eq: ['$$quiz.quizId', QuizId],
+              },
+            },
+          },
+        },
+      },
+      {
+        $sort: {
+          'quizesInfo.score': -1,
+        },
+      },
+    ]);
+
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet('Users Data');
+
+    const headerRow = worksheet.addRow([
+      '#',
+      'User Name',
+      'Student Code',
+      'Student Phone',
+      'Parent Phone',
+      'Quiz Grade',
+    ]);
+
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid', 
+      fgColor: { argb: 'FFFF00' },
+    };
+
+    // Add user data to the worksheet with alternating row colors
+    let c = 0;
+    users.forEach((user) => {
+      c++;
+      const row = worksheet.addRow([
+        c,
+        user.Username,
+        user.Code,
+        user.phone,
+        user.parentPhone,
+        user['quizesInfo'][0]['score'],
+      ]);
+      // Apply alternating row colors
+      if (c % 2 === 0) {
+        row.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'DDDDDD' },
+        };
+      }
+    });
+      
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+
+    // Set response headers for file download
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=users_data.xlsx'
+    );
+
+    // Send Excel file as response
+
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).send('Error generating Excel file');
+  }
+
+};
+    
+
 // =================================================== END Handle Quizzes ================================================ //
 
 // =================================================== Codes ================================================ //
@@ -3343,6 +3451,7 @@ module.exports = {
   searchToGetOneUserAllData,
   convertToExcelAllUserData,
   changeEnterToQuiz,
+  exportStudentsQuizDataToExcel,
   // convertToPDFAllUserData
 
   // getVideosToQuiz

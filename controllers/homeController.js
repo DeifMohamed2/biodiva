@@ -23,12 +23,12 @@ const public_login_get = (req, res) => {
 
 const public_login_post = async (req, res) => {
   try {
-    const { emailOrPhone, password } = req.body;
+    const { phone, password } = req.body;
 
     const user = await User.findOne({
-      $or: [{ phone: emailOrPhone }],
+      $or: [{ phone: phone }],
     });
-
+    console.log(user);
     if (!user) {
       return res
         .status(401)
@@ -133,9 +133,9 @@ const public_Register_post = async (req, res) => {
     // Set an error message for this condition
     errors.phone = '- رقم هاتف الطالب لا يجب ان يساوي رقم هاتف ولي الامر';
   }
-  if (!gender) {
-    errors.gender = '- يجب اختيار نوع الجنس';
-  }
+  // if (!gender) {
+  //   errors.gender = '- يجب اختيار نوع الجنس';
+  // }
   if (!gov) {
     errors.gov = '- يجب اختيار محافظة';
   }
@@ -188,7 +188,7 @@ const public_Register_post = async (req, res) => {
       Markez: Markez,
       schoolName: schoolName,
       Grade: Grade,
-      gender: gender,
+      gender: 'male',
       phone: phone,
       parentPhone: parentPhone,
       place: place,

@@ -469,7 +469,7 @@ async function updateWatchInUser(req, res, videoId, chapterID) {
 }
 
 const crypto = require('crypto');
-const { sample } = require('lodash');
+
 
 // Helper function to generate Bunny.net token
 function generateBunnyToken(tokenSecurityKey, videoId, expirationTimestamp) {
@@ -1022,14 +1022,13 @@ const quizFinish = async (req, res) => {
             }
           )
             .then(async (result) => {
-let message = 
-`اهلا وسهلا معاك اسستنت *BIODIVA* 
-حبين نبلغ حضرتك بأن ابنك ${req.userData.Username}
-دخل امتحان *${quiz.quizName}* ولكن لم يحقق النسبة المطلوبة للنجاح
-وجاب اقل من *60%* من الدرجة
-النتيجة: *${score}* من *${quiz.sampleQuestions}*
-بس يقدر يدخل الامتحان مره تانيه وهنبلغك بكل النتائج
-شكرا لتعاونكم`
+let message = `
+عشان مع *BIODIVA* تقدر تتابع مستوى ابنك في كل مرة بيمتحن فيها، حابين نبلغ حضرتك ولي أمر الطالب/ة *${req.userData.Username}* أنه/ا حصل/ت على *${score}* من *${quiz.sampleQuestions}* في امتحان *${quiz.quizName}*، لكنه/ا لم يحقق/ت النسبة المطلوبة للنجاح (*أقل من 60%*).  
+
+لكن مفيش مشكلة! يقدر يدخل الامتحان مرة تانية، وهنبلغك بكل النتائج أول بأول.  
+ودايماً احنا في ضهركم عشان نوصل لأفضل نتيجة مع دكتور *مارينا سامح* ❤️  
+`;
+
 let studentMessage =
 `
 اهلا وسهلا معاك اسستنت *BIODIVA*
@@ -1064,13 +1063,15 @@ let studentMessage =
         $inc: { totalScore: +score, totalQuestions: +quiz.sampleQuestions },
       }
     ).then(async (result) => {
-      let message = 
-`اهلا وسهلا معاك اسستنت *BIODIVA*
-حبين نبلغ حضرتك بأن ابنك ${req.userData.Username}
-انهى امتحان *${quiz.quizName}* بنجاح
-النتيجة: *${score}* من *${quiz.sampleQuestions}*
-شكرا لتعاونكم
-`;      
+let message = `
+عشان مع *BIODIVA* تقدر تتابع مستوى ابنك في كل مرة بيمتحن فيها، حابين نبلغ حضرتك ولي أمر الطالب/ة *${req.userData.Username}* أنه/ا أنهى امتحان *${quiz.quizName}* بنجاح.  
+
+النتيجة: *${score}* من *${quiz.sampleQuestions}*  
+
+ودايماً احنا في ضهركم عشان نوصل لأفضل نتيجة مع دكتور *مارينا سامح* ❤️  
+شكراً لتعاونكم.  
+`;
+   
 let studentMessage =
 `
 اهلا وسهلا معاك اسستنت *BIODIVA*

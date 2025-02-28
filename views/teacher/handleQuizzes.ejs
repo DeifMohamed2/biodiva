@@ -123,7 +123,7 @@
                                                 <td><%= counter %></td>
                                                 <td><%=student.Username %></td>
                                                 <td><%=student.Code %></td>
-                                                <td><%=student['quizesInfo'][0].solvedAt ||"لم يحل الامتحان بعد"%></td>
+                                                <td><%= student['quizesInfo'][0].solvedAt ? new Date(student['quizesInfo'][0].solvedAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : "لم يحل الامتحان بعد" %></td>
 
                                                 <% if (student['quizesInfo'][0].solvedAt) { %>
                                                     
@@ -149,6 +149,14 @@
                           
                             <% } %>
                         </div>
+                        <% if (studetsData) { %>
+                            <div class="col-md-12">
+                                <form action="/teacher/exportQuizDataToExcel" method="post">
+                                    <input type="hidden" name="quizID" value="<%= quizID %>">
+                                    <button type="submit" class="btn btn-success">Convert To Excel</button>
+                                </form>
+                            </div>
+                        <% } %>
                     </div>
             </main>
             </div>
