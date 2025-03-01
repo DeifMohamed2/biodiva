@@ -21,6 +21,7 @@ const getChaptersByGrade = async (req, res) => {
     const chapters = await Chapter.find({
       chapterGrade: grade,
     }).sort({ createdAt: -1 });
+    console.log('chapters', chapters);
     res.json(chapters); // Send the filtered chapters as JSON
   } catch (error) {
     console.error('Error fetching chapters by grade:', error);
