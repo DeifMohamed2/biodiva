@@ -36,21 +36,19 @@ const public_login_post = async (req, res) => {
           title: 'Login Page',
           Email: '',
           Password: null,
-          error: 'البريد الالكتروني او كلمه المرور خاطئه',
+          error: 'رقم الهاتف او كلمه المرور خاطئه',
         });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.Password);
 
     if (!isPasswordValid) {
-      return res
-        .status(401)
-        .render('login', {
-          title: 'Login Page',
-          Email: '',
-          Password: null,
-          error: 'البريد الالكتروني او كلمه المرور خاطئه',
-        });
+      return res.status(401).render('login', {
+        title: 'Login Page',
+        Email: '',
+        Password: null,
+        error: 'رقم الهاتف او كلمه المرور خاطئه',
+      });
     }
 
     const token = jwt.sign({ userId: user._id }, jwtSecret);
@@ -84,7 +82,6 @@ const public_Register_get = (req, res) => {
 
 const public_Register_post = async (req, res) => {
   const {
-    Password,
     Username,
     gov,
     Markez,
@@ -94,21 +91,24 @@ const public_Register_post = async (req, res) => {
     phone,
     parentPhone,
     place,
+    password,
+    password2,
     // verificationCode,
   } = req.body;
 
   // Create an object to store validation errors
   const errors = {};
-
+try {
   // // Validate verification code
   // if (req.session.verificationCode !== parseInt(verificationCode)) {
   //   errors.verificationCode = '- كود التفعيل غير صحيح';
   // }
 
-  // Check if the password is at least 7 characters long
-  if (Password.length < 7) {
-    req.body.Password = '';
-    errors.password = '- كلمة المرور يجب ان لا تقل عن 7';
+  // Check if the password is less than 6 characters
+  if (password !== password2) {
+    errors.password = '- كلمتا المرور غير متطابقتين';
+  } else if (password.length < 6) {
+    errors.password = '- كلمه المرور يجب ان تكون علي الاقل 6 احرف';
   }
   let Code = Math.floor(Math.random() * 400000 + 600000);
 
@@ -177,72 +177,71 @@ const public_Register_post = async (req, res) => {
     });
   }
 
-  const hashedPassword = await bcrypt.hash(Password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-  try {
-    const user = new User({
-      Username: Username,
-      Password: hashedPassword,
-      PasswordWithOutHash: Password,
-      gov: gov,
-      Markez: Markez,
-      schoolName: schoolName,
-      Grade: Grade,
-      gender: 'male',
-      phone: phone,
-      parentPhone: parentPhone,
-      place: place,
-      Code: Code,
-      subscribe: false,
-      quizesInfo: quizesInfo,
-      videosInfo: videosInfo,
-      totalScore: 0,
-      examsEnterd: 0,
-      totalQuestions: 0,
-      totalSubscribed: 0,
-      isTeacher: false,
-      ARorEN: 'AR',
-      chaptersPaid: [],
-      videosPaid: [],
-      examsPaid: [],
-      // Add other fields as needed
+  const user = new User({
+    Username: Username,
+    Password: hashedPassword,
+    PasswordWithOutHash: password,
+    gov: gov,
+    Markez: Markez,
+    schoolName: schoolName,
+    Grade: Grade,
+    gender: 'male',
+    phone: phone,
+    parentPhone: parentPhone,
+    place: 'none',
+    Code: Code,
+    subscribe: false,
+    quizesInfo: quizesInfo,
+    videosInfo: videosInfo,
+    totalScore: 0,
+    examsEnterd: 0,
+    totalQuestions: 0,
+    totalSubscribed: 0,
+    isTeacher: false,
+    ARorEN: 'AR',
+    chaptersPaid: [],
+    videosPaid: [],
+    examsPaid: [],
+    // Add other fields as needed
+  });
+  user
+    .save()
+    .then((result) => {
+      res
+        .status(201)
+        .redirect('Register?StudentCode=' + encodeURIComponent(Code));
+    })
+    .catch((error) => {
+      if (error.name === 'MongoServerError' && error.code === 11000) {
+        // Duplicate key error
+        errors.emailDub = 'هذا الرقم مستخدم من قبل';
+        // Handle the error as needed
+        res.render('Register', {
+          title: 'Register Page',
+          errors: errors,
+          firebaseError: '',
+          formData: req.body, // Pass the form data back to pre-fill the form
+        });
+      } else {
+        // Handle other errors
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+      }
     });
-    user
-      .save()
-      .then((result) => {
-        res
-          .status(201)
-          .redirect('Register?StudentCode=' + encodeURIComponent(Code));
-      })
-      .catch((error) => {
-        if (error.name === 'MongoServerError' && error.code === 11000) {
-          // Duplicate key error
-          errors.emailDub = 'هذا الرقم مستخدم من قبل';
-          // Handle the error as needed
-          res.render('Register', {
-            title: 'Register Page',
-            errors: errors,
-            firebaseError: '',
-            formData: req.body, // Pass the form data back to pre-fill the form
-          });
-        } else {
-          // Handle other errors
-          console.error(error);
-          res.status(500).json({ message: 'Internal Server Error' });
-        }
-      });
-  } catch (error) {
-    if (error.name === 'MongoServerError' && error.code === 11000) {
-      // Duplicate key error
-      errors.emailDub = 'This email is already in use.';
-      // Handle the error as needed
-      res.status(409).json({ message: 'User already in use' });
-    } else {
-      // Handle other errors
-      console.error(error);
-      res.status(500).json({ message: 'Internal Server Error' });
-    }
+} catch (error) {
+  if (error.name === 'MongoServerError' && error.code === 11000) {
+    // Duplicate key error
+    errors.emailDub = 'This email is already in use.';
+    // Handle the error as needed
+    res.status(409).json({ message: 'User already in use' });
+  } else {
+    // Handle other errors
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
+}
 };
 
 const send_verification_code = async (req, res) => {
