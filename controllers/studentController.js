@@ -1031,12 +1031,10 @@ let message = `
 
 let studentMessage =
 `
-اهلا وسهلا معاك اسستنت *BIODIVA*
-حبين نبلغك بأنك دخلت امتحان *${quiz.quizName}*
-وحصلت على *${score}* من *${quiz.sampleQuestions}*
-لكن لم تحقق النسبة المطلوبة للنجاح
-وهي *60%*
-حاول مره تانيه وهتوصلك النتيجة
+عشان مع *BIODIVA* تقدر تتابع مستواك في كل مرة بتمتحن فيها، حابين نبلغك بأنك حصلت على *${score}* من *${quiz.sampleQuestions}* في امتحان *${quiz.quizName}*، لكنك لم تحقق النسبة المطلوبة للنجاح (*أقل من 60%*).
+
+لكن مش مشكلة! تقدر تدخل الامتحان مرة تانية، وهنبلغك بكل النتائج أول بأول.
+شكرا لتعاونكم
 `
 
              await sendWhatsAppMessage(message,studentMessage, req.userData.parentPhone,req.userData.phone);
@@ -1074,10 +1072,10 @@ let message = `
    
 let studentMessage =
 `
-اهلا وسهلا معاك اسستنت *BIODIVA*
-حبين نبلغك بأنك انهيت امتحان *${quiz.quizName}*
-وحصلت على *${score}* من *${quiz.sampleQuestions}*
+عشان مع *BIODIVA* تقدر تتابع مستواك في كل مرة بتمتحن فيها، حابين نبلغك بأنك أنهيت امتحان *${quiz.quizName}* بنجاح.
+النتيجة: *${score}* من *${quiz.sampleQuestions}*
 شكرا لتعاونكم
+
 `
       await sendWhatsAppMessage(message,studentMessage, req.userData.parentPhone,req.userData.phone);
     
