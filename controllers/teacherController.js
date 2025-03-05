@@ -708,6 +708,95 @@ const convertToExcel = async (req, res) => {
     res.status(500).send('Error generating Excel file');
   }
 };
+const convertToExcelnotWatched = async (req, res) => {
+  try {
+    const videoId = req.params.VideoID;
+
+    // Fetch user data
+    const users = await User.aggregate([
+      {
+        $match: {
+          videosInfo: {
+            $elemMatch: {
+              _id: videoId,
+              numberOfWatches:  0 ,
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          Username: 1,
+          Code: 1,
+          phone: 1,
+          parentPhone: 1,
+        },
+      },
+      {
+        $sort: {
+          createdAt: 1,
+        },
+      },
+    ]);
+    console.log(users);
+    // Create a new Excel workbook
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet('Users Data');
+
+    const headerRow = worksheet.addRow([
+      '#',
+      'User Name',
+      'Student Code',
+      'Student Phone',
+      'Parent Phone',
+    ]);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF00' },
+    };
+
+    // Add user data to the worksheet with alternating row colors
+    let c = 0;
+    users.forEach((user) => {
+      c++;
+      const row = worksheet.addRow([
+        c,
+        user.Username,
+        user.Code,
+        user.phone,
+        user.parentPhone,
+      ]);
+      // Apply alternating row colors
+      if (c % 2 === 0) {
+        row.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'DDDDDD' },
+        };
+      }
+    });
+
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+
+    // Set response headers for file download
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=users_data.xlsx'
+    );
+
+    // Send Excel file as response
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).send('Error generating Excel file');
+  }
+};
 
 // =================================================== END Handle Videos ================================================ //
 
@@ -3443,6 +3532,7 @@ module.exports = {
   updateVideoData,
   addViewsToStudent,
   convertToExcel,
+  convertToExcelnotWatched,
   searchForUser,
   converStudentRequestsToExcel,
   getSingleUserAllData,

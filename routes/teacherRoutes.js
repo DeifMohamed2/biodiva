@@ -210,6 +210,7 @@ router.post("/updateVideo",authMiddleware, teacherController.updateVideoData);
 router.post("/addViewsToStudent/:VideoID",authMiddleware, teacherController.addViewsToStudent);
 
 router.post("/convertToExcel/:VideoID",authMiddleware, teacherController.convertToExcel);
+router.post("/convertToExcelnotWatched/:VideoID",authMiddleware, teacherController.convertToExcelnotWatched);
 
 router.post("/handleVideo/:videoCode",authMiddleware, teacherController.getSingleVideoAllData);
 
