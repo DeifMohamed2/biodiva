@@ -728,7 +728,7 @@ Dropzone.options.myDropzone = {
                 console.log(imgToUpload);
                 const stroageRef = sRef(
                     storage,
-                    "BioDiva/" + "New/" + files[0].name
+                    "mainDiva/" + "New/" + `${files[0].name}notEdited`
                 );
                 const UploadTask = uploadBytesResumable(stroageRef, imgToUpload, metaData);
                 UploadTask.on(
