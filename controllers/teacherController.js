@@ -393,7 +393,7 @@ const getSingleVideoAllData = async (req, res) => {
   try {
     VideoID = req.params.videoCode;
     let videoData;
-    let perPage = 300;
+    let perPage = 1000;
     let page = req.query.page || 1;
     console.log(page);
     Chapter.findOne(
