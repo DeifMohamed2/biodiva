@@ -666,6 +666,82 @@ const ranking_get = async (req, res) => {
 // ================== Exams  ====================== //
 
 // ================== Exams  ====================== //
+// const exams_get = async (req, res) => {
+//   try {
+//     // Get the top 3 ranked users by total score
+//     const rankedUsers = await User.find(
+//       { Grade: req.userData.Grade },
+//       { Username: 1, userPhoto: 1 }
+//     )
+//       .sort({ totalScore: -1 })
+//       .limit(3);
+
+//     // Get all exams for the user's grade
+//     const exams = await Quiz.find({ Grade: req.userData.Grade }).sort({
+//       createdAt: 1,
+//     });
+
+//     // Map through the exams and add additional information
+//     const paidExams = await Promise.all(
+//       exams.map(async (exam) => {
+//       const isPaid = req.userData.examsPaid.includes(exam._id);
+//       const quizUser = req.userData.quizesInfo.find(
+//         (quiz) => quiz.quizId.toString() === exam._id.toString()
+//       );
+
+//       // Get the top 100 user scores for the current quiz
+//       const topUsers = await User.find({
+//         Grade: req.userData.Grade,
+//         'quizesInfo.quizId': exam._id,
+//       })
+//         .select('quizesInfo.$')
+//         .sort({ 'quizesInfo.score': -1 })
+//         .limit(100);
+
+//       // Extract and sort the scores
+//       const userScores = topUsers.map((user) => ({
+//         userId: user._id,
+//         score: user.quizesInfo[0].score,
+//       }));
+
+//       // Find the rank of the current user
+//       let userRank = userScores.findIndex(
+//         (result) => result.userId.toString() === req.userData._id.toString()
+//       ) + 1;
+
+//       // If the user is not in the top 100, set rank to 100+
+//       if (userRank === 0) {
+//         userRank = '100+';
+//       }
+
+//       const quizInfo = quizUser
+//         ? {
+//           isEnterd: quizUser.isEnterd,
+//           inProgress: quizUser.inProgress,
+//           score: quizUser.score,
+//           answers: quizUser.answers,
+//           rank: userRank, // Add user rank here
+//           lengthOfUsersTakesQuiz: userScores.length, // Add total number of users in the top 100
+//         }
+//         : null;
+
+//       return { ...exam.toObject(), isPaid, quizUser: quizInfo };
+//       })
+//     );
+//     console.log(paidExams);
+//     res.render('student/exams', {
+//       title: 'Exams',
+//       path: req.path,
+//       userData: req.userData,
+//       rankedUsers,
+//       exams: paidExams,
+//     });
+//   } catch (error) {
+//     res.send(error.message);
+//   }
+// };
+
+
 const exams_get = async (req, res) => {
   try {
     // Get the top 3 ranked users by total score
@@ -682,52 +758,23 @@ const exams_get = async (req, res) => {
     });
 
     // Map through the exams and add additional information
-    const paidExams = await Promise.all(
-      exams.map(async (exam) => {
-        // console.log(exam);
-        const isPaid = req.userData.examsPaid.includes(exam._id);
-         console.log(isPaid);
-        const quizUser = req.userData.quizesInfo.find(
-          (quiz) => quiz.quizId.toString() === exam._id.toString()
-        );
-       
+    const paidExams = exams.map((exam) => {
+      const isPaid = req.userData.examsPaid.includes(exam._id);
+      const quizUser = req.userData.quizesInfo.find(
+        (quiz) => quiz.quizId.toString() === exam._id.toString()
+      );
 
-        // Get all user scores for the current quiz
-        const users = await User.find({
-          Grade: req.userData.Grade,
-          'quizesInfo.quizId': exam._id,
-        }).select('quizesInfo.$');
+      const quizInfo = quizUser
+        ? {
+            isEnterd: quizUser.isEnterd,
+            inProgress: quizUser.inProgress,
+            score: quizUser.score,
+          }
+        : null;
 
-        // Extract and sort the scores
-        const userScores = users
-          .map((user) => ({
-            userId: user._id,
-            score: user.quizesInfo[0].score,
-          }))
-          .sort((a, b) => b.score - a.score);
+      return { ...exam.toObject(), isPaid, quizUser: quizInfo };
+    });
 
-        // Find the rank of the current user
-        const userRank =
-          userScores.findIndex(
-            (result) => result.userId.toString() === req.userData._id.toString()
-          ) + 1;
-
-        const quizInfo = quizUser
-          ? {
-              isEnterd: quizUser.isEnterd,
-              inProgress: quizUser.inProgress,
-              score: quizUser.score,
-              answers: quizUser.answers,
-              rank: userRank, // Add user rank here
-              lengthOfUsersTakesQuiz: userScores.length, // Add total number of users who took the quiz
-              // Add other properties you want to include
-            }
-          : null;
-            
-        return { ...exam.toObject(), isPaid, quizUser: quizInfo };
-      })
-    );
-    console.log(paidExams);
     res.render('student/exams', {
       title: 'Exams',
       path: req.path,
@@ -739,6 +786,7 @@ const exams_get = async (req, res) => {
     res.send(error.message);
   }
 };
+
 
 const buyQuiz = async (req, res) => {
   try {
@@ -1124,7 +1172,7 @@ const review_Answers = async (req, res) => {
     const randomQuestions = userQuizInfo.randomQuestions;
 
     // Redirect if quiz or user info not found
-    if (!quiz.permissionToShow) {
+    if (!quiz.permissionToShow || !quiz.isQuizActive) {
       return res.redirect('/student/exams');
     }
 
