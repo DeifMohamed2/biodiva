@@ -231,9 +231,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (question.questionPhoto && question.questionPhoto !== '') {
       questionHTML += `
-        <div class="box-img">
-          <img src="${question.questionPhoto}" alt="Question Image">
-        </div>
+      <div class="box-img">
+        <div class="img-loader">Image Loading...  </div>
+        <img src="${question.questionPhoto}" alt="Question Image" style="display: none;" onload="this.style.display='block'; this.previousElementSibling.style.display='none';">
+      </div>
       `;
     }
 
