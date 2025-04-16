@@ -29,6 +29,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set endTime from userQuizInfo
     if (userQuizInfo && userQuizInfo.endTime) {
       endTime = new Date(userQuizInfo.endTime).getTime();
+
+
+       const currentTime = Date.now();
+       if (endTime <= currentTime) {
+         // Time already expired, finish the quiz immediately
+         document.getElementById('minutes').innerText = '00';
+         document.getElementById('seconds').innerText = '00';
+
+         // Add a small delay to ensure the DOM is fully loaded
+         setTimeout(() => {
+           finish();
+         }, 500);
+       }
     }
   } catch (error) {
     console.error('Error initializing quiz data:', error);
