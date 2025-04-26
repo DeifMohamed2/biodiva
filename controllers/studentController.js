@@ -1172,7 +1172,8 @@ const review_Answers = async (req, res) => {
     const randomQuestions = userQuizInfo.randomQuestions;
 
     // Redirect if quiz or user info not found
-    if (!quiz.permissionToShow || !quiz.isQuizActive) {
+    if (!quiz.permissionToShow || quiz.isQuizActive) {
+      console.log("heres1")
       return res.redirect('/student/exams');
     }
 
