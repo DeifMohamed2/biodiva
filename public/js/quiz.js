@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let viewedQuestions = [];
   let qNumber = null;
   let endTime = null;
-  let quizData, quizQuestions, question, userQuizInfo;
+  let quizData, quizQuestions, question, userQuizInfo, serverTimeStr;
 
   // Get DOM elements first to avoid reference errors
   const nextButton = document.getElementById('next');
@@ -15,37 +15,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize quiz data from server-rendered variables
   try {
-    quizData = JSON.parse(document.getElementById('quizData').textContent);
-    quizQuestions = JSON.parse(
+     quizData = JSON.parse(document.getElementById('quizData').textContent);
+     quizQuestions = JSON.parse(
       document.getElementById('quizQuestions').textContent
     );
-    question = JSON.parse(
+     question = JSON.parse(
       document.getElementById('currentQuestion').textContent
     );
-    userQuizInfo = JSON.parse(
+     userQuizInfo = JSON.parse(
       document.getElementById('userQuizInfo').textContent
     );
+     serverTimeStr = JSON.parse(
+      document.getElementById('serverTime').textContent
+    ); // string or ISO
 
-    // Set endTime from userQuizInfo
+    const serverTime = new Date(serverTimeStr).getTime();
+    const clientTimeAtLoad = Date.now();
+
+    // Calculate server-client offset
+    const timeOffset = serverTime - clientTimeAtLoad;
+
+
     if (userQuizInfo && userQuizInfo.endTime) {
       endTime = new Date(userQuizInfo.endTime).getTime();
 
+      // Apply offset
+      endTime += timeOffset;
 
-       const currentTime = Date.now();
-       if (endTime <= currentTime) {
-         // Time already expired, finish the quiz immediately
-         document.getElementById('minutes').innerText = '00';
-         document.getElementById('seconds').innerText = '00';
+      console.log('Adjusted End Time:', new Date(endTime));
 
-         // Add a small delay to ensure the DOM is fully loaded
-         setTimeout(() => {
-           finish();
-         }, 500);
-       }
+      if (endTime <= Date.now() + timeOffset) {
+        document.getElementById('minutes').innerText = '00';
+        document.getElementById('seconds').innerText = '00';
+
+        // Allow DOM to settle
+        setTimeout(() => {
+          finish(); // Your finish logic
+        }, 500);
+      }
     }
   } catch (error) {
     console.error('Error initializing quiz data:', error);
   }
+
 
   // Load answers and viewed questions from localStorage
   try {

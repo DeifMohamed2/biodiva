@@ -759,6 +759,7 @@ const exams_get = async (req, res) => {
 
     // Map through the exams and add additional information
     const paidExams = exams.map((exam) => {
+      console.log(exam.quizName)
       const isPaid = req.userData.examsPaid.includes(exam._id);
       const quizUser = req.userData.quizesInfo.find(
         (quiz) => quiz.quizId.toString() === exam._id.toString()
@@ -774,7 +775,7 @@ const exams_get = async (req, res) => {
 
       return { ...exam.toObject(), isPaid, quizUser: quizInfo };
     });
-
+    console.log(paidExams);
     res.render('student/exams', {
       title: 'Exams',
       path: req.path,
@@ -1014,8 +1015,9 @@ const quiz_start = async (req, res) => {
        quiz,
        userData: req.userData,
        randomQuestions: randomQuestions,
-       question: { ...question, qNumber : questionNumber },
+       question: { ...question, qNumber: questionNumber },
        userQuizInfo,
+       serverTime: new Date().toISOString(), // ✅ Add this line
      });
   } catch (error) {
     res.send(error.message);
