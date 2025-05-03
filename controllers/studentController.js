@@ -1008,7 +1008,7 @@ const quiz_start = async (req, res) => {
     question.answer2 = escapeSpecialCharacters(question.answer2);
     question.answer3 = escapeSpecialCharacters(question.answer3);
     question.answer4 = escapeSpecialCharacters(question.answer4);
-
+    userQuizInfo.endTime = new Date(userQuizInfo.endTime).toISOString();
      res.render('student/quizStart', {
        title: 'Quiz',
        path: req.path,
@@ -1174,7 +1174,7 @@ const review_Answers = async (req, res) => {
     const randomQuestions = userQuizInfo.randomQuestions;
 
     // Redirect if quiz or user info not found
-    if (!quiz.permissionToShow || quiz.isQuizActive) {
+    if (!quiz.permissionToShow ) {
       console.log("heres1")
       return res.redirect('/student/exams');
     }

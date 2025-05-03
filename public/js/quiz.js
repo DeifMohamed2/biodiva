@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let viewedQuestions = [];
   let qNumber = null;
   let endTime = null;
+  let timeOffset= null;
   let quizData, quizQuestions, question, userQuizInfo, serverTimeStr;
 
   // Get DOM elements first to avoid reference errors
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clientTimeAtLoad = Date.now();
 
     // Calculate server-client offset
-    const timeOffset = serverTime - clientTimeAtLoad;
+     timeOffset = serverTime - clientTimeAtLoad;
 
 
     if (userQuizInfo && userQuizInfo.endTime) {
@@ -41,10 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Apply offset
       endTime += timeOffset;
-
+      const now = Date.now() + timeOffset;
       console.log('Adjusted End Time:', new Date(endTime));
 
-      if (endTime <= Date.now() + timeOffset) {
+      if (endTime <= now) {
         document.getElementById('minutes').innerText = '00';
         document.getElementById('seconds').innerText = '00';
 
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const timerInterval = setInterval(updateTimerDisplay, 1000);
 
     function updateTimerDisplay() {
-      const now = Date.now();
+      const now =  Date.now() + timeOffset;
       const remainingTime = endTime - now;
 
       if (remainingTime <= 0) {
