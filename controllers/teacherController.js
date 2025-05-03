@@ -75,6 +75,77 @@ const dash_get = async (req, res) => {
   //   console.error('Error finding quiz1:', error);
   // });
 
+
+
+  // const quizId = '67f8f58e4e88c0469e9a8064';
+  // const grade = 'Grade2';
+
+  // try {
+  //   const quiz = await Quiz.findById(quizId);
+  //   if (!quiz) {
+  //     throw new Error('Quiz not found');
+  //   }
+
+  //   const students = await User.find({
+  //     Grade: grade,
+  //     quizesInfo: {
+  //       $elemMatch: {
+  //         quizId: new mongoose.Types.ObjectId(quizId),
+  //         isEnterd: true,
+  //       },
+  //     },
+  //   });
+
+  //   const changesLog = [];
+
+  //   for (const student of students) {
+  //     const quizInfo = student.quizesInfo.find(q => q.quizId.equals(quizId));
+  //     if (quizInfo && quizInfo.randomQuestions) {
+  //       const originalScore = quizInfo.score;
+
+  //       quizInfo.randomQuestions.forEach(randomQuestion => {
+  //         const matchingQuestion = quiz.Questions.find(
+  //           q => q.title === randomQuestion.title
+  //         );
+  //         if (matchingQuestion) {
+  //           randomQuestion.ranswer = matchingQuestion.ranswer;
+  //         }
+  //       });
+
+  //       // Recalculate the score based on updated randomQuestions and student's answers
+  //       let newScore = 0;
+  //       quizInfo.randomQuestions.forEach((randomQuestion, index) => {
+  //         if (quizInfo.answers && quizInfo.answers[index + 1] === +randomQuestion.ranswer) {
+  //           newScore++;
+  //         }
+  //       });
+
+  //       await User.updateOne(
+  //         { _id: student._id, 'quizesInfo.quizId': new mongoose.Types.ObjectId(quizId) },
+  //         { 
+  //           $set: { 
+  //             'quizesInfo.$.randomQuestions': quizInfo.randomQuestions,
+  //             'quizesInfo.$.score': newScore
+  //           } 
+  //         }
+  //       );
+
+  //       changesLog.push({
+  //         studentId: student._id,
+  //         studentName: student.Username,
+  //         originalScore,
+  //         newScore
+  //       });
+  //     }
+  //   }
+
+  //   console.log('Random questions updated and scores recalculated successfully for all students.');
+  //   console.log('Changes Log:', changesLog);
+  // } catch (error) {
+  //   console.error('Error updating random questions and recalculating scores:', error);
+  // }
+
+
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
 
