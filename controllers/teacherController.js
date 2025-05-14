@@ -16,16 +16,15 @@ const Excel = require('exceljs');
 const { v4: uuidv4 } = require('uuid');
 
 const dash_get = async (req, res) => {
-
-//   User.updateMany({}, {
-//     $set: {
-//       totalScore: 0 ,
-//       totalQuestions : 0,
-//     }
-// }).then((result) => {
-//     console.log(result);
-// }).catch((error) => {
-// });
+  //   User.updateMany({}, {
+  //     $set: {
+  //       totalScore: 0 ,
+  //       totalQuestions : 0,
+  //     }
+  // }).then((result) => {
+  //     console.log(result);
+  // }).catch((error) => {
+  // });
 
   //   const idsToKeep = [
   //     "65e4cfe6022bba8f9ed4a80f",
@@ -41,7 +40,6 @@ const dash_get = async (req, res) => {
   //   .catch(error => {
   //       console.error("Error deleting users:", error);
   //   });
-
 
   // const users = await User.updateMany
   // ({}, {
@@ -75,10 +73,8 @@ const dash_get = async (req, res) => {
   //   console.error('Error finding quiz1:', error);
   // });
 
-
-
-  // const quizId = '67f8f58e4e88c0469e9a8064';
-  // const grade = 'Grade2';
+  // const quizId = '67f429f64e88c0469e99d5f3';
+  // const grade = 'Grade1';
 
   // try {
   //   const quiz = await Quiz.findById(quizId);
@@ -122,11 +118,11 @@ const dash_get = async (req, res) => {
 
   //       await User.updateOne(
   //         { _id: student._id, 'quizesInfo.quizId': new mongoose.Types.ObjectId(quizId) },
-  //         { 
-  //           $set: { 
+  //         {
+  //           $set: {
   //             'quizesInfo.$.randomQuestions': quizInfo.randomQuestions,
   //             'quizesInfo.$.score': newScore
-  //           } 
+  //           }
   //         }
   //       );
 
@@ -144,7 +140,6 @@ const dash_get = async (req, res) => {
   // } catch (error) {
   //   console.error('Error updating random questions and recalculating scores:', error);
   // }
-
 
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
