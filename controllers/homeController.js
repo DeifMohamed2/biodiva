@@ -33,11 +33,13 @@ const getChaptersByGrade = async (req, res) => {
 // }
 
 const public_login_get = (req, res) => {
+  const StudentCode = req.query.StudentCode;
   res.render('login', {
     title: 'Login Page',
     Email: '',
     Password: '',
     error: '',
+    StudentCode: StudentCode || '',
   });
 };
 
@@ -187,17 +189,17 @@ const public_Register_post = async (req, res) => {
   let videosInfo = [];
 
   if (Grade === 'Grade1') {
-    await User.findOne({ Grade: Grade, Code: 792605 }).then((result) => {
+    await User.findOne({ Code: 755213 }).then((result) => {
       quizesInfo = result.quizesInfo;
       videosInfo = result.videosInfo;
     });
   } else if (Grade === 'Grade2') {
-    await User.findOne({ Grade: Grade, Code: 844488 }).then((result) => {
+    await User.findOne({ Code: 982142 }).then((result) => {
       quizesInfo = result.quizesInfo;
       videosInfo = result.videosInfo;
     });
   } else if (Grade === 'Grade3') {
-    await User.findOne({ Grade: Grade, Code: 716589 }).then((result) => {
+    await User.findOne({ Code: 865795 }).then((result) => {
       quizesInfo = result.quizesInfo;
       videosInfo = result.videosInfo;
     });
@@ -400,6 +402,65 @@ const reset_password_post = async (req, res) => {
   }
 };
 
+// ================== Authentication Middleware ====================== //
+
+const authenticateUser = async (req, res, next) => {
+  try {
+    const token = req.cookies.token;
+    
+    if (!token) {
+      return res.redirect('/login');
+    }
+
+    const decoded = jwt.verify(token, jwtSecret);
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      return res.redirect('/login');
+    }
+    if(!user.subscribe){
+      return res.redirect('/login?StudentCode=' + user.Code);
+    }
+
+  
+    req.userData = user;
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.redirect('/login');
+  }
+};
+
+const authenticateTeacher = async (req, res, next) => {
+  try {
+    console.log('authenticateTeacher');
+    const token = req.cookies.token;
+    
+    if (!token) {
+      return res.redirect('/login');
+    }
+
+    const decoded = jwt.verify(token, jwtSecret);
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      return res.redirect('/login');
+    }
+
+    if (!user.isTeacher) {
+      res.clearCookie('token');
+      return res.redirect('/login');
+    }
+
+    req.userData = user;
+    req.teacherData = user; // Additional reference for teacher
+    next();
+  } catch (error) {
+    console.error('Teacher authentication error:', error);
+    return res.redirect('/login');
+  }
+};
+
 module.exports = {
   home_page,
   getChaptersByGrade,
@@ -412,4 +473,6 @@ module.exports = {
   forgetPassword_post,
   reset_password_get,
   reset_password_post,
+  authenticateUser,
+  authenticateTeacher,
 };

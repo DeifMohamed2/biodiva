@@ -38,19 +38,119 @@
     <title>Elshahd</title>
 
     <style>
+      .Sign-Left {
+        max-width: 600px !important;
+      }
       .inputs-form{
-        width: 50% !important;
-
+        width: 80% !important;
+        margin: 0 auto;
+        min-width: 300px;
+      }
+      .input-container {
+        align-items: center;
+      }
+      @media (max-width: 768px) {
+        .inputs-form {
+          width: 90% !important;
+        }
       }
       @media (max-width: 576px) {
-  .inputs-form
-  {
-    width: 100% !important;
-  }
-}
+        .inputs-form {
+          width: 100% !important;
+        }
+      }
+
+      /* Toast Styles */
+      .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+      }
+
+      .toast {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        color: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: 'Noto Kufi Arabic', sans-serif;
+        direction: rtl;
+      }
+
+      .toast.show {
+        transform: translateX(0);
+      }
+
+      .toast-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .toast-content {
+        flex: 1;
+      }
+
+      .toast-title {
+        font-weight: bold;
+        margin-bottom: 4px;
+        font-size: 16px;
+      }
+
+      .toast-message {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .toast-close {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background-color 0.2s;
+      }
+
+      .toast-close:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      @media (max-width: 576px) {
+        .toast-container {
+          top: 10px;
+          right: 10px;
+          left: 10px;
+          max-width: none;
+        }
+        
+        .toast {
+          transform: translateY(-100%);
+        }
+        
+        .toast.show {
+          transform: translateY(0);
+        }
+      }
     </style>
   </head>
   <body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
     <!-- Start Header -->
     <header>
           <%- include("./partials/head.ejs") %>
@@ -119,5 +219,71 @@
 
     <script src="assetsLanding/js/script.js" defer></script>
     <script src="assetsLanding/js/sign-in-up.js" defer></script>
+    
+    <script>
+      // Toast functionality
+      function showToast(title, message, type = 'error') {
+        const toastContainer = document.getElementById('toastContainer');
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        
+        const icon = type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+        
+        toast.innerHTML = `
+          <i class="fa-solid ${icon} toast-icon"></i>
+          <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+          </div>
+          <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Show the toast
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 100);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.classList.remove('show');
+            setTimeout(() => {
+              if (toast.parentElement) {
+                toast.remove();
+              }
+            }, 300);
+          }
+        }, 5000);
+      }
+      
+      // Check for StudentCode in URL and show toast
+      function checkStudentCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentCode = urlParams.get('StudentCode');
+        
+        if (studentCode) {
+          showToast(
+            ' الحساب غير مفعل ',
+            ` يرجى التواصل مع الدعم لتفعيل الحساب ${studentCode}`,
+            'error'
+          );
+          
+          // Remove StudentCode from URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete('StudentCode');
+          history.replaceState(null, null, url);
+        }
+      }
+      
+      // Check for StudentCode on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        checkStudentCode();
+      });
+    </script>
   </body>
 </html>

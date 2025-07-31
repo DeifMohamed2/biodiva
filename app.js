@@ -23,7 +23,17 @@ const teacherRoutes = require('./routes/teacherRoutes')
 const studentRoutes = require('./routes/studentRoutes');
 // express app
 const app = express();
+
+// Configure middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configure file upload middleware
+app.use(fileUpload({
+  useTempFiles: false,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
+  debug: false
+}));
 
 const socketio = require('socket.io');
 const path = require('path');
@@ -31,7 +41,7 @@ const path = require('path');
 
 // CONECT to mongodb
 let io
-const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/mrWalid?retryWrites=true&w=majority&appName=Cluster0'
+const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/mrWalid?retryWrites=true&w=majority&appName=Cluster0';
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then((result) => {
         let server = app.listen(9031);
@@ -41,7 +51,7 @@ mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
             console.log(`New connection: ${socket.id}`);
         })
 
-        console.log("Dadad")
+        console.log("Server is running on port 9031")
     }).catch((err) => {
         console.log(err)
     })
@@ -59,9 +69,7 @@ app.use((req, res, next) => {
 
 app.use(morgan('dev'));
 app.use(express.static('public'))
-app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
-app.use(fileUpload());
 // let uri = ""; // Declare the 'uri' variable
 
 app.use(session({
