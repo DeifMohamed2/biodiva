@@ -1839,6 +1839,175 @@ const codes_create_post = async (req, res) => {
   }
 };
 
+const codes_upload_excel = async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    const { codeType, grade, isGeneral, chapterId, contentId } = req.body;
+    
+    // Check if file was uploaded
+    if (!req.files || !req.files.excelFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى رفع ملف Excel'
+      });
+    }
+
+    const excelFile = req.files.excelFile;
+    
+    // Validate file type
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    
+    if (!validTypes.includes(excelFile.mimetype) && !excelFile.name.match(/\.(xlsx|xls)$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى رفع ملف Excel صحيح (.xlsx أو .xls)'
+      });
+    }
+
+    // Validation
+    if (!codeType || !grade) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى ملء جميع الحقول المطلوبة'
+      });
+    }
+
+    // Read Excel file
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(excelFile.data);
+    
+    const worksheet = workbook.getWorksheet(1); // Get first worksheet
+    if (!worksheet) {
+      return res.status(400).json({
+        success: false,
+        message: 'لم يتم العثور على بيانات في ملف Excel'
+      });
+    }
+
+    // Find the code column
+    let codeColumnIndex = -1;
+    const headerRow = worksheet.getRow(1);
+    
+    // Look for code column headers (Arabic or English)
+    const possibleHeaders = ['الكود', 'Code', 'كود', 'code', 'الكود', 'الرمز'];
+    
+    headerRow.eachCell((cell, colNumber) => {
+      const cellValue = cell.value ? cell.value.toString().trim() : '';
+      if (possibleHeaders.includes(cellValue)) {
+        codeColumnIndex = colNumber;
+      }
+    });
+
+    if (codeColumnIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'لم يتم العثور على عمود "الكود" أو "Code" في ملف Excel'
+      });
+    }
+
+    // Extract codes from Excel
+    const extractedCodes = [];
+    const usedCodes = new Set();
+    
+    // Get existing codes from database to avoid duplicates
+    const existingCodes = await Code.find({}, 'Code');
+    existingCodes.forEach(code => usedCodes.add(code.Code));
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip header row
+      
+      const codeCell = row.getCell(codeColumnIndex);
+      const codeValue = codeCell.value;
+      
+      if (codeValue) {
+        const code = codeValue.toString().trim();
+        
+        // Validate code format (should be numeric and 12 digits)
+        if (code && /^\d{12}$/.test(code)) {
+          // Check if code already exists
+          if (!usedCodes.has(code)) {
+            usedCodes.add(code);
+            extractedCodes.push(code);
+          }
+        }
+      }
+    });
+
+    if (extractedCodes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'لم يتم العثور على أكواد صحيحة في ملف Excel'
+      });
+    }
+
+    // Determine content details based on code type
+    let contentName = 'عام';
+    let chapterName = '';
+
+    if (!isGeneral || isGeneral === 'false') {
+      if (chapterId) {
+        const chapter = await Chapter.findById(chapterId);
+        if (chapter) {
+          chapterName = chapter.chapterName;
+        }
+      }
+
+      if (contentId) {
+        if (codeType === 'Video') {
+          const video = await Video.findById(contentId);
+          if (video) {
+            contentName = video.videoTitle || video.lectureName;
+          }
+        } else if (codeType === 'Quiz') {
+          const quiz = await Quiz.findById(contentId);
+          if (quiz) {
+            contentName = quiz.quizName;
+          }
+        } else if (codeType === 'PDF') {
+          const pdf = await PDFs.findById(contentId);
+          if (pdf) {
+            contentName = pdf.pdfName;
+          }
+        }
+      }
+    }
+
+    // Create code objects
+    const codesToSave = extractedCodes.map(code => ({
+      Code: code,
+      codeType: codeType,
+      codeGrade: grade,
+      isGeneral: isGeneral === 'true',
+      isAllGrades: grade === 'AllGrades',
+      chapterId: chapterId || null,
+      contentId: contentId || null,
+      contentName: contentName,
+      chapterName: chapterName,
+      usedBy: null,
+      createdAt: new Date()
+    }));
+
+    // Save codes to database
+    const savedCodes = await Code.insertMany(codesToSave);
+
+    return res.json({
+      success: true,
+      message: `تم رفع ${savedCodes.length} كود بنجاح`,
+      codes: savedCodes
+    });
+
+  } catch (error) {
+    console.error('Excel upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء رفع ملف Excel'
+    });
+  }
+};
+
 const codes_manage_get = async (req, res) => {
   try {
     const { type, status, grade, search, page = 1 } = req.query;
@@ -3112,6 +3281,7 @@ module.exports = {
   codes_get,
   codes_create_get,
   codes_create_post,
+  codes_upload_excel,
   codes_manage_get,
   codes_search,
   codes_export,

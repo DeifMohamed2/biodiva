@@ -239,7 +239,7 @@ const userSchema = new Schema({
     subscribe: {
         type: Boolean,
         required: true,
-        default: false
+        default: true
     },
     ARorEN: {
         type: String,

@@ -82,6 +82,7 @@ router.get("/students/export", authenticateTeacherRoute, teacherController.stude
 router.get("/codes", authenticateTeacherRoute, teacherController.codes_get);
 router.get("/codes/create", authenticateTeacherRoute, teacherController.codes_create_get);
 router.post("/codes/create", authenticateTeacherRoute, teacherController.codes_create_post);
+router.post("/codes/upload-excel", authenticateTeacherRoute, teacherController.codes_upload_excel);
 router.get("/codes/manage", authenticateTeacherRoute, teacherController.codes_manage_get);
 router.get("/codes/search", authenticateTeacherRoute, teacherController.codes_search);
 router.get("/codes/export", authenticateTeacherRoute, teacherController.codes_export);
