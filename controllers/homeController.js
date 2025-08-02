@@ -418,9 +418,9 @@ const authenticateUser = async (req, res, next) => {
     if (!user) {
       return res.redirect('/login');
     }
-    if(!user.subscribe){
-      return res.redirect('/login?StudentCode=' + user.Code);
-    }
+    // if(!user.subscribe){
+    //   return res.redirect('/login?StudentCode=' + user.Code);
+    // }
 
   
     req.userData = user;
