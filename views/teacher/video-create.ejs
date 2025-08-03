@@ -320,69 +320,13 @@
         return false;
       }
       
-      // Process the video URL to extract a clean URL if it contains HTML
-      const videoURLInput = document.getElementById('videoURL');
-      const videoURL = videoURLInput.value;
-      
-      if (videoURL.includes('<')) {
-        // This might be an embed code, try to extract the URL
-        const cleanURL = extractURLFromEmbed(videoURL);
-        if (cleanURL) {
-          console.log('Extracted clean URL from embed code:', cleanURL);
-          videoURLInput.value = cleanURL;
-        } else {
-          console.log('Could not extract URL from embed code');
-        }
-      }
+      // No processing of videoURL - send it as is
       
       console.log('Form is valid, submitting...');
       showTemporaryAlert('info', 'جاري إنشاء الفيديو...');
       return true;
     });
-    
-    // Function to extract URL from embed code
-    function extractURLFromEmbed(embedCode) {
-      // Try to extract Wistia video ID
-      let match = embedCode.match(/wistia_async_([a-zA-Z0-9]+)/);
-      if (match && match[1]) {
-        return `https://fast.wistia.net/embed/iframe/${match[1]}`;
-      }
-      
-      // Try to extract Wistia video ID from class
-      match = embedCode.match(/wistia_embed\s+wistia_async_([a-zA-Z0-9]+)/);
-      if (match && match[1]) {
-        return `https://fast.wistia.net/embed/iframe/${match[1]}`;
-      }
-      
-      // Check for "undefined" in Wistia URLs and handle as a special case
-      if (embedCode.includes('wistia') && embedCode.includes('undefined')) {
-        // This is likely a Wistia embed with an undefined video ID
-        // Return a default Wistia URL that can be updated later
-        return 'https://fast.wistia.net/embed/iframe/placeholder';
-      }
-      
-      // Try to extract YouTube video ID
-      match = embedCode.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        return `https://www.youtube.com/embed/${match[1]}`;
-      }
-      
-      // Try to extract Vimeo video ID
-      match = embedCode.match(/player\.vimeo\.com\/video\/([0-9]+)/);
-      if (match && match[1]) {
-        return `https://player.vimeo.com/video/${match[1]}`;
-      }
-      
-      // Try to extract any URL
-      match = embedCode.match(/https?:\/\/[^\s"'<>]+/);
-      if (match) {
-        return match[0];
-      }
-      
-      // If no URL found, return a placeholder
-      return 'https://placeholder.com/video';
-    }
-    
+ 
     // Remove the separate submit button click handler and just use the form submit handler
     document.getElementById('submitButton').addEventListener('click', function() {
       console.log('Submit button clicked directly');
@@ -478,12 +422,9 @@
     document.getElementById('previewVideoBtn').addEventListener('click', function() {
       const videoURL = document.getElementById('videoURL').value;
       if (videoURL) {
-        let urlToUse = videoURL;
-        
-
-        
+        // Use the video URL as is without any processing
         document.getElementById('videoPreview').style.display = 'block';
-        document.getElementById('videoFrame').src = urlToUse;
+        document.getElementById('videoFrame').src = videoURL;
       } else {
         showTemporaryAlert('danger', 'يرجى إدخال رابط الفيديو أولاً');
       }
