@@ -19,6 +19,13 @@ const { v4: uuidv4 } = require('uuid');
 // ==================  Dashboard  ====================== //
 
 const dash_get = async (req, res) => {
+  // Update all users' video allowed attempts to 10
+  const updateResult = await User.updateMany(
+    { isTeacher: false }, // Target only student accounts
+    { $set: { "videosInfo.$[].videoAllowedAttemps": 10 } }
+  );
+  
+  console.log(`Updated video attempts for ${updateResult.modifiedCount} users`);
   try {
     // Use Promise.all for parallel execution and optimize queries
     const [
@@ -837,12 +844,16 @@ const video_edit_post = async (req, res) => {
     
     // Update the video based on its type
     let videoArray;
+    let arrayFieldName;
     if (videoType === 'lecture') {
       videoArray = chapter.chapterLectures;
+      arrayFieldName = 'chapterLectures';
     } else if (videoType === 'summary') {
       videoArray = chapter.chapterSummaries;
+      arrayFieldName = 'chapterSummaries';
     } else if (videoType === 'solving') {
       videoArray = chapter.chapterSolvings;
+      arrayFieldName = 'chapterSolvings';
     } else {
       return res.redirect(`/teacher/videos/${videoId}/edit?error=invalid_video_type`);
     }
@@ -869,9 +880,25 @@ const video_edit_post = async (req, res) => {
     videoArray[videoIndex].videoDescription = videoDescription || '';
     videoArray[videoIndex].updatedAt = new Date();
     
+    // Explicitly mark the modified array so Mongoose persists the changes
+    if (arrayFieldName) {
+      chapter.markModified(arrayFieldName);
+    }
+    
     // Save the chapter with updated video
     chapter.updatedAt = new Date();
     await chapter.save();
+    
+    // Propagate the new allowed attempts to all students who have this video in their videosInfo
+    const newAllowedAttempts = parseInt(videoAllowedAttemps) || 10;
+    try {
+      await User.updateMany(
+        { isTeacher: false, 'videosInfo._id': new mongoose.Types.ObjectId(videoId) },
+        { $set: { 'videosInfo.$.videoAllowedAttemps': newAllowedAttempts } }
+      );
+    } catch (propagationError) {
+      console.error('Failed to propagate new allowed attempts to users:', propagationError);
+    }
     
     res.redirect(`/teacher/videos/${videoId}?success=video_updated`);
   } catch (error) {
