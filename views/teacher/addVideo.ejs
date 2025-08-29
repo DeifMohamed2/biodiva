@@ -589,7 +589,7 @@ const getQueryStringParameter = (name) => {
                 console.log(imgToUpload);
                 const stroageRef = sRef(
                     storage,
-                    "BioDiva/" + "New/" + cfiles[0].name
+                    "Biodiva/" + "New/" + cfiles[0].name
                 );
                 const UploadTask = uploadBytesResumable(stroageRef, imgToUpload, metaData);
                 UploadTask.on(
@@ -660,7 +660,7 @@ const getQueryStringParameter = (name) => {
                 console.log(imgToUpload);
                 const stroageRef = sRef(
                     storage,
-                    "BioDiva/" + "New/" + files[0].name
+                    "Biodiva/" + "New/" + files[0].name
                 );
                 const UploadTask = uploadBytesResumable(stroageRef, imgToUpload, metaData);
                 UploadTask.on(
@@ -721,7 +721,7 @@ const getQueryStringParameter = (name) => {
                 console.log(PDFToUpload);
                 const stroageRef = sRef(
                     storage,
-                    "BioDiva/" + "PDFs/" + filesPDF[0].name
+                    "Biodiva/" + "PDFs/" + filesPDF[0].name
                 );
                 const UploadTask = uploadBytesResumable(stroageRef, PDFToUpload, metaData);
                 UploadTask.on(

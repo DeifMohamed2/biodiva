@@ -375,10 +375,10 @@
       };
       const storageConfig = {
           apiKey: "AIzaSyC0VUgV2B_ClqKImLQAafbklwKZRabod0A",
-          authDomain: "biodiva-fa1b0.firebaseapp.com",
-          databaseURL: "https://biodiva-fa1b0-default-rtdb.firebaseio.com",
-          projectId: "biodiva-fa1b0",
-          storageBucket: "biodiva-fa1b0.appspot.com",
+          authDomain: "Biodiva-fa1b0.firebaseapp.com",
+          databaseURL: "https://Biodiva-fa1b0-default-rtdb.firebaseio.com",
+          projectId: "Biodiva-fa1b0",
+          storageBucket: "Biodiva-fa1b0.appspot.com",
           messagingSenderId: "262124821606",
           appId: "1:262124821606:web:09311e0be3fc9b7634a1a7"
       };
@@ -436,7 +436,7 @@ const metaData = {
       contentType: ImgToUpload.type
 }
   const storage = getStorage(storageApp);
-  const stroageRef = sRef(storage, "BioDiva/"+ "profilePhotos/"+  files[0].name);
+  const stroageRef = sRef(storage, "Biodiva/"+ "profilePhotos/"+  files[0].name);
   const UploadTask = uploadBytesResumable(stroageRef, ImgToUpload, metaData);
   UploadTask.on('state-changed', (snapshot) => {
       var progess = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;

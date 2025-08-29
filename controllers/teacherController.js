@@ -1633,18 +1633,21 @@ const codes_get = async (req, res) => {
     const { search, type, status, grade, page = 1 } = req.query;
     const perPage = 20;
     
+    console.log('Search parameters:', { search, type, status, grade, page });
+    
     // Build query
     let query = {};
     
     if (search) {
-      // Check if search is a number (for usedBy field)
+      // Search in both Code field and usedBy field
+      query.$or = [
+        { Code: { $regex: search, $options: 'i' } }
+      ];
+      
+      // If search is a number, also search in usedBy field
       const searchNumber = parseInt(search);
       if (!isNaN(searchNumber)) {
-        // If search is a number, search in usedBy field
-        query.usedBy = searchNumber;
-      } else {
-        // If search is not a number, search in Code field only
-        query.Code = { $regex: search, $options: 'i' };
+        query.$or.push({ usedBy: searchNumber });
       }
     }
     
@@ -1685,11 +1688,18 @@ const codes_get = async (req, res) => {
     const quizzes = await Quiz.find({ isQuizActive: true }).select('quizName Grade');
     
     // Get codes with pagination
+    console.log('Final query:', JSON.stringify(query, null, 2));
+    
+    // First, let's check if there are any codes at all
+    const totalCodesInDB = await Code.countDocuments({});
+    console.log('Total codes in database:', totalCodesInDB);
+    
     const codes = await Code.find(query)
       .sort({ createdAt: -1 })
       .limit(perPage)
       .skip((page - 1) * perPage);
     
+    console.log('Found codes:', codes.length);
     const totalCodes = await Code.countDocuments(query);
     
     const stats = codeStats[0] || { 
@@ -2057,14 +2067,15 @@ const codes_manage_get = async (req, res) => {
     }
     
     if (search) {
-      // Check if search is a number (for usedBy field)
+      // Search in both Code field and usedBy field
+      query.$or = [
+        { Code: { $regex: search, $options: 'i' } }
+      ];
+      
+      // If search is a number, also search in usedBy field
       const searchNumber = parseInt(search);
       if (!isNaN(searchNumber)) {
-        // If search is a number, search in usedBy field
-        query.usedBy = searchNumber;
-      } else {
-        // If search is not a number, search in Code field only
-        query.Code = { $regex: search, $options: 'i' };
+        query.$or.push({ usedBy: searchNumber });
       }
     }
     
@@ -2098,14 +2109,15 @@ const codes_search = async (req, res) => {
     let query = {};
     
     if (search) {
-      // Check if search is a number (for usedBy field)
+      // Search in both Code field and usedBy field
+      query.$or = [
+        { Code: { $regex: search, $options: 'i' } }
+      ];
+      
+      // If search is a number, also search in usedBy field
       const searchNumber = parseInt(search);
       if (!isNaN(searchNumber)) {
-        // If search is a number, search in usedBy field
-        query.usedBy = searchNumber;
-      } else {
-        // If search is not a number, search in Code field only
-        query.Code = { $regex: search, $options: 'i' };
+        query.$or.push({ usedBy: searchNumber });
       }
     }
     
@@ -2141,14 +2153,15 @@ const codes_export = async (req, res) => {
     let query = {};
     
     if (search) {
-      // Check if search is a number (for usedBy field)
+      // Search in both Code field and usedBy field
+      query.$or = [
+        { Code: { $regex: search, $options: 'i' } }
+      ];
+      
+      // If search is a number, also search in usedBy field
       const searchNumber = parseInt(search);
       if (!isNaN(searchNumber)) {
-        // If search is a number, search in usedBy field
-        query.usedBy = searchNumber;
-      } else {
-        // If search is not a number, search in Code field only
-        query.Code = { $regex: search, $options: 'i' };
+        query.$or.push({ usedBy: searchNumber });
       }
     }
     

@@ -189,17 +189,17 @@ const public_Register_post = async (req, res) => {
   let videosInfo = [];
 
   if (Grade === 'Grade1') {
-    await User.findOne({ Code: 755213 }).then((result) => {
+    await User.findOne({ Code: 793659 }).then((result) => {
       quizesInfo = result.quizesInfo;
       videosInfo = result.videosInfo;
     });
   } else if (Grade === 'Grade2') {
-    await User.findOne({ Code: 982142 }).then((result) => {
+    await User.findOne({ Code: 986544 }).then((result) => {
       quizesInfo = result.quizesInfo;
       videosInfo = result.videosInfo;
     });
   } else if (Grade === 'Grade3') {
-    await User.findOne({ Code: 865795 }).then((result) => {
+    await User.findOne({ Code: 891053 }).then((result) => {
       quizesInfo = result.quizesInfo;
       videosInfo = result.videosInfo;
     });

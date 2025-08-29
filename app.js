@@ -41,17 +41,17 @@ const path = require('path');
 
 // CONECT to mongodb
 let io
-const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/mrWalid?retryWrites=true&w=majority&appName=Cluster0';
+const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/biodiva2025?retryWrites=true&w=majority&appName=Cluster0';
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then((result) => {
-        let server = app.listen(9031);
+        let server = app.listen(8000);
 
         io = socketio(server)
         io.on('connection', (socket) => {
             console.log(`New connection: ${socket.id}`);
         })
 
-        console.log("Server is running on port 9031")
+        console.log("Server is running on port 8000")
     }).catch((err) => {
         console.log(err)
     })

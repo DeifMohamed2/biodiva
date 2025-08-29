@@ -460,7 +460,7 @@
         
         <!-- Filters -->
         <div class="filters-section">
-          <form method="GET" action="/teacher/codes">
+          <form method="GET" action="/teacher/codes" id="searchForm">
             <div class="filters-grid">
               <div class="filter-group">
                 <label for="search">البحث</label>
@@ -646,6 +646,22 @@
   </div>
 
     <script>
+    // Form debugging
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      const formData = new FormData(this);
+      const searchValue = formData.get('search');
+      const typeValue = formData.get('type');
+      const statusValue = formData.get('status');
+      const gradeValue = formData.get('grade');
+      
+      console.log('Form submitted with values:', {
+        search: searchValue,
+        type: typeValue,
+        status: statusValue,
+        grade: gradeValue
+      });
+    });
+    
     // Copy code function
     function copyCode(code) {
       navigator.clipboard.writeText(code).then(function() {
