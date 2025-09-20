@@ -27,6 +27,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Dynamic video loading based on grade selection
+    const gradeSelect = document.getElementById('Grade');
+    const videoWillbeOpenSelect = document.getElementById('videoWillbeOpen');
+    
+    if (gradeSelect && videoWillbeOpenSelect) {
+        gradeSelect.addEventListener('change', function() {
+            const selectedGrade = this.value;
+            if (selectedGrade) {
+                loadQuizVideosByGrade(selectedGrade);
+            } else {
+                // Reset video dropdown
+                videoWillbeOpenSelect.innerHTML = '<option value="">لا يوجد - اختر الصف أولاً</option>';
+            }
+        });
+    }
+    
     // Questions Management
     const questions = [];
     let currentEditingIndex = -1;
@@ -423,5 +439,39 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadQuestionImageBtn.disabled = false;
         uploadQuestionImageBtn.classList.remove('upload-btn-uploading', 'upload-btn-success', 'upload-btn-error');
         uploadQuestionImageBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> تحميل صورة';
+    }
+    
+    // Function to load videos that require quiz for a specific grade
+    function loadQuizVideosByGrade(grade) {
+        if (!videoWillbeOpenSelect) return;
+        
+        // Show loading state
+        videoWillbeOpenSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+        
+        // Convert grade format (Grade1 -> 1, Grade2 -> 2, Grade3 -> 3)
+        const gradeNumber = grade.replace('Grade', '');
+        
+        // Fetch videos that require quiz for this grade
+        fetch(`/teacher/api/videos/grade/${gradeNumber}?requireQuiz=true`)
+            .then(response => response.json())
+        .then(data => {
+            console.log('Quiz API Response:', data);
+            if (data.success && data.videos && data.videos.length > 0) {
+                videoWillbeOpenSelect.innerHTML = '<option value="">لا يوجد</option>';
+                data.videos.forEach(video => {
+                    const option = document.createElement('option');
+                    option.value = video._id;
+                    option.textContent = `${video.title} (${video.chapterName}) - ${video.type === 'lecture' ? 'محاضرة' : video.type === 'summary' ? 'ملخص' : 'حل تمارين'}`;
+                    videoWillbeOpenSelect.appendChild(option);
+                });
+            } else {
+                console.log('No quiz videos found or API error:', data);
+                videoWillbeOpenSelect.innerHTML = '<option value="">لا توجد فيديوهات تتطلب اختبار في هذا الصف</option>';
+            }
+        })
+            .catch(error => {
+                console.error('Error loading quiz videos:', error);
+                videoWillbeOpenSelect.innerHTML = '<option value="">حدث خطأ في التحميل</option>';
+            });
     }
 }); 

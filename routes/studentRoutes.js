@@ -76,6 +76,7 @@ router.post("/settings", authenticateUser, studentController.settings_post);
 
 // ================== Upload Routes ====================== //
 router.post("/uploadHW", authenticateUser, studentController.uploadHW);
+router.post("/homework/submit", authenticateUser, studentController.submitHomework);
 
 // ================== Logout Route ====================== //
 router.get("/logOut", authenticateUser, studentController.logOut);

@@ -294,12 +294,21 @@
             <div class="tabs">
               <div class="tab active" data-tab="watched">الطلاب الذين شاهدوا</div>
               <div class="tab" data-tab="unwatched">الطلاب الذين لم يشاهدوا</div>
+              <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
+                <div class="tab" data-tab="homework">الواجبات المسلمة</div>
+              <% } %>
             </div>
           </div>
           
           <!-- Tab Content -->
           <div class="tab-content active" id="watched-tab">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="watchedSearch" placeholder="البحث بالكود أو رقم الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+                <button id="clearWatchedSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
               <button type="button" class="btn btn-outline" id="exportWatchedBtn">
                 <i class="fas fa-file-excel"></i>
                 تصدير Excel
@@ -366,7 +375,13 @@
           </div>
           
           <div class="tab-content" id="unwatched-tab">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="unwatchedSearch" placeholder="البحث بالكود أو رقم الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+                <button id="clearUnwatchedSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
               <button type="button" class="btn btn-outline" id="exportUnwatchedBtn">
                 <i class="fas fa-file-excel"></i>
                 تصدير Excel
@@ -435,6 +450,139 @@
               </div>
             <% } %>
           </div>
+          
+          <!-- Homework Submissions Tab -->
+          <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
+            <div class="tab-content" id="homework-tab">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="text" id="homeworkSearch" placeholder="البحث بالاسم أو الكود..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+                  <button id="clearHomeworkSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <button type="button" class="btn btn-outline" id="exportHomeworkBtn">
+                  <i class="fas fa-file-excel"></i>
+                  تصدير Excel
+                </button>
+              </div>
+              
+              <% if (homeworkSubmissions && homeworkSubmissions.length > 0) { %>
+                <div class="table-container">
+                  <table class="teacher-table" id="homework-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 15%;">اسم الطالب</th>
+                        <th style="width: 8%;">الكود</th>
+                        <th style="width: 8%;">الصف</th>
+                        <th style="width: 10%;">تاريخ التسليم</th>
+                        <th style="width: 8%;">الحالة</th>
+                        <th style="width: 10%;">الملفات</th>
+                        <th style="width: 15%;">ملاحظات الطالب</th>
+                        <th style="width: 15%;">ملاحظات المراجعة</th>
+                        <th style="width: 15%;">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% homeworkSubmissions.forEach((submission, index) => { %>
+                        <tr>
+                          <td><%= index + 1 %></td>
+                          <td><%= submission.studentName %></td>
+                          <td><%= submission.studentCode %></td>
+                          <td><%= submission.studentGrade || 'غير محدد' %></td>
+                          <td><%= new Date(submission.submittedAt).toLocaleString('ar-EG') %></td>
+                          <td>
+                            <span class="status-badge <%= submission.status === 'approved' ? 'active' : submission.status === 'pending' ? 'pending' : 'rejected' %>">
+                              <%= submission.status === 'approved' ? 'مقبول' : submission.status === 'pending' ? 'في الانتظار' : 'مرفوض' %>
+                            </span>
+                          </td>
+                          <td>
+                            <% if (submission.files && submission.files.length > 0) { %>
+                              <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                <% submission.files.forEach(function(file) { %>
+                                  <a href="<%= file.url %>" target="_blank" style="color: var(--primary-color); font-size: 0.75rem;">
+                                    <i class="fas fa-file"></i> <%= file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name %>
+                                  </a>
+                                <% }); %>
+                              </div>
+                            <% } else { %>
+                              <span style="color: var(--text-secondary);">لا توجد ملفات</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <% if (submission.notes) { %>
+                              <span style="font-size: 0.75rem;" title="<%= submission.notes %>">
+                                <%= submission.notes.length > 30 ? submission.notes.substring(0, 30) + '...' : submission.notes %>
+                              </span>
+                            <% } else { %>
+                              <span style="color: var(--text-secondary);">لا توجد ملاحظات</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <% if (submission.reviewNotes) { %>
+                              <span style="font-size: 0.75rem;" title="<%= submission.reviewNotes %>">
+                                <%= submission.reviewNotes.length > 30 ? submission.reviewNotes.substring(0, 30) + '...' : submission.reviewNotes %>
+                              </span>
+                            <% } else { %>
+                              <span style="color: var(--text-secondary);">لا توجد ملاحظات</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                              <% if (submission.status === 'pending') { %>
+                                <button class="btn btn-sm btn-success approve-homework" 
+                                        data-submission-id="<%= submission._id %>" 
+                                        data-student-name="<%= submission.studentName %>"
+                                        data-student-id="<%= submission.studentId %>"
+                                        title="قبول الواجب">
+                                  <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger reject-homework" 
+                                        data-submission-id="<%= submission._id %>" 
+                                        data-student-name="<%= submission.studentName %>"
+                                        data-student-id="<%= submission.studentId %>"
+                                        title="رفض الواجب">
+                                  <i class="fas fa-times"></i>
+                                </button>
+                              <% } else if (submission.status === 'approved') { %>
+                                <button class="btn btn-sm btn-warning review-homework" 
+                                        data-submission-id="<%= submission._id %>" 
+                                        data-student-name="<%= submission.studentName %>"
+                                        data-current-notes="<%= submission.reviewNotes || '' %>"
+                                        title="تعديل ملاحظات المراجعة">
+                                  <i class="fas fa-edit"></i>
+                                </button>
+                              <% } else { %>
+                                <button class="btn btn-sm btn-primary approve-homework" 
+                                        data-submission-id="<%= submission._id %>" 
+                                        data-student-name="<%= submission.studentName %>"
+                                        data-student-id="<%= submission.studentId %>"
+                                        title="قبول الواجب">
+                                  <i class="fas fa-check"></i>
+                                </button>
+                              <% } %>
+                              <button class="btn btn-sm btn-outline view-homework-details" 
+                                      data-submission-id="<%= submission._id %>"
+                                      title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      <% }); %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <div class="no-data-container">
+                  <i class="fas fa-tasks no-data-icon"></i>
+                  <h4 style="margin-bottom: 0.5rem;">لا توجد واجبات مسلمة بعد</h4>
+                  <p style="color: var(--text-secondary);">ستظهر هنا الواجبات عندما يقوم الطلاب بتسليمها</p>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
         </div>
       </div>
     </main>
@@ -710,6 +858,217 @@
         }
       });
     });
+    
+    // Search functionality for watched students
+    const watchedSearchInput = document.getElementById('watchedSearch');
+    const clearWatchedSearchBtn = document.getElementById('clearWatchedSearch');
+    
+    function filterWatchedStudents() {
+      const searchTerm = watchedSearchInput.value.toLowerCase().trim();
+      const watchedRows = document.querySelectorAll('#watched-table tbody tr');
+      
+      watchedRows.forEach(row => {
+        const studentCode = row.children[2].textContent.toLowerCase(); // Column index 2 for student code
+        const phoneNumber = row.children[4].textContent.toLowerCase(); // Column index 4 for phone
+        const parentPhone = row.children[5].textContent.toLowerCase(); // Column index 5 for parent phone
+        
+        if (searchTerm === '' || 
+            studentCode.includes(searchTerm) || 
+            phoneNumber.includes(searchTerm) || 
+            parentPhone.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+    
+    watchedSearchInput.addEventListener('input', filterWatchedStudents);
+    
+    clearWatchedSearchBtn.addEventListener('click', function() {
+      watchedSearchInput.value = '';
+      filterWatchedStudents();
+      watchedSearchInput.focus();
+    });
+    
+    // Search functionality for unwatched students
+    const unwatchedSearchInput = document.getElementById('unwatchedSearch');
+    const clearUnwatchedSearchBtn = document.getElementById('clearUnwatchedSearch');
+    
+    function filterUnwatchedStudents() {
+      const searchTerm = unwatchedSearchInput.value.toLowerCase().trim();
+      const unwatchedRows = document.querySelectorAll('#unwatched-table tbody tr');
+      
+      unwatchedRows.forEach(row => {
+        const studentCode = row.children[2].textContent.toLowerCase(); // Column index 2 for student code
+        const phoneNumber = row.children[4].textContent.toLowerCase(); // Column index 4 for phone
+        const parentPhone = row.children[5].textContent.toLowerCase(); // Column index 5 for parent phone
+        
+        if (searchTerm === '' || 
+            studentCode.includes(searchTerm) || 
+            phoneNumber.includes(searchTerm) || 
+            parentPhone.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+    
+    unwatchedSearchInput.addEventListener('input', filterUnwatchedStudents);
+    
+    clearUnwatchedSearchBtn.addEventListener('click', function() {
+      unwatchedSearchInput.value = '';
+      filterUnwatchedStudents();
+      unwatchedSearchInput.focus();
+    });
+    
+    // Homework management functionality
+    const homeworkSearchInput = document.getElementById('homeworkSearch');
+    const clearHomeworkSearchBtn = document.getElementById('clearHomeworkSearch');
+    
+    function filterHomeworkSubmissions() {
+      const searchTerm = homeworkSearchInput.value.toLowerCase().trim();
+      const homeworkRows = document.querySelectorAll('#homework-table tbody tr');
+      
+      homeworkRows.forEach(row => {
+        const studentName = row.children[1].textContent.toLowerCase();
+        const studentCode = row.children[2].textContent.toLowerCase();
+        
+        if (searchTerm === '' || 
+            studentName.includes(searchTerm) || 
+            studentCode.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+    
+    if (homeworkSearchInput) {
+      homeworkSearchInput.addEventListener('input', filterHomeworkSubmissions);
+    }
+    
+    if (clearHomeworkSearchBtn) {
+      clearHomeworkSearchBtn.addEventListener('click', function() {
+        homeworkSearchInput.value = '';
+        filterHomeworkSubmissions();
+        homeworkSearchInput.focus();
+      });
+    }
+    
+    // Export homework to Excel
+    if (document.getElementById('exportHomeworkBtn')) {
+      document.getElementById('exportHomeworkBtn').addEventListener('click', function() {
+        exportTableToExcel('homework-table', 'homework_submissions_<%= video._id %>');
+      });
+    }
+    
+    // Homework approval/rejection functionality
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.approve-homework')) {
+        const button = e.target.closest('.approve-homework');
+        const submissionId = button.getAttribute('data-submission-id');
+        const studentName = button.getAttribute('data-student-name');
+        const studentId = button.getAttribute('data-student-id');
+        
+        if (confirm(`هل أنت متأكد من قبول واجب ${studentName}؟`)) {
+          approveHomework(submissionId, studentId, studentName);
+        }
+      }
+      
+      if (e.target.closest('.reject-homework')) {
+        const button = e.target.closest('.reject-homework');
+        const submissionId = button.getAttribute('data-submission-id');
+        const studentName = button.getAttribute('data-student-name');
+        const studentId = button.getAttribute('data-student-id');
+        
+        const reviewNotes = prompt(`يرجى كتابة سبب رفض الواجب للطالب ${studentName}:`);
+        if (reviewNotes !== null) {
+          rejectHomework(submissionId, studentId, studentName, reviewNotes);
+        }
+      }
+      
+      if (e.target.closest('.review-homework')) {
+        const button = e.target.closest('.review-homework');
+        const submissionId = button.getAttribute('data-submission-id');
+        const currentNotes = button.getAttribute('data-current-notes') || '';
+        
+        const newNotes = prompt('ملاحظات المراجعة:', currentNotes);
+        if (newNotes !== null) {
+          updateReviewNotes(submissionId, newNotes);
+        }
+      }
+    });
+    
+    function approveHomework(submissionId, studentId, studentName) {
+      fetch(`/teacher/homework/approve/${submissionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ studentId })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('تم قبول الواجب بنجاح');
+          location.reload();
+        } else {
+          alert('حدث خطأ: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء قبول الواجب');
+      });
+    }
+    
+    function rejectHomework(submissionId, studentId, studentName, reviewNotes) {
+      fetch(`/teacher/homework/reject/${submissionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ studentId, reviewNotes })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('تم رفض الواجب');
+          location.reload();
+        } else {
+          alert('حدث خطأ: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء رفض الواجب');
+      });
+    }
+    
+    function updateReviewNotes(submissionId, reviewNotes) {
+      fetch(`/teacher/homework/review-notes/${submissionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reviewNotes })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('تم تحديث ملاحظات المراجعة');
+          location.reload();
+        } else {
+          alert('حدث خطأ: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء تحديث الملاحظات');
+      });
+    }
   </script>
 </body>
 </html> 

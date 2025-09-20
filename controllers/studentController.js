@@ -5,14 +5,159 @@ const Code = require('../models/Code');
 const PDFs = require('../models/PDFs');
 const mongoose = require('mongoose');
 
-const jwt = require('jsonwebtoken');
-const jwtSecret = process.env.JWTSECRET;
+// Import WhatsApp functionality
+const wasender = require('../utils/wasender');
 
-const Excel = require('exceljs');
-const PDFDocument = require('pdfkit');
-const stream = require('stream');
+// Note: Using frontend Cloudinary upload instead of server-side processing
 
-const { v4: uuidv4 } = require('uuid');
+// ==================  WhatsApp Helper Functions  ====================== //
+
+async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, countryCode = '20') {
+  try {
+    // Skip if phone number is missing or invalid
+    const phoneAsString = (typeof phone === 'string' ? phone : String(phone || '')).trim();
+    if (!phoneAsString) {
+      console.warn('Skipping message - No phone number provided');
+      return { success: false, message: 'No phone number provided' };
+    }
+    
+    // Get all sessions to find the one with matching phone number
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      console.error(`Failed to get sessions: ${sessionsResponse.message}`);
+      return { success: false, message: `Failed to get sessions: ${sessionsResponse.message}` };
+    }
+    
+    const sessions = sessionsResponse.data;
+    let targetSession = null;
+    
+    // Find session by admin phone number
+    if (adminPhone == '01028772548') {
+      targetSession = sessions.find(s => s.phone_number === '+201003202768' || s.phone_number === '01003202768');
+    }
+    
+    // If no specific match, try to find any connected session
+    if (!targetSession) {
+      targetSession = sessions.find(s => s.status === 'connected');
+    }
+    
+    if (!targetSession) {
+      console.error('No connected WhatsApp session found');
+      return { success: false, message: 'No connected WhatsApp session found' };
+    }
+    
+    if (!targetSession.api_key) {
+      console.error('Session API key not available');
+      return { success: false, message: 'Session API key not available' };
+    }
+    
+    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
+    
+    // Format the phone number properly
+    let countryCodeWithout0 = countryCode ? String(countryCode).replace(/^0+/, '') : '20'; // Remove leading zeros, default to 20
+    console.log('Country code:', countryCodeWithout0);
+
+    // Clean phone input to digits only
+    let cleanedPhone = phoneAsString.replace(/\D/g, '');
+    // Remove leading zero from national number (e.g., 010... -> 10...)
+    if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.slice(1);
+
+    // Build full international number (without +)
+    let phoneNumber = `${countryCodeWithout0}${cleanedPhone}`.replace(/\D/g, '');
+    // Ensure leading country indicator '2' for Egypt if missing
+    if (!phoneNumber.startsWith('2')) phoneNumber = `2${phoneNumber}`;
+    
+    // Format for WhatsApp (add @s.whatsapp.net suffix)
+    const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
+    
+    console.log('Sending message to:', formattedPhone);
+    
+    // Use the session-specific API key to send the message
+    const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
+    
+    if (!response.success) {
+      console.error(`Failed to send message: ${response.message}`);
+      return { success: false, message: `Failed to send message: ${response.message}` };
+    }
+    
+    return { success: true, data: response.data };
+  } catch (err) {
+    console.error('Error sending WhatsApp message:', err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+// Function to send quiz completion message to parent
+async function sendQuizCompletionMessage(student, quiz, score, totalQuestions, isRetake = false, previousScore = null) {
+  try {
+    // Check if parent phone exists
+    if (!student.parentPhone) {
+      console.log(`No parent phone found for student ${student.Username}`);
+      return { success: false, message: 'No parent phone number' };
+    }
+
+    // Calculate percentage
+    const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+    
+    // Determine if this is a retake and if score improved
+    let retakeMessage = '';
+    if (isRetake && previousScore !== null) {
+      const scoreImprovement = score - previousScore;
+      const previousPercentage = totalQuestions > 0 ? Math.round((previousScore / totalQuestions) * 100) : 0;
+      
+      if (scoreImprovement > 0) {
+        retakeMessage = `\n🔄 *محاولة إعادة* - تحسن الدرجة من ${previousScore}/${totalQuestions} (${previousPercentage}%) إلى ${score}/${totalQuestions} (${percentage}%)`;
+      } else if (scoreImprovement < 0) {
+        retakeMessage = `\n🔄 *محاولة إعادة* - انخفضت الدرجة من ${previousScore}/${totalQuestions} (${previousPercentage}%) إلى ${score}/${totalQuestions} (${percentage}%)`;
+      } else {
+        retakeMessage = `\n🔄 *محاولة إعادة* - نفس الدرجة ${score}/${totalQuestions} (${percentage}%)`;
+      }
+    }
+
+    // Determine status message
+    let statusMessage = '';
+    if (percentage >= 60) {
+      statusMessage = '✅ *نجح الطالب*';
+    } else {
+      statusMessage = '⚠️ *يمكن للطالب إعادة الامتحان*';
+    }
+
+    // Format the message
+    const message = `🎓 *نتيجة الامتحان* 🎓
+
+الطالب: *${student.Username}*
+الامتحان: *${quiz.quizName}*
+الدرجة: *${score}/${totalQuestions}*
+النسبة: *${percentage}%*
+${retakeMessage}
+
+${statusMessage}
+
+📅 تاريخ الامتحان: ${new Date().toLocaleDateString('ar-EG')}
+⏰ وقت الامتحان: ${new Date().toLocaleTimeString('ar-EG')}
+
+نتمنى لطالبك المزيد من التقدم والنجاح 🌟
+
+---
+*منصة Biodiva التعليمية*`;
+
+    // Send the message
+    const result = await sendWasenderMessage(message, student.parentPhone, '01028772548');
+    
+    if (result.success) {
+      console.log(`Quiz completion message sent to parent of ${student.Username}`);
+      return { success: true, message: 'Message sent successfully' };
+    } else {
+      console.error(`Failed to send quiz completion message: ${result.message}`);
+      return { success: false, message: result.message };
+    }
+  } catch (error) {
+    console.error('Error in sendQuizCompletionMessage:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+// ==================  END WhatsApp Helper Functions  ====================== //
 
 // ==================  Dash  ====================== //
 
@@ -494,22 +639,44 @@ const getVideoWatch = async (req, res) => {
   if (video.paymentStatus == 'Pay') {
     if (hasVideoAccess || hasChapterAccess) {
       await updateWatchInUser(req, res, VideoId, chapterID);
+      
+      // Get homework submission for this video if it requires homework
+      let homeworkSubmission = null;
+      if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
+        homeworkSubmission = req.userData.homeworkSubmissions && 
+          req.userData.homeworkSubmissions.find(submission => 
+            submission.videoId.toString() === VideoId.toString()
+          );
+      }
+      
       res.render('student/watch', {
         title: 'Watch',
         path: req.path,
         video: video,
         userData: req.userData,
+        homeworkSubmission: homeworkSubmission
       });
     } else {
       res.redirect('/student/chapter/' + chapterID);
     }
   } else {
     await updateWatchInUser(req, res, VideoId, chapterID);
+    
+    // Get homework submission for this video if it requires homework
+    let homeworkSubmission = null;
+    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
+      homeworkSubmission = req.userData.homeworkSubmissions && 
+        req.userData.homeworkSubmissions.find(submission => 
+          submission.videoId.toString() === VideoId.toString()
+        );
+    }
+    
     res.render('student/watch', {
       title: 'Watch',
       path: req.path,
       video: video,
       userData: req.userData,
+      homeworkSubmission: homeworkSubmission
     });
   }
 }
@@ -538,6 +705,86 @@ const uploadHW = async (req, res) => {
     await getVideoWatch(req, res);
   } catch (error) {
     res.status(500).send(error.message);
+  }
+};
+
+// New comprehensive homework submission function
+const submitHomework = async (req, res) => {
+  try {
+    const { videoId, notes, files } = req.body;
+    const userId = req.userData._id;
+    
+    if (!videoId) {
+      return res.status(400).json({ success: false, message: 'Video ID is required' });
+    }
+    
+    // Check if video exists and user has access
+    const userVideo = req.userData.videosInfo.find(video => video._id.toString() === videoId);
+    if (!userVideo) {
+      return res.status(404).json({ success: false, message: 'Video not found or no access' });
+    }
+    
+    // Check if video requires homework
+    if (userVideo.prerequisites !== 'WithHw' && userVideo.prerequisites !== 'WithExamaAndHw') {
+      return res.status(400).json({ success: false, message: 'This video does not require homework submission' });
+    }
+    
+    // Check if homework is already submitted and approved
+    if (userVideo.isUserUploadPerviousHWAndApproved) {
+      return res.status(400).json({ success: false, message: 'Homework already submitted and approved' });
+    }
+    
+    // Handle file uploads - files should already be uploaded to Cloudinary from frontend
+    const uploadedFiles = [];
+    if (files && files.length > 0) {
+      // Files are already uploaded to Cloudinary from frontend
+      uploadedFiles.push(...files);
+    } else {
+      return res.status(400).json({ success: false, message: 'At least one file is required' });
+    }
+    
+    // Create homework submission record
+    const homeworkSubmission = {
+      _id: new mongoose.Types.ObjectId(),
+      videoId: new mongoose.Types.ObjectId(videoId),
+      studentId: new mongoose.Types.ObjectId(userId),
+      studentName: req.userData.Username,
+      studentCode: req.userData.Code || req.userData.Code.toString(),
+      files: uploadedFiles,
+      notes: notes || '',
+      status: 'pending', // pending, approved, rejected
+      submittedAt: new Date(),
+      reviewedAt: null,
+      reviewedBy: null,
+      reviewNotes: null
+    };
+    
+    // Save homework submission to database
+    await User.findOneAndUpdate(
+      { _id: userId },
+      { 
+        $push: { 
+          homeworkSubmissions: homeworkSubmission 
+        },
+        $set: { 
+          'videosInfo.$[video].isHWIsUploaded': true,
+          'videosInfo.$[video].homeworkSubmissionId': homeworkSubmission._id
+        }
+      },
+      {
+        arrayFilters: [{ 'video._id': new mongoose.Types.ObjectId(videoId) }]
+      }
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Homework submitted successfully',
+      submissionId: homeworkSubmission._id
+    });
+    
+  } catch (error) {
+    console.error('Homework submission error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -871,9 +1118,15 @@ const quiz_get = async (req, res) => {
       (q) => q._id.toString() === quiz._id.toString()
     );
     
+    // Allow retake if student scored below 60%
     if (quizUser && quizUser.isEnterd && !quizUser.inProgress) {
-      console.log('Quiz already completed');
-      return res.redirect('/student/exams');
+      if (quizUser.canRetake === true) {
+        console.log('Quiz completed with low score - allowing retake');
+        // Allow the student to retake, don't redirect
+      } else {
+        console.log('Quiz already completed with passing score');
+        return res.redirect('/student/exams');
+      }
     }
 
     console.log('Rendering quiz preparation page');
@@ -914,9 +1167,14 @@ const quizWillStart = async (req, res) => {
       (q) => q._id.toString() === quiz._id.toString()
     );
 
-    // Check if user already completed this quiz
+    // Allow retake if student scored below 60%
     if (quizUser && quizUser.isEnterd && !quizUser.inProgress) {
-      return res.status(400).json({ success: false, message: 'Quiz already completed' });
+      if (quizUser.canRetake === true) {
+        console.log('Quiz completed with low score - allowing retake');
+        // Allow the student to retake, don't return error
+      } else {
+        return res.status(400).json({ success: false, message: 'Quiz already completed with passing score' });
+      }
     }
 
     const durationInMinutes = quiz.timeOfQuiz;
@@ -942,7 +1200,11 @@ const quizWillStart = async (req, res) => {
         randomQuestionIndices: [],
         startTime: startTime,
         endTime: endTime,
-        quizPurchaseStatus: !quiz.prepaidStatus || isFreeQuiz || hasGeneralQuizAccess || hasSpecificQuizAccess
+        quizPurchaseStatus: !quiz.prepaidStatus || isFreeQuiz || hasGeneralQuizAccess || hasSpecificQuizAccess,
+        canRetake: false,
+        percentage: 0,
+        isRetake: false,
+        previousScore: null
       };
 
       await User.findByIdAndUpdate(
@@ -952,10 +1214,12 @@ const quizWillStart = async (req, res) => {
         }
       );
       
-      return res.json({ success: true, message: 'Quiz started successfully' });
-    } else if (!quizUser.endTime || !quizUser.inProgress) {
-      // Update existing quiz info with start time
-      console.log('Updating existing quiz info with start time');
+      return res.json({ success: true, message: 'Quiz started successfully', isRetake: false });
+    } else if (!quizUser.endTime || !quizUser.inProgress || (quizUser.canRetake && quizUser.isEnterd)) {
+      // Update existing quiz info with start time (including retakes)
+      const isRetake = quizUser.canRetake && quizUser.isEnterd;
+      console.log('Updating existing quiz info with start time. Is retake:', isRetake);
+      
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
         {
@@ -964,14 +1228,22 @@ const quizWillStart = async (req, res) => {
             'quizesInfo.$.endTime': endTime,
             'quizesInfo.$.inProgress': true,
             'quizesInfo.$.isEnterd': false,
-            'quizesInfo.$.answers': [],
-            'quizesInfo.$.Score': 0,
-            'quizesInfo.$.randomQuestionIndices': []
+            'quizesInfo.$.answers': [], // Clear previous answers
+            'quizesInfo.$.Score': 0, // Reset score
+            'quizesInfo.$.randomQuestionIndices': [], // Clear previous random indices
+            'quizesInfo.$.canRetake': false, // Reset retake flag
+            'quizesInfo.$.percentage': 0, // Reset percentage
+            'quizesInfo.$.isRetake': isRetake, // Mark as retake if applicable
+            'quizesInfo.$.previousScore': isRetake ? quizUser.Score : null // Store previous score for retakes
           },
         }
       );
       
-      return res.json({ success: true, message: 'Quiz timer updated successfully' });
+      return res.json({ 
+        success: true, 
+        message: isRetake ? 'Quiz retake started successfully' : 'Quiz timer updated successfully',
+        isRetake: isRetake
+      });
     } else {
       // Check if existing quiz time is still valid
       const currentTime = new Date().getTime();
@@ -1048,9 +1320,15 @@ const quiz_start = async (req, res) => {
       return res.redirect('/student/exams');
     }
 
-    // Redirect if user completed quiz
+    // Allow retake if student scored below 60%
     if (userQuizInfo && userQuizInfo.isEnterd && !userQuizInfo.inProgress) {
-      return res.redirect('/student/exams');
+      if (userQuizInfo.canRetake === true) {
+        console.log('Quiz completed with low score - allowing retake');
+        // Allow the student to retake, don't redirect
+      } else {
+        console.log('Quiz already completed with passing score');
+        return res.redirect('/student/exams');
+      }
     }
 
     // Redirect if quiz is not yet started
@@ -1333,6 +1611,23 @@ const quizFinish = async (req, res) => {
     
     const finalScore = calculatedScore; // Use server-calculated score for security
 
+    // Calculate percentage to determine if student can retake
+    const percentage = questionsShown > 0 ? Math.round((finalScore / questionsShown) * 100) : 0;
+    const canRetake = percentage < 60; // Allow retake if score is below 60%
+    
+    console.log(`Quiz completion: Score ${finalScore}/${questionsShown} (${percentage}%), Can retake: ${canRetake}`);
+
+    // Check if this is a retake (previous attempt existed)
+    const isRetake = userQuizInfo.isEnterd && userQuizInfo.canRetake;
+    
+    // Calculate score difference for retakes
+    let scoreDifference = 0;
+    if (isRetake) {
+      const previousScore = userQuizInfo.Score || 0;
+      scoreDifference = finalScore - previousScore;
+      console.log(`Retake: Previous score ${previousScore}, New score ${finalScore}, Difference: ${scoreDifference}`);
+    }
+
     // Update user's quiz info
     const updateResult = await User.findOneAndUpdate(
       { _id: req.userData._id, 'quizesInfo._id': quizObjId },
@@ -1341,14 +1636,18 @@ const quizFinish = async (req, res) => {
           'quizesInfo.$.answers': finalAnswers,
           'quizesInfo.$.Score': finalScore,
           'quizesInfo.$.inProgress': false,
-          'quizesInfo.$.isEnterd': true,
+          'quizesInfo.$.isEnterd': !canRetake, // Only mark as completed if score >= 60%
           'quizesInfo.$.solvedAt': Date.now(),
           'quizesInfo.$.endTime': 0,
+          'quizesInfo.$.canRetake': canRetake, // Track retake eligibility
+          'quizesInfo.$.percentage': percentage, // Store percentage for easy access
+          'quizesInfo.$.isRetake': isRetake, // Track if this was a retake
+          'quizesInfo.$.previousScore': isRetake ? userQuizInfo.Score : null, // Store previous score for retakes
         },
         $inc: { 
-          totalScore: finalScore, 
-          totalQuestions: questionsShown, // Total possible points for questions shown (1 point each)
-          examsEnterd: 1
+          totalScore: isRetake ? scoreDifference : finalScore, // Only add the difference for retakes, full score for first attempt
+          totalQuestions: isRetake ? 0 : questionsShown, // Don't increment total questions for retakes
+          examsEnterd: canRetake ? 0 : (isRetake ? 0 : 1) // Only increment for first-time completion with passing score
         },
       },
       { new: true }
@@ -1370,6 +1669,14 @@ const quizFinish = async (req, res) => {
         }
       }
 
+      // Send quiz completion notification to parent
+      try {
+        await sendQuizCompletionMessage(req.userData, quiz, finalScore, questionsShown, isRetake, isRetake ? userQuizInfo.Score : null);
+      } catch (notificationError) {
+        console.error('Failed to send parent notification:', notificationError);
+        // Don't fail the quiz completion if notification fails
+      }
+
       console.log('Quiz finish response:', {
         finalScore,
         questionsShown,
@@ -1379,9 +1686,16 @@ const quizFinish = async (req, res) => {
       
       return res.json({ 
         success: true, 
-        message: 'Quiz completed successfully',
+        message: isRetake ? 
+          (canRetake ? 'Retake completed - You can retake again for better score' : 'Retake completed successfully!') :
+          (canRetake ? 'Quiz completed - You can retake for better score' : 'Quiz completed successfully'),
         score: finalScore,
         totalQuestions: questionsShown,
+        percentage: percentage,
+        canRetake: canRetake,
+        isRetake: isRetake,
+        previousScore: isRetake ? userQuizInfo.Score : null,
+        scoreImprovement: isRetake ? scoreDifference : 0,
         questionsPool: quiz.Questions.length, // Total questions in the pool
         maxScore: questionsShown // Maximum possible score for questions shown (1 point each)
       });
@@ -1885,6 +2199,12 @@ const chapter_content_get = async (req, res) => {
       pdfGrade: req.userData.Grade 
     });
 
+    // Get all quizzes for the user's grade to help with prerequisite quiz name resolution
+    const allGradeQuizzes = await Quiz.find({ 
+      Grade: req.userData.Grade,
+      isQuizActive: true
+    }).select('_id quizName videoWillbeOpen');
+
     // Check user access to chapter and content
     const hasChapterAccess = req.userData.hasChapterAccess(chapterId);
     
@@ -1922,6 +2242,7 @@ const chapter_content_get = async (req, res) => {
       chapter: chapter,
       quizzes: quizzes,
       chapterPDFs: chapterPDFs,
+      allGradeQuizzes: allGradeQuizzes, // Add this to help with quiz name resolution
       userData: req.userData,
       hasChapterAccess: hasChapterAccess,
       totalVideos: totalVideos,
@@ -2079,6 +2400,15 @@ const video_watch_get = async (req, res) => {
     if (chapter.chapterSummaries) relatedVideos.push(...chapter.chapterSummaries);
     if (chapter.chapterSolvings) relatedVideos.push(...chapter.chapterSolvings);
     
+    // Get homework submission for this video if it requires homework
+    let homeworkSubmission = null;
+    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
+      homeworkSubmission = req.userData.homeworkSubmissions && 
+        req.userData.homeworkSubmissions.find(submission => 
+          submission.videoId.toString() === videoId.toString()
+        );
+    }
+    
     res.render('student/video-watch', {
       title: `${video.lectureName || video.videoName || video.name} - مشاهدة الفيديو`,
       path: req.path,
@@ -2094,7 +2424,8 @@ const video_watch_get = async (req, res) => {
       chapterId: chapterId,
       videoId: videoId,
       watchProgress: watchProgress,
-      videoViewsCount: video.views || 0
+      videoViewsCount: video.views || 0,
+      homeworkSubmission: homeworkSubmission
     });
   } catch (error) {
     console.error('Error in video_watch_get:', error);
@@ -2195,6 +2526,7 @@ module.exports = {
   watch_get,
   getVideoWatch,
   uploadHW,
+  submitHomework,
 
   ranking_get,
 

@@ -587,50 +587,202 @@
             <% } %>
           </div>
 
-          <!-- Homework Section -->
-          <% if (video.PDFURL) { %>
+          <!-- Resources Section -->
+          <div class="homework-section">
+            <div class="homework-header">
+              <div class="homework-icon">
+                <i class="material-icons-outlined">folder_open</i>
+              </div>
+              <div class="homework-info">
+                <h3>الموارد والملفات</h3>
+                <p>الملفات والموارد المتاحة لهذا الفيديو</p>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg);">
+              <!-- PDF Card - Always visible -->
+              <div style="background: var(--white); padding: var(--spacing-lg); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                  <% if (video.PDFURL) { %>
+                    <i class="material-icons-outlined" style="color: var(--error); font-size: 2rem;">picture_as_pdf</i>
+                    <h4 style="margin: 0; color: var(--gray-900);">ملف PDF</h4>
+                  <% } else { %>
+                    <i class="material-icons-outlined" style="color: var(--gray-400); font-size: 2rem;">picture_as_pdf</i>
+                    <h4 style="margin: 0; color: var(--gray-400);">ملف PDF</h4>
+                  <% } %>
+                </div>
+                <p style="margin: 0 0 var(--spacing-md) 0; color: var(--gray-600); font-size: 0.875rem;">
+                  <%= video.PDFURL ? 'ملف PDF للواجب' : 'لا يوجد ملف PDF متاح' %>
+                </p>
+                <% if (video.PDFURL) { %>
+                  <a href="<%= video.PDFURL %>" target="_blank" class="btn btn-outline" style="width: 100%;">
+                    <i class="material-icons-outlined" style="margin-left: 8px;">download</i>
+                    تحميل PDF
+                  </a>
+                <% } else { %>
+                  <button class="btn btn-outline-secondary" style="width: 100%; cursor: not-allowed;" disabled>
+                    <i class="material-icons-outlined" style="margin-left: 8px;">block</i>
+                    غير متاح
+                  </button>
+                <% } %>
+              </div>
+              
+              <!-- External Link Card - Always visible -->
+              <div style="background: var(--white); padding: var(--spacing-lg); border-radius: var(--radius-lg); border: 1px solid var(--gray-200);">
+                <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                  <% if (video.externalLink) { %>
+                    <i class="material-icons-outlined" style="color: var(--primary-color); font-size: 2rem;">link</i>
+                    <h4 style="margin: 0; color: var(--gray-900);">رابط إضافي</h4>
+                  <% } else { %>
+                    <i class="material-icons-outlined" style="color: var(--gray-400); font-size: 2rem;">link</i>
+                    <h4 style="margin: 0; color: var(--gray-400);">رابط إضافي</h4>
+                  <% } %>
+                </div>
+                <p style="margin: 0 0 var(--spacing-md) 0; color: var(--gray-600); font-size: 0.875rem;">
+                  <%= video.externalLink ? 'ملفات وموارد إضافية' : 'لا يوجد رابط إضافي متاح' %>
+                </p>
+                <% if (video.externalLink) { %>
+                  <a href="<%= video.externalLink %>" target="_blank" class="btn btn-outline" style="width: 100%;">
+                    <i class="material-icons-outlined" style="margin-left: 8px;">open_in_new</i>
+                    فتح الرابط
+                  </a>
+                <% } else { %>
+                  <button class="btn btn-outline-secondary" style="width: 100%; cursor: not-allowed;" disabled>
+                    <i class="material-icons-outlined" style="margin-left: 8px;">block</i>
+                    غير متاح
+                  </button>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Homework Submission Section -->
           <div class="homework-section">
             <div class="homework-header">
               <div class="homework-icon">
                 <i class="material-icons-outlined">assignment</i>
               </div>
               <div class="homework-info">
-                <h3>واجب <%= video.videoName || 'الفيديو' %></h3>
-                <p>حمل الواجب المطلوب وقم برفع الحل للمراجعة</p>
+                <h3>تسليم الواجب</h3>
+                <p>رفع حل الواجب للمراجعة</p>
               </div>
             </div>
 
-            <div class="homework-actions">
-              <a href="<%= video.PDFURL %>" target="_blank" class="btn btn-outline">
-                <i class="material-icons-outlined" style="margin-left: 8px;">download</i>
-                تحميل الواجب PDF
-              </a>
-              <button class="btn btn-primary" onclick="toggleHomeworkUpload()">
-                <i class="material-icons-outlined" style="margin-left: 8px;">cloud_upload</i>
-                رفع الحل
-              </button>
-            </div>
-
-            <!-- File Upload Area -->
-            <div id="homeworkUploadArea" style="display: none;">
-              <div class="file-upload-area" onclick="document.getElementById('homeworkFiles').click()">
-                <div class="upload-icon">
-                  <i class="material-icons-outlined">cloud_upload</i>
+            <!-- Always show homework section, but with different content based on prerequisites -->
+            <div id="homeworkStatus" style="margin-bottom: var(--spacing-lg);">
+              <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
+                <!-- Video requires homework -->
+                <% if (homeworkSubmission && homeworkSubmission.status === 'approved') { %>
+                  <div style="background: var(--success-light); border: 1px solid var(--success-color); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <i class="material-icons-outlined" style="color: var(--success-color);">check_circle</i>
+                    <span style="color: var(--success-color); font-weight: 500;">تم قبول الواجب بنجاح</span>
+                  </div>
+                <% } else if (homeworkSubmission && homeworkSubmission.status === 'pending') { %>
+                  <div style="background: var(--warning-light); border: 1px solid var(--warning-color); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <i class="material-icons-outlined" style="color: var(--warning-color);">schedule</i>
+                    <span style="color: var(--warning-color); font-weight: 500;">الواجب في انتظار المراجعة</span>
+                  </div>
+                <% } else if (homeworkSubmission && homeworkSubmission.status === 'rejected') { %>
+                  <div style="background: var(--error-light); border: 1px solid var(--error); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <i class="material-icons-outlined" style="color: var(--error);">cancel</i>
+                    <span style="color: var(--error); font-weight: 500;">تم رفض الواجب - يرجى إعادة التسليم</span>
+                  </div>
+                <% } else { %>
+                  <div style="background: var(--primary-light); border: 1px solid var(--primary-color); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <i class="material-icons-outlined" style="color: var(--primary-color);">info</i>
+                    <span style="color: var(--primary-color); font-weight: 500;">يجب تسليم الواجب لفتح الفيديو التالي</span>
+                  </div>
+                <% } %>
+              <% } else { %>
+                <!-- Video doesn't require homework -->
+                <div style="background: var(--gray-100); border: 1px solid var(--gray-300); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
+                  <i class="material-icons-outlined" style="color: var(--gray-500);">info</i>
+                  <span style="color: var(--gray-600); font-weight: 500;">هذا الفيديو لا يتطلب تسليم واجب</span>
                 </div>
-                <div class="upload-text">اسحب الملفات هنا أو اضغط للاختيار</div>
-                <div class="upload-hint">يمكنك رفع ملفات PDF، صور، أو مستندات Word</div>
-                <input type="file" id="homeworkFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
-              </div>
-              
-              <div id="fileList" class="file-list"></div>
-              
-              <button id="uploadHomeworkBtn" class="btn btn-success" style="width: 100%; margin-top: var(--spacing-md); display: none;">
-                <i class="material-icons-outlined" style="margin-left: 8px;">send</i>
-                رفع الواجب
-              </button>
+              <% } %>
             </div>
+            
+            <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
+              <!-- Show homework form if video requires homework -->
+              <% if (!homeworkSubmission || homeworkSubmission.status === 'rejected') { %>
+                <div class="homework-actions">
+                  <button class="btn btn-primary" onclick="toggleHomeworkUpload()">
+                    <i class="material-icons-outlined" style="margin-left: 8px;">cloud_upload</i>
+                    رفع الحل
+                  </button>
+                </div>
+
+                <!-- File Upload Area -->
+                <div id="homeworkUploadArea" style="display: none;">
+                  <div class="file-upload-area" onclick="document.getElementById('homeworkFiles').click()">
+                    <div class="upload-icon">
+                      <i class="material-icons-outlined">cloud_upload</i>
+                    </div>
+                    <div class="upload-text">اسحب الملفات هنا أو اضغط للاختيار</div>
+                    <div class="upload-hint">يمكنك رفع ملفات PDF، صور، أو مستندات Word</div>
+                    <input type="file" id="homeworkFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
+                  </div>
+                  
+                  <div id="fileList" class="file-list"></div>
+                  
+                  <div style="margin-top: var(--spacing-lg);">
+                    <label style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--gray-700);">ملاحظات (اختياري)</label>
+                    <textarea id="homeworkNotes" rows="3" placeholder="أي ملاحظات أو توضيحات حول الواجب..." style="width: 100%; padding: var(--spacing-md); border: 1px solid var(--gray-300); border-radius: var(--radius); resize: vertical; font-family: inherit;"></textarea>
+                  </div>
+                  
+                  <button id="uploadHomeworkBtn" class="btn btn-success" style="width: 100%; margin-top: var(--spacing-md); display: none;">
+                    <i class="material-icons-outlined" style="margin-left: 8px;">send</i>
+                    رفع الواجب
+                  </button>
+                </div>
+              <% } %>
+              
+              <% if (homeworkSubmission) { %>
+                <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--gray-200);">
+                  <h6 style="margin-bottom: var(--spacing-md);">تفاصيل التسليم:</h6>
+                  <p style="margin: var(--spacing-xs) 0; color: var(--gray-600);">
+                    <strong>تاريخ التسليم:</strong> <%= new Date(homeworkSubmission.submittedAt).toLocaleString('ar-EG') %>
+                  </p>
+                  <% if (homeworkSubmission.notes) { %>
+                    <p style="margin: var(--spacing-xs) 0; color: var(--gray-600);">
+                      <strong>ملاحظات:</strong> <%= homeworkSubmission.notes %>
+                    </p>
+                  <% } %>
+                  <% if (homeworkSubmission.files && homeworkSubmission.files.length > 0) { %>
+                    <p style="margin: var(--spacing-xs) 0; color: var(--gray-600);">
+                      <strong>الملفات المرفوعة:</strong>
+                    </p>
+                    <ul style="margin: var(--spacing-xs) 0; padding-right: var(--spacing-lg);">
+                      <% homeworkSubmission.files.forEach(function(file) { %>
+                        <li style="color: var(--gray-600);">
+                          <a href="<%= file.url %>" target="_blank" style="color: var(--primary-color);">
+                            <i class="material-icons-outlined" style="font-size: 1rem; vertical-align: middle;">description</i> <%= file.name %>
+                          </a>
+                        </li>
+                      <% }); %>
+                    </ul>
+                  <% } %>
+                </div>
+              <% } %>
+            <% } else { %>
+              <!-- Show disabled form if video doesn't require homework -->
+              <div id="homeworkUploadArea" style="opacity: 0.6;">
+                <div class="file-upload-area" style="border-color: var(--gray-300); background: var(--gray-50);">
+                  <div class="upload-icon" style="color: var(--gray-400);">
+                    <i class="material-icons-outlined">block</i>
+                  </div>
+                  <div class="upload-text" style="color: var(--gray-400);">هذا الفيديو لا يتطلب تسليم واجب</div>
+                  <div class="upload-hint" style="color: var(--gray-400);">لا يمكن رفع ملفات للفيديوهات التي لا تتطلب واجب</div>
+                  <input type="file" disabled style="display: none;">
+                </div>
+                
+                <button class="btn btn-outline-secondary" style="width: 100%; margin-top: var(--spacing-md); cursor: not-allowed;" disabled>
+                  <i class="material-icons-outlined" style="margin-left: 8px;">block</i>
+                  غير مطلوب
+                </button>
+              </div>
+            <% } %>
           </div>
-          <% } %>
         </div>
 
         <!-- Sidebar -->
@@ -703,6 +855,66 @@
 
   <script>
     let selectedFiles = [];
+
+    // Check prerequisites on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      checkPrerequisites();
+    });
+
+    function checkPrerequisites() {
+      const videoPrerequisites = '<%= video.prerequisites %>';
+      const chapterAccess = <%= hasChapterAccess || false %>;
+      
+      if (videoPrerequisites === 'WithExamaAndHw' || videoPrerequisites === 'WithExam' || videoPrerequisites === 'WithHw') {
+        const prerequisiteVideoId = '<%= video.AccessibleAfterViewing %>';
+        if (prerequisiteVideoId && prerequisiteVideoId !== 'null' && prerequisiteVideoId !== 'undefined') {
+          // Find prerequisite video info from user data
+          const userVideosInfo = <%- JSON.stringify(userData.videosInfo || []) %>;
+          const prerequisiteVideoInfo = userVideosInfo.find(v => v._id === prerequisiteVideoId);
+          
+          if (prerequisiteVideoInfo) {
+            let canWatch = true;
+            let prerequisiteMessage = '';
+            let detailedPrerequisiteInfo = '';
+            
+            if (videoPrerequisites === 'WithExamaAndHw') {
+              canWatch = prerequisiteVideoInfo.isUserEnterQuiz && prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+              if (!canWatch) {
+                if (!prerequisiteVideoInfo.isUserEnterQuiz && !prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved) {
+                  prerequisiteMessage = 'يجب اجتياز الاختبار وتسليم الواجب أولاً';
+                  detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار وتسليم واجب فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
+                } else if (!prerequisiteVideoInfo.isUserEnterQuiz) {
+                  prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                  detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
+                } else if (!prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved) {
+                  prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                  detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
+                }
+              }
+            } else if (videoPrerequisites === 'WithExam') {
+              canWatch = prerequisiteVideoInfo.isUserEnterQuiz;
+              if (!canWatch) {
+                prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
+              }
+            } else if (videoPrerequisites === 'WithHw') {
+              canWatch = prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+              if (!canWatch) {
+                prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
+              }
+            }
+            
+            if (!canWatch) {
+              // Redirect to chapter page with error message
+              const chapterUrl = '/student/chapter/<%= chapterId %>?error=prerequisites_not_met&message=' + encodeURIComponent(prerequisiteMessage);
+              window.location.href = chapterUrl;
+              return;
+            }
+          }
+        }
+      }
+    }
 
     // Toggle homework upload area
     function toggleHomeworkUpload() {
@@ -794,43 +1006,95 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    // Upload homework
-    document.getElementById('uploadHomeworkBtn').addEventListener('click', function() {
+    // Upload homework using Cloudinary (same as watch.ejs)
+    document.getElementById('uploadHomeworkBtn').addEventListener('click', async function() {
       if (selectedFiles.length === 0) return;
-      
-      const formData = new FormData();
-      selectedFiles.forEach(file => {
-        formData.append('homework', file);
-      });
       
       // Show loading state
       this.innerHTML = '<i class="material-icons-outlined">hourglass_empty</i> جاري الرفع...';
       this.disabled = true;
       
-      // Submit homework
-      fetch(window.location.pathname + '/homework', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => {
-        if (response.ok) {
+      try {
+        // Upload files to Cloudinary first
+        const uploadedFiles = [];
+        
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const uploadedFile = await uploadFileToCloudinary(file);
+          if (uploadedFile) {
+            uploadedFiles.push(uploadedFile);
+          } else {
+            throw new Error(`فشل في رفع الملف: ${file.name}`);
+          }
+        }
+        
+        // Submit homework with uploaded file URLs
+        const response = await fetch('/student/homework/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            videoId: '<%= video._id %>',
+            notes: document.getElementById('homeworkNotes') ? document.getElementById('homeworkNotes').value.trim() : '',
+            files: uploadedFiles
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
           showModal('successModal');
           selectedFiles = [];
           document.getElementById('fileList').innerHTML = '';
           document.getElementById('homeworkUploadArea').style.display = 'none';
+          // Reload page to show updated status
+          setTimeout(() => location.reload(), 2000);
         } else {
-          throw new Error('Upload failed');
+          alert('حدث خطأ: ' + data.message);
         }
-      })
-      .catch(error => {
-        alert('حدث خطأ في رفع الواجب. يرجى المحاولة مرة أخرى.');
-      })
-      .finally(() => {
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء تسليم الواجب: ' + error.message);
+      } finally {
         this.innerHTML = '<i class="material-icons-outlined">send</i> رفع الواجب';
         this.disabled = false;
         this.style.display = 'none';
-      });
+      }
     });
+
+    // Function to upload file to Cloudinary (same as watch.ejs)
+    function uploadFileToCloudinary(file) {
+      return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'order_project');
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://api.cloudinary.com/v1_1/dusod9wxt/upload', true);
+        
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            resolve({
+              name: file.name,
+              url: response.secure_url,
+              publicId: response.public_id,
+              size: file.size
+            });
+          } else {
+            reject(new Error('فشل في رفع الملف'));
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new Error('خطأ في الاتصال'));
+        };
+        
+        xhr.send(formData);
+      });
+    }
 
     // Modal functions
     function showModal(modalId) {

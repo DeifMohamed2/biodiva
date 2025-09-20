@@ -283,23 +283,102 @@ function submitQuiz() {
   })
   .then(function(data) {
     if (data.success) {
+      // Always clear localStorage on successful quiz completion
       localStorage.removeItem('quizAnswers_' + quizData.quizId);
       closeSubmitModal();
       
-             const finalScoreElement = document.getElementById('finalScore');
-       const maxScoreElement = document.getElementById('maxScore');
-       
-       console.log('External JS - Quiz finish response data:', data);
-       console.log('External JS - Updating final score to:', data.score);
-       console.log('External JS - Updating max score to:', data.maxScore);
-       
-       if (finalScoreElement) {
-         finalScoreElement.textContent = data.score || 0;
-       }
-       if (maxScoreElement) {
-         // Always update maxScore from server response, fallback to totalQuestions if not provided
-         maxScoreElement.textContent = data.maxScore || totalQuestions;
-       }
+      const finalScoreElement = document.getElementById('finalScore');
+      const maxScoreElement = document.getElementById('maxScore');
+      
+      console.log('External JS - Quiz finish response data:', data);
+      console.log('External JS - Updating final score to:', data.score);
+      console.log('External JS - Updating max score to:', data.maxScore);
+      
+      if (finalScoreElement) {
+        finalScoreElement.textContent = data.score || 0;
+      }
+      if (maxScoreElement) {
+        // Always update maxScore from server response, fallback to totalQuestions if not provided
+        maxScoreElement.textContent = data.maxScore || totalQuestions;
+      }
+      
+      // Handle retake messaging
+      const percentage = data.percentage || 0;
+      const canRetake = data.canRetake || false;
+      const isRetake = data.isRetake || false;
+      const previousScore = data.previousScore;
+      const scoreImprovement = data.scoreImprovement || 0;
+      
+      // Update percentage display
+      const percentageDisplay = document.getElementById('percentageDisplay');
+      if (percentageDisplay) {
+        percentageDisplay.textContent = `النسبة المئوية: ${percentage}%`;
+      }
+      
+      // Update modal icon and title based on result
+      const modalIcon = document.getElementById('modalIcon');
+      const modalTitle = document.getElementById('modalTitle');
+      const retakeMessage = document.getElementById('retakeMessage');
+      const retakeInfo = document.getElementById('retakeInfo');
+      const retakeBtn = document.getElementById('retakeBtn');
+      
+      if (percentage >= 60) {
+        // Passing grade
+        if (modalIcon) {
+          modalIcon.className = 'modal-icon success';
+          modalIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        }
+        if (modalTitle) {
+          modalTitle.textContent = '🎉 مبروك! نجحت في الامتحان';
+        }
+        if (retakeMessage) {
+          retakeMessage.style.display = 'none';
+        }
+        if (retakeBtn) {
+          retakeBtn.style.display = 'none';
+        }
+      } else {
+        // Failing grade - show retake option
+        if (modalIcon) {
+          modalIcon.className = 'modal-icon warning';
+          modalIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        }
+        if (modalTitle) {
+          modalTitle.textContent = '⚠️ يمكنك إعادة الامتحان';
+        }
+        
+        // Show retake message
+        if (retakeMessage) {
+          retakeMessage.style.display = 'block';
+          retakeMessage.style.backgroundColor = '#fff3cd';
+          retakeMessage.style.border = '1px solid #ffeaa7';
+          retakeMessage.style.color = '#856404';
+          retakeMessage.innerHTML = `
+            <strong>الدرجة أقل من 60%</strong><br>
+            يمكنك إعادة الامتحان للحصول على درجة أفضل
+          `;
+        }
+        
+        // Show retake info if it's a retake
+        if (isRetake && retakeInfo) {
+          retakeInfo.style.display = 'block';
+          if (scoreImprovement > 0) {
+            retakeInfo.innerHTML = `🔄 تحسن من ${previousScore}/${totalQuestions} إلى ${data.score}/${data.maxScore}`;
+            retakeInfo.style.color = '#28a745';
+          } else if (scoreImprovement < 0) {
+            retakeInfo.innerHTML = `🔄 انخفض من ${previousScore}/${totalQuestions} إلى ${data.score}/${data.maxScore}`;
+            retakeInfo.style.color = '#dc3545';
+          } else {
+            retakeInfo.innerHTML = `🔄 نفس الدرجة ${data.score}/${data.maxScore}`;
+            retakeInfo.style.color = '#6c757d';
+          }
+        }
+        
+        // Show retake button
+        if (retakeBtn) {
+          retakeBtn.style.display = 'inline-block';
+        }
+      }
       
       const successModal = document.getElementById('successModal');
       if (successModal) {
@@ -325,6 +404,15 @@ function submitQuiz() {
 
 function goToExams() {
   window.location.href = '/student/exams';
+}
+
+function retakeQuiz() {
+  // Clear localStorage for clean retake
+  console.log('Clearing localStorage for retake');
+  localStorage.removeItem('quizAnswers_' + quizData.quizId);
+  
+  // Redirect to the quiz preparation page to start retake
+  window.location.href = '/student/quiz/' + quizData.quizId;
 }
 
 function previewImage(imageSrc) {

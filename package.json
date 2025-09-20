@@ -47,7 +47,8 @@
     "uuid": "^9.0.1",
     "vimeo": "^2.3.1",
     "whatsapp-web.js": "^1.23.0",
-    "wwebjs-mongo": "^1.1.0"
+    "wwebjs-mongo": "^1.1.0",
+    "xlsx": "^0.18.5"
   },
   "description": "E-learning For Dr Alaa Sharaf"
 }

@@ -6,28 +6,105 @@
 <body>
 
     <style>
-        * {
-            box-sizing: border-box;
+        /* WhatsApp Page Specific Styles */
+
+        .whatsapp-card {
+            background: var(--background-color);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            padding: var(--spacing-2xl);
+            margin: var(--spacing-lg) auto;
+            max-width: 800px;
+            border: 1px solid var(--border-color);
+        }
+
+        .whatsapp-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .whatsapp-header h1 {
+            color: var(--text-primary);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-md);
+        }
+
+        .whatsapp-header .whatsapp-icon {
+            color: #25D366;
+            font-size: 2.5rem;
+        }
+
+        .whatsapp-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
             margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
+        }
+
+        .form-section {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .form-section h3 {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
         .upload-container {
-            background-color: transparent;
-            border: 2px solid #e3b228;
-            border-radius: 10px;
-            padding: 30px;
-            width: 100%;
-            max-width: 600px;
+            background: var(--surface-color);
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
             text-align: center;
-            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            margin: var(--spacing-lg) 0;
         }
 
-        h1 {
-            margin-bottom: 20px;
-            color: #ffffff;
-            font-size: 2rem;
+        .upload-container:hover {
+            border-color: var(--primary-color);
+            background: var(--surface-hover);
+        }
+
+        .upload-container.dragover {
+            border-color: var(--primary-color);
+            background: rgba(79, 70, 229, 0.05);
         }
 
         .file-input-wrapper {
@@ -37,126 +114,567 @@
 
         .file-label {
             display: block;
-            background-color: transparent;
-            border: 2px dashed #e3b228;
-            border-radius: 5px;
-            padding: 15px;
-            color: #e3b228;
+            padding: var(--spacing-lg);
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: all 0.3s ease;
+            border-radius: var(--radius-md);
         }
 
         .file-label:hover {
-            background-color: #e3b228;
-            color: rgb(0, 0, 0);
+            color: var(--primary-color);
+            background: rgba(79, 70, 229, 0.05);
+        }
+
+        .file-label i {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-sm);
+            display: block;
         }
 
         #file {
             display: none;
         }
 
-        .upload-btn {
-            margin-top: 20px;
-            padding: 15px 30px;
-            border: 2px solid #e3b228;
-            background-color: transparent;
-            color: #e3b228;
-            border-radius: 5px;
-            font-size: 1.1rem;
+        .btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            text-decoration: none;
         }
 
-        .upload-btn:hover {
-            background-color: #e3b228;
-            color: rgb(0, 0, 0);
-            transform: scale(1.05);
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-success {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
 
         .output {
-            margin-top: 20px;
-            text-align: left;
+            margin-top: var(--spacing-lg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+        }
+        .output .progress-note{
+            margin-top: var(--spacing-sm);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .output.success {
+            background: rgba(5, 150, 105, 0.1);
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+
+        .output.error {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: var(--danger-color);
+            color: var(--danger-color);
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .stats-card {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            margin: var(--spacing-md) 0;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stats-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: var(--spacing-xs);
+        }
+
+        /* Form Check Styles */
+        .form-check {
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-sm);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .form-check:hover {
+            border-color: var(--primary-color);
+            background: rgba(79, 70, 229, 0.05);
+        }
+
+        .form-check-input {
+            margin-top: 0.25rem;
+            margin-left: 0.5rem;
+        }
+
+        .form-check-label {
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .form-check-input:checked + .form-check-label {
+            color: var(--primary-color);
+        }
+
+        .form-check-input:checked ~ .form-check {
+            border-color: var(--primary-color);
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        .form-text {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: var(--spacing-xs);
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* Row spacing */
+        .row {
+            margin: 0 -0.5rem;
+        }
+
+        .row > [class*="col-"] {
+            padding: 0 0.5rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .whatsapp-card {
+                margin: var(--spacing-md);
+                padding: var(--spacing-lg);
+            }
+            
+            .whatsapp-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .form-check {
+                padding: 0.5rem;
+            }
         }
     </style>
 
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-lg-2">
+    <div class="teacher-container">
                 <%- include("./partials/nav.ejs") %>
+        
+        <main class="teacher-main">
+            <div class="whatsapp-container">
+                <div class="whatsapp-card">
+                    <!-- Header -->
+                    <div class="whatsapp-header">
+                        <h1>
+                            <i class="fab fa-whatsapp whatsapp-icon"></i>
+                            نظام إرسال الرسائل
+                        </h1>
+                        <p>أرسل الرسائل والدرجات للطلاب عبر واتساب</p>
             </div>
 
-            <div class="col-lg-10">
-                <main>
-                    <div class="row">
-                        <div class="col-md-6"></div>
-
-                        <div class="col-md-6">
-                            <div class="left" style="margin-top: 0.2rem;">
-                                <%- include("./partials/top.ejs") %>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-2 mb-4">
-                            <select name="chapterGrade" id="optionSelect" class="Grade w-100 text-center" required>
-                                <option value="">اختر نوع الارسال </option>
-                                <option value="msgWithoutPhoto">ارسال رسائل بدون صوره</option>
-                                <option value="msgWithPhoto">ارسال رسائل بصوره</option>
-                                <option value="gradeMsg">ارسال درجات</option>
+                    <!-- Message Type Selection -->
+                    <div class="form-section">
+                        <h3>اختر نوع الإرسال</h3>
+                        <div class="form-group">
+                            <label class="form-label">نوع الرسالة</label>
+                            <select name="messageType" id="optionSelect" class="form-control" required>
+                                <option value="">اختر نوع الإرسال</option>
+                                <option value="msgWithoutPhoto">إرسال رسائل نصية</option>
+                                <option value="msgWithPhoto">إرسال رسائل مع صورة</option>
+                                <option value="gradeMsg">إرسال درجات الامتحانات</option>
                             </select>
                         </div>
-                        <hr>
+                    </div>
 
-                        <!-- Section for "ارسال رسائل بدون صوره" -->
-                        <div id="msgWithoutPhotoSection" class="hidden">
-                            <div class="col-md-4 mb-4">
-                                <input type="text" class="form-control" placeholder="اسم الرسالة">
-                            </div>
-                        </div>
-
-                        <!-- Section for "ارسال رسائل بصوره" -->
-                        <div id="msgWithPhotoSection" class="hidden">
-                            <div class="col-md-4 mb-4">
-                                <input type="file" class="form-control" placeholder="اختر الصورة">
-                            </div>
-                        </div>
-
-                        <!-- Section for "ارسال درجات" -->
-                        <div id="gradeMsgSection" class="hidden">
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="quizName" class="form-control" placeholder="اسم الامتحان">
-                            </div>
-
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="phoneCloumnName" class="form-control" placeholder="اكتب اسم ال cloumn بتاع الارقام">
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="gradeCloumnName" class="form-control" placeholder="اكتب اسم ال cloumn بتاع الدرجات">
-                            </div>
-
-                            <div class="upload-container">
-                                <h1>رفع شيت الاكسل</h1>
-                                <div class="file-input-wrapper">
-                                    <label for="file" class="file-label" id="fileLabel">
-                                        <i class="fas fa-upload"></i> اختر الملف لرفعه
-                                    </label>
-                                    <input type="file" id="file" name="file" required onchange="updateFileName()">
+                    <!-- Text Message Section -->
+                    <div id="msgWithoutPhotoSection" class="form-section hidden">
+                        <h3>إرسال رسائل نصية</h3>
+                        
+                        <!-- Target Selection -->
+                        <div class="form-group">
+                            <label class="form-label">اختر الهدف</label>
+                    <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="textTargetType" id="textExistingStudents" value="existing" checked>
+                                        <label class="form-check-label" for="textExistingStudents">
+                                            <i class="fas fa-users"></i> الطلاب المسجلين
+                                        </label>
+                                    </div>
                                 </div>
-                                <button class="upload-btn" onclick="handleFile()">رفع الملف</button>
-
-                                <div class="output" id="output"></div>
-                                <h2 class="warning d-none" id="numberOfSend"></h2>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="textTargetType" id="textExcelUpload" value="excel">
+                                        <label class="form-check-label" for="textExcelUpload">
+                                            <i class="fas fa-file-excel"></i> رفع ملف Excel
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+
+                        <!-- Grade Selection (for existing students) -->
+                        <div id="textGradeSelection" class="form-group">
+                            <label class="form-label">اختر الصف الدراسي</label>
+                            <select id="textGrade" class="form-control">
+                                <option value="">جميع الصفوف</option>
+                                <option value="Grade1">الصف الأول الثانوي</option>
+                                <option value="Grade2">الصف الثاني الثانوي</option>
+                                <option value="Grade3">الصف الثالث الثانوي</option>
+                            </select>
+                        </div>
+
+                        <!-- Recipient Type Selection -->
+                        <div class="form-group">
+                            <label class="form-label">نوع المستلمين</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="textRecipientType" id="textStudentsOnly" value="students" checked>
+                                        <label class="form-check-label" for="textStudentsOnly">
+                                            <i class="fas fa-user-graduate"></i> الطلاب فقط
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="textRecipientType" id="textParentsOnly" value="parents">
+                                        <label class="form-check-label" for="textParentsOnly">
+                                            <i class="fas fa-user-friends"></i> أولياء الأمور فقط
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="textRecipientType" id="textBoth" value="both">
+                                        <label class="form-check-label" for="textBoth">
+                                            <i class="fas fa-users"></i> الطلاب وأولياء الأمور
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Excel Upload Section (for text messages) -->
+                        <div id="textExcelSection" class="form-group hidden">
+                            <label class="form-label">رفع ملف Excel</label>
+                            <div class="upload-container" id="textUploadContainer">
+                                <div class="file-input-wrapper">
+                                    <label for="textExcelFile" class="file-label" id="textFileLabel">
+                                        <i class="fas fa-file-excel"></i>
+                                        <span id="textFileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
+                                    </label>
+                                    <input type="file" id="textExcelFile" name="textExcelFile" accept=".xlsx,.xls" onchange="updateTextFileName()">
+                                </div>
+                            </div>
+                            
+                            <!-- Column Names Input -->
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">اسم عمود رقم الهاتف</label>
+                                        <input type="text" id="textPhoneColumn" class="form-control" placeholder="رقم الهاتف">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">اسم عمود اسم الطالب (اختياري)</label>
+                                        <input type="text" id="textStudentNameColumn" class="form-control" placeholder="اسم الطالب">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">اسم عمود هاتف ولي الأمر (اختياري)</label>
+                                        <input type="text" id="textParentPhoneColumn" class="form-control" placeholder="هاتف ولي الأمر">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <small class="form-text text-muted">
+                                يجب أن يحتوي الملف على أعمدة: رقم الهاتف، اسم الطالب (اختياري)، رقم هاتف ولي الأمر (اختياري)
+                            </small>
+                        </div>
+
+                        <!-- Message Content -->
+                        <div class="form-group">
+                            <label class="form-label">نص الرسالة</label>
+                            <textarea id="messageText" class="form-control" rows="4" placeholder="اكتب نص الرسالة هنا..."></textarea>
+                            <small class="form-text text-muted">
+                                يمكنك استخدام {name} لكتابة اسم الطالب و {parent_name} لاسم ولي الأمر
+                            </small>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="sendTextMessages()">
+                            <i class="fas fa-paper-plane"></i>
+                            إرسال الرسائل
+                        </button>
+                            </div>
+
+                    <!-- Image Message Section -->
+                    <div id="msgWithPhotoSection" class="form-section hidden">
+                        <h3>إرسال رسائل مع صورة</h3>
+                        
+                        <!-- Target Selection -->
+                        <div class="form-group">
+                            <label class="form-label">اختر الهدف</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="imageTargetType" id="imageExistingStudents" value="existing" checked>
+                                        <label class="form-check-label" for="imageExistingStudents">
+                                            <i class="fas fa-users"></i> الطلاب المسجلين
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="imageTargetType" id="imageExcelUpload" value="excel">
+                                        <label class="form-check-label" for="imageExcelUpload">
+                                            <i class="fas fa-file-excel"></i> رفع ملف Excel
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grade Selection (for existing students) -->
+                        <div id="imageGradeSelection" class="form-group">
+                            <label class="form-label">اختر الصف الدراسي</label>
+                            <select id="imageGrade" class="form-control">
+                                <option value="">جميع الصفوف</option>
+                                <option value="Grade1">الصف الأول الثانوي</option>
+                                <option value="Grade2">الصف الثاني الثانوي</option>
+                                <option value="Grade3">الصف الثالث الثانوي</option>
+                            </select>
+                        </div>
+
+                        <!-- Recipient Type Selection -->
+                        <div class="form-group">
+                            <label class="form-label">نوع المستلمين</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="imageRecipientType" id="imageStudentsOnly" value="students" checked>
+                                        <label class="form-check-label" for="imageStudentsOnly">
+                                            <i class="fas fa-user-graduate"></i> الطلاب فقط
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="imageRecipientType" id="imageParentsOnly" value="parents">
+                                        <label class="form-check-label" for="imageParentsOnly">
+                                            <i class="fas fa-user-friends"></i> أولياء الأمور فقط
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="imageRecipientType" id="imageBoth" value="both">
+                                        <label class="form-check-label" for="imageBoth">
+                                            <i class="fas fa-users"></i> الطلاب وأولياء الأمور
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+
+                        <!-- Excel Upload Section (for image messages) -->
+                        <div id="imageExcelSection" class="form-group hidden">
+                            <label class="form-label">رفع ملف Excel</label>
+                            <div class="upload-container" id="imageUploadContainer">
+                                <div class="file-input-wrapper">
+                                    <label for="imageExcelFile" class="file-label" id="imageFileLabel">
+                                        <i class="fas fa-file-excel"></i>
+                                        <span id="imageFileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
+                                    </label>
+                                    <input type="file" id="imageExcelFile" name="imageExcelFile" accept=".xlsx,.xls" onchange="updateImageFileName()">
+                                </div>
+                            </div>
+                            
+                            <!-- Column Names Input -->
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">اسم عمود رقم الهاتف</label>
+                                        <input type="text" id="imagePhoneColumn" class="form-control" placeholder="رقم الهاتف">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">اسم عمود اسم الطالب (اختياري)</label>
+                                        <input type="text" id="imageStudentNameColumn" class="form-control" placeholder="اسم الطالب">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">اسم عمود هاتف ولي الأمر (اختياري)</label>
+                                        <input type="text" id="imageParentPhoneColumn" class="form-control" placeholder="هاتف ولي الأمر">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <small class="form-text text-muted">
+                                يجب أن يحتوي الملف على أعمدة: رقم الهاتف، اسم الطالب (اختياري)، رقم هاتف ولي الأمر (اختياري)
+                            </small>
+                        </div>
+
+                        <!-- Message Content -->
+                        <div class="form-group">
+                            <label class="form-label">نص الرسالة</label>
+                            <textarea id="imageMessageText" class="form-control" rows="3" placeholder="اكتب نص الرسالة هنا..."></textarea>
+                            <small class="form-text text-muted">
+                                يمكنك استخدام {name} لكتابة اسم الطالب و {parent_name} لاسم ولي الأمر
+                            </small>
+                        </div>
+
+                        <!-- Image Upload -->
+                        <div class="form-group">
+                            <label class="form-label">الصورة</label>
+                            <input type="file" id="imageFile" class="form-control" accept="image/*">
+                            <small class="form-text text-muted">
+                                الحد الأقصى لحجم الصورة: 10 ميجابايت
+                            </small>
+                            <div id="imageUploadProgress" class="hidden" style="margin-top: 10px;">
+                                <div style="height: 8px; background: var(--border-color); border-radius: 6px; overflow: hidden;">
+                                    <div id="imageUploadProgressBar" style="height: 8px; width: 0%; background: var(--primary-color);"></div>
+                                </div>
+                                <div id="imageUploadProgressText" class="form-text" style="margin-top: 6px;">0%</div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="sendImageMessages()">
+                            <i class="fas fa-image"></i>
+                            إرسال الرسائل مع الصورة
+                        </button>
+                    </div>
+
+                    <!-- Grade Message Section -->
+                    <div id="gradeMsgSection" class="form-section hidden">
+                        <h3>إرسال درجات الامتحانات</h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">اسم الامتحان</label>
+                                    <input type="text" id="quizName" class="form-control" placeholder="اسم الامتحان">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">اسم عمود الدرجات</label>
+                                    <input type="text" id="gradeColumnName" class="form-control" placeholder="اسم العمود الذي يحتوي على الدرجات">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">الدرجة النهائية</label>
+                                    <input type="number" id="finalTotalGrade" class="form-control" placeholder="مثل: 100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column Names Input -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">اسم عمود اسم الطالب</label>
+                                    <input type="text" id="gradeStudentNameColumn" class="form-control" placeholder="اسم الطالب">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">اسم عمود هاتف ولي الأمر</label>
+                                    <input type="text" id="gradeParentPhoneColumn" class="form-control" placeholder="هاتف ولي الأمر">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="upload-container" id="uploadContainer">
+                            <div class="file-input-wrapper">
+                                <label for="file" class="file-label" id="fileLabel">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span id="fileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
+                                </label>
+                                <input type="file" id="file" name="file" accept=".xlsx,.xls" required onchange="updateFileName()">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success" onclick="handleFile()" id="uploadBtn">
+                            <i class="fas fa-upload"></i>
+                            معالجة الملف وإرسال الدرجات
+                        </button>
+
+                        <!-- Results -->
+                        <div class="output hidden" id="output"></div>
+                        <div class="stats-card hidden" id="statsCard">
+                            <div class="stats-number" id="statsNumber">0</div>
+                            <div class="stats-label">رسالة مرسلة</div>
                         </div>
                     </div>
-                </main>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script src="../assest/bootstrap.bundle.min.js"></script>
@@ -164,10 +682,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script>
+        // DOM Elements
         const optionSelect = document.getElementById('optionSelect');
         const msgWithoutPhotoSection = document.getElementById('msgWithoutPhotoSection');
         const msgWithPhotoSection = document.getElementById('msgWithPhotoSection');
         const gradeMsgSection = document.getElementById('gradeMsgSection');
+        const output = document.getElementById('output');
+        const statsCard = document.getElementById('statsCard');
+        const statsNumber = document.getElementById('statsNumber');
+        const fileLabelText = document.getElementById('fileLabelText');
 
         // Event listener to show/hide sections based on selection
         optionSelect.addEventListener('change', function () {
@@ -177,6 +700,8 @@
             msgWithoutPhotoSection.classList.add('hidden');
             msgWithPhotoSection.classList.add('hidden');
             gradeMsgSection.classList.add('hidden');
+            output.classList.add('hidden');
+            statsCard.classList.add('hidden');
 
             // Show corresponding section
             if (selectedValue === 'msgWithoutPhoto') {
@@ -188,105 +713,482 @@
             }
         });
 
-        // Function to handle file reading
+        // Event listeners for text message target type
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'textTargetType') {
+                const textExcelSection = document.getElementById('textExcelSection');
+                const textGradeSelection = document.getElementById('textGradeSelection');
+                
+                if (e.target.value === 'excel') {
+                    textExcelSection.classList.remove('hidden');
+                    textGradeSelection.classList.add('hidden');
+                } else {
+                    textExcelSection.classList.add('hidden');
+                    textGradeSelection.classList.remove('hidden');
+                }
+            }
+
+            if (e.target.name === 'imageTargetType') {
+                const imageExcelSection = document.getElementById('imageExcelSection');
+                const imageGradeSelection = document.getElementById('imageGradeSelection');
+                
+                if (e.target.value === 'excel') {
+                    imageExcelSection.classList.remove('hidden');
+                    imageGradeSelection.classList.add('hidden');
+                } else {
+                    imageExcelSection.classList.add('hidden');
+                    imageGradeSelection.classList.remove('hidden');
+                }
+            }
+
+            if (e.target.name === 'gradeRecipientType') {
+                updateGradeColumnRequirements(e.target.value);
+            }
+        });
+
+        // File handling functions
         function updateFileName() {
             const input = document.getElementById('file');
             const fileLabel = document.getElementById('fileLabel');
             if (input.files.length > 0) {
-                fileLabel.innerHTML = `<i class="fas fa-file-alt"></i> ${input.files[0].name}`;
+                fileLabelText.textContent = input.files[0].name;
+                fileLabel.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #25D366;"></i>
+                    <span id="fileLabelText">${input.files[0].name}</span>
+                `;
             }
         }
 
-        // Function to handle file reading and show "Uploaded" status
-        function handleFile() {
-            const input = document.getElementById('file');
-            const fileLabel = document.getElementById('fileLabel');
+        function updateTextFileName() {
+            const input = document.getElementById('textExcelFile');
+            const fileLabel = document.getElementById('textFileLabel');
+            const fileLabelText = document.getElementById('textFileLabelText');
+            if (input.files.length > 0) {
+                fileLabelText.textContent = input.files[0].name;
+                fileLabel.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #25D366;"></i>
+                    <span id="textFileLabelText">${input.files[0].name}</span>
+                `;
+            }
+        }
 
-            if (!input.files.length) {
-                alert('Please select a file!');
+        function updateImageFileName() {
+            const input = document.getElementById('imageExcelFile');
+            const fileLabel = document.getElementById('imageFileLabel');
+            const fileLabelText = document.getElementById('imageFileLabelText');
+            if (input.files.length > 0) {
+                fileLabelText.textContent = input.files[0].name;
+                fileLabel.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #25D366;"></i>
+                    <span id="imageFileLabelText">${input.files[0].name}</span>
+                `;
+            }
+        }
+
+        // Drag and drop functionality
+        const uploadContainer = document.getElementById('uploadContainer');
+        uploadContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadContainer.classList.add('dragover');
+        });
+
+        uploadContainer.addEventListener('dragleave', () => {
+            uploadContainer.classList.remove('dragover');
+        });
+
+        uploadContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadContainer.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('file').files = files;
+                updateFileName();
+            }
+        });
+
+        // Send text messages function
+        async function sendTextMessages() {
+            const messageText = document.getElementById('messageText').value.trim();
+            const targetType = document.querySelector('input[name="textTargetType"]:checked').value;
+            const recipientType = document.querySelector('input[name="textRecipientType"]:checked').value;
+            
+            if (!messageText) {
+                showToast('error', 'يرجى إدخال نص الرسالة');
                 return;
             }
+
+            // Validate Excel file if needed
+            if (targetType === 'excel') {
+                const excelFile = document.getElementById('textExcelFile').files[0];
+                const phoneColumn = document.getElementById('textPhoneColumn').value.trim();
+                
+                if (!excelFile) {
+                    showToast('error', 'يرجى اختيار ملف Excel');
+                    return;
+                }
+                
+                if (!phoneColumn) {
+                    showToast('error', 'يرجى إدخال اسم عمود رقم الهاتف');
+                    return;
+                }
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading"></span> جاري الإرسال (تأخير 5-8 ثواني بين كل رسالة)...';
+            btn.disabled = true;
+
+            try {
+                let requestData = {
+                    message: messageText,
+                    targetType: targetType,
+                    recipientType: recipientType
+                };
+
+                if (targetType === 'existing') {
+                    const grade = document.getElementById('textGrade').value;
+                    requestData.grade = grade;
+                } else if (targetType === 'excel') {
+                    const excelFile = document.getElementById('textExcelFile').files[0];
+                    const phoneColumn = document.getElementById('textPhoneColumn').value.trim();
+                    const studentNameColumn = document.getElementById('textStudentNameColumn').value.trim();
+                    const parentPhoneColumn = document.getElementById('textParentPhoneColumn').value.trim();
+                    
+                    const formData = new FormData();
+                    formData.append('message', messageText);
+                    formData.append('targetType', targetType);
+                    formData.append('recipientType', recipientType);
+                    formData.append('excelFile', excelFile);
+                    formData.append('phoneColumn', phoneColumn);
+                    formData.append('studentNameColumn', studentNameColumn);
+                    formData.append('parentPhoneColumn', parentPhoneColumn);
+
+                    const response = await fetch('/teacher/sendTextMessages', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showToast('success', `تم إرسال ${result.count} رسالة بنجاح`);
+                        output.classList.remove('hidden');
+                        output.className = 'output success';
+                        output.innerHTML = `
+                            <h4><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</h4>
+                            <p>تم إرسال ${result.count} رسالة بنجاح</p>
+                        `;
+                    } else {
+                        showToast('error', result.message || 'حدث خطأ أثناء الإرسال');
+                    }
+
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+
+                const response = await fetch('/teacher/sendTextMessages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('success', `تم إرسال ${result.count} رسالة بنجاح`);
+                    output.classList.remove('hidden');
+                    output.className = 'output success';
+                    output.innerHTML = `
+                        <h4><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</h4>
+                        <p>تم إرسال ${result.count} رسالة بنجاح</p>
+                        <div class="progress-note"><i class="fas fa-hourglass-half"></i> تم الإرسال مع تأخير عشوائي 5-8 ثوانٍ بين كل رسالة لتجنب الحظر.</div>
+                    `;
+                } else {
+                    showToast('error', result.message || 'حدث خطأ أثناء الإرسال');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'حدث خطأ أثناء الإرسال');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Send image messages function
+        async function sendImageMessages() {
+            const messageText = document.getElementById('imageMessageText').value.trim();
+            const imageFile = document.getElementById('imageFile').files[0];
+            const targetType = document.querySelector('input[name="imageTargetType"]:checked').value;
+            const recipientType = document.querySelector('input[name="imageRecipientType"]:checked').value;
+            
+            if (!messageText || !imageFile) {
+                showToast('error', 'يرجى إدخال نص الرسالة واختيار الصورة');
+                return;
+            }
+
+            if (targetType === 'excel') {
+                const excelFile = document.getElementById('imageExcelFile').files[0];
+                const phoneColumn = document.getElementById('imagePhoneColumn').value.trim();
+                
+                if (!excelFile) {
+                    showToast('error', 'يرجى اختيار ملف Excel');
+                    return;
+                }
+                
+                if (!phoneColumn) {
+                    showToast('error', 'يرجى إدخال اسم عمود رقم الهاتف');
+                    return;
+                }
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading"></span> جاري الرفع ثم الإرسال...';
+            btn.disabled = true;
+
+            // Cloudinary config
+            const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dusod9wxt/upload';
+            const CLOUDINARY_UPLOAD_PRESET = 'order_project';
+
+            const progressWrap = document.getElementById('imageUploadProgress');
+            const progressBar = document.getElementById('imageUploadProgressBar');
+            const progressText = document.getElementById('imageUploadProgressText');
+
+            try {
+                // 1) Upload to Cloudinary with progress
+                progressWrap.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+
+                const uploadForm = new FormData();
+                uploadForm.append('file', imageFile);
+                uploadForm.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                const uploadResponse = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', CLOUDINARY_URL);
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const percent = Math.round((e.loaded / e.total) * 100);
+                            progressBar.style.width = percent + '%';
+                            progressText.textContent = percent + '%';
+                        }
+                    };
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try { resolve(JSON.parse(xhr.responseText)); } catch (err) { reject(err); }
+                        } else {
+                            reject(new Error('فشل رفع الصورة إلى Cloudinary'));
+                        }
+                    };
+                    xhr.onerror = () => reject(new Error('مشكلة اتصال أثناء الرفع'));
+                    xhr.send(uploadForm);
+                });
+
+                const imageUrl = uploadResponse.secure_url || uploadResponse.url;
+                if (!imageUrl) throw new Error('لم يتم استلام رابط الصورة من Cloudinary');
+
+                // 2) Send message request to server using the Cloudinary URL
+                const formData = new FormData();
+                formData.append('message', messageText);
+                formData.append('imageUrl', imageUrl);
+                formData.append('targetType', targetType);
+                formData.append('recipientType', recipientType);
+
+                if (targetType === 'existing') {
+                    const grade = document.getElementById('imageGrade').value;
+                    formData.append('grade', grade);
+                } else if (targetType === 'excel') {
+                    const excelFile = document.getElementById('imageExcelFile').files[0];
+                    const phoneColumn = document.getElementById('imagePhoneColumn').value.trim();
+                    const studentNameColumn = document.getElementById('imageStudentNameColumn').value.trim();
+                    const parentPhoneColumn = document.getElementById('imageParentPhoneColumn').value.trim();
+                    
+                    formData.append('excelFile', excelFile);
+                    formData.append('phoneColumn', phoneColumn);
+                    formData.append('studentNameColumn', studentNameColumn);
+                    formData.append('parentPhoneColumn', parentPhoneColumn);
+                }
+
+                const response = await fetch('/teacher/sendImageMessages', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('success', `تم إرسال ${result.count} رسالة مع صورة بنجاح`);
+                    output.classList.remove('hidden');
+                    output.className = 'output success';
+                    output.innerHTML = `
+                        <h4><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</h4>
+                        <p>تم إرسال ${result.count} رسالة مع صورة بنجاح</p>
+                        <div class="progress-note"><i class="fas fa-hourglass-half"></i> تم الإرسال مع تأخير عشوائي 5-8 ثوانٍ بين كل رسالة لتجنب الحظر.</div>
+                    `;
+                } else {
+                    showToast('error', result.message || 'حدث خطأ أثناء الإرسال');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', error.message || 'حدث خطأ أثناء الإرسال');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                setTimeout(() => {
+                    progressWrap.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                    progressText.textContent = '0%';
+                }, 1500);
+            }
+        }
+
+        // Update grade column requirements based on recipient type
+        function updateGradeColumnRequirements(recipientType) {
+            const phoneColumnLabel = document.querySelector('label[for="gradeParentPhoneColumn"]');
+            
+            // Reset all labels
+            phoneColumnLabel.innerHTML = 'اسم عمود هاتف ولي الأمر <span class="text-danger">*</span>';
+            
+            // Update based on recipient type
+            if (recipientType === 'parents') {
+                phoneColumnLabel.innerHTML = 'اسم عمود هاتف ولي الأمر <span class="text-danger">*</span>';
+            } else if (recipientType === 'both') {
+                phoneColumnLabel.innerHTML = 'اسم عمود هاتف ولي الأمر <span class="text-danger">*</span>';
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('WhatsApp page loaded successfully');
+            // Initialize with default selection
+            updateGradeColumnRequirements('students');
+        });
+    </script>
+
+    <script>
+        // Override validators for parent-only grade sending
+        function handleFile() {
+            const input = document.getElementById('file');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (!input.files.length) {
+                showToast('error', 'يرجى اختيار ملف Excel');
+                return;
+            }
+
+            // Parent-only enforcement
+            const phoneColumnName = document.getElementById('gradeParentPhoneColumn').value.trim();
+            const studentNameColumn = document.getElementById('gradeStudentNameColumn').value.trim();
+            const gradeColumnName = document.getElementById('gradeColumnName').value.trim();
+            const quizName = document.getElementById('quizName').value.trim();
+            const finalTotalGrade = document.getElementById('finalTotalGrade').value.trim();
+
+            if (!quizName || !gradeColumnName || !finalTotalGrade || !studentNameColumn || !phoneColumnName) {
+                showToast('error', 'يرجى ملء اسم الامتحان واسم عمود الدرجات والدرجة النهائية واسم عمود الطالب وعمود هاتف ولي الأمر');
+                return;
+            }
+
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<span class="loading"></span> جاري المعالجة...';
+            uploadBtn.disabled = true;
 
             const file = input.files[0];
             const reader = new FileReader();
 
             reader.onload = function (e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet);
 
-                const sheetName = workbook.SheetNames[0];
-                console.log(sheetName);
-                const sheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(sheet);
-                console.log(json);
-
-                displayDataAndSend(json);
-
-                // Update label to indicate that the file is uploaded
-                fileLabel.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name} (Uploaded)`;
-                fileLabel.style.color = "green";
+                    processAndSendGrades(json, phoneColumnName, studentNameColumn, phoneColumnName, gradeColumnName, quizName, 'parents');
+                } catch (error) {
+                    console.error('Error reading file:', error);
+                    showToast('error', 'خطأ في قراءة ملف Excel');
+                    uploadBtn.innerHTML = originalText;
+                    uploadBtn.disabled = false;
+                }
             };
 
             reader.readAsArrayBuffer(file);
         }
 
-        // Function to send the data
-        async function displayDataAndSend(data) {
-            const output = document.getElementById('output');
-
-            output.innerHTML = 'data is being sent...';
-            const phoneCloumnName = document.getElementById('phoneCloumnName');
-            const gradeCloumnName = document.getElementById('gradeCloumnName');
-            const quizName = document.getElementById('quizName');
-
-            if (!phoneCloumnName.value || !gradeCloumnName.value) {
-                alert('ادخل اسامي ال cloumn');
-                return;
-            }
-
-            const dataSend = {
-                phoneCloumnName: phoneCloumnName.value,
-                gradeCloumnName: gradeCloumnName.value,
-                quizName: quizName.value,
-                dataToSend: data
-            };
-
+        async function processAndSendGrades(data, phoneColumnName, studentNameColumn, parentPhoneColumn, gradeColumnName, quizName, recipientType) {
+            const uploadBtn = document.getElementById('uploadBtn');
+            const originalText = uploadBtn.innerHTML;
+            
             try {
+                uploadBtn.innerHTML = '<span class="loading"></span> جاري الإرسال...';
+
                 const response = await fetch('/teacher/sendGradeMessages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(dataSend)
+                    body: JSON.stringify({
+                        phoneColumnName: phoneColumnName,
+                        studentNameColumn: studentNameColumn,
+                        parentPhoneColumn: phoneColumnName,
+                        gradeColumnName: gradeColumnName,
+                        quizName: quizName,
+                        recipientType: 'parents',
+                        dataToSend: data,
+                        finalTotalGrade: document.getElementById('finalTotalGrade').value,
+                        parentExtraMessage: (function(){
+                            const el = document.getElementById('parentExtraMessage');
+                            return el ? el.value : '';
+                        })()
+                    })
                 });
 
-                const responseData = await response.json();
+                const result = await response.json();
 
                 if (response.ok) {
-                    output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
-                    output.style.color = "green";
+                    output.classList.remove('hidden');
+                    output.className = 'output success';
+                    output.innerHTML = `
+                        <h4><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</h4>
+                        <p>تم إرسال ${result.count} رسالة درجات بنجاح</p>
+                    `;
+                    
+                    statsCard.classList.remove('hidden');
+                    statsNumber.textContent = result.count;
+                    
+                    showToast('success', `تم إرسال ${result.count} رسالة درجات بنجاح`);
                 } else {
-                    output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                    output.style.color = "red";
+                    output.classList.remove('hidden');
+                    output.className = 'output error';
+                    output.innerHTML = `
+                        <h4><i class="fas fa-exclamation-triangle"></i> خطأ في الإرسال</h4>
+                        <p>${result.message || 'حدث خطأ أثناء الإرسال'}</p>
+                    `;
+                    
+                    showToast('error', result.message || 'حدث خطأ أثناء الإرسال');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                output.style.color = "red";
+                output.classList.remove('hidden');
+                output.className = 'output error';
+                output.innerHTML = `
+                    <h4><i class="fas fa-exclamation-triangle"></i> خطأ في الإرسال</h4>
+                    <p>حدث خطأ أثناء الإرسال</p>
+                `;
+                
+                showToast('error', 'حدث خطأ أثناء الإرسال');
+            } finally {
+                uploadBtn.innerHTML = originalText;
+                uploadBtn.disabled = false;
             }
         }
-    </script>
+        </script>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const numberOfSend = document.getElementById('numberOfSend');
-        const socket = io();
-
-        socket.on('sendingMessages', (data) => {
-            numberOfSend.classList.remove('d-none');
-            numberOfSend.innerHTML = `تم ارسال ${data.nMessages} رساله`;
-        });
-    </script>
 
 </body>
 

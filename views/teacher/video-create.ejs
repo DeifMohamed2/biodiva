@@ -145,8 +145,35 @@
               
               <div class="form-group" id="accessibleAfterViewingGroup" style="display: none;">
                 <label class="form-label">متاح بعد مشاهدة</label>
-                <input type="text" class="form-input" id="AccessibleAfterViewing" name="AccessibleAfterViewing">
-                <small style="color: var(--text-secondary); font-size: 0.75rem;">أدخل معرف الفيديو الذي يجب مشاهدته أولاً</small>
+                
+                <!-- Grade Selection -->
+                <div style="margin-bottom: 1rem;">
+                  <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.5rem;">اختر الصف</label>
+                  <select class="form-select" id="prerequisiteGrade" name="prerequisiteGrade">
+                    <option value="">اختر الصف</option>
+                    <option value="1">الصف الأول الثانوي</option>
+                    <option value="2">الصف الثاني الثانوي</option>
+                    <option value="3">الصف الثالث الثانوي</option>
+                  </select>
+                </div>
+                
+                <!-- Video Selection -->
+                <div id="videoSelectionGroup" style="display: none;">
+                  <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.5rem;">اختر الفيديو المطلوب مشاهدته</label>
+                  <select class="form-select" id="AccessibleAfterViewing" name="AccessibleAfterViewing">
+                    <option value="">اختر الفيديو</option>
+                  </select>
+                  <small style="color: var(--text-secondary); font-size: 0.75rem;">سيصبح الفيديو الجديد متاحًا فقط بعد مشاهدة الفيديو المحدد</small>
+                  
+                  <!-- Debug button -->
+                  <button type="button" id="debugSystemBtn" class="btn btn-outline" style="margin-top: 0.5rem; font-size: 0.75rem;">
+                    <i class="fas fa-bug"></i>
+                    فحص النظام
+                  </button>
+                  <small style="color: var(--text-secondary); font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                    يظهر جميع الفصول والفيديوهات في النظام
+                  </small>
+                </div>
               </div>
               
               <div class="form-group">
@@ -226,6 +253,12 @@
               </div>
               
               <div class="form-group">
+                <label class="form-label">رابط Google Drive أو ملف إضافي (اختياري)</label>
+                <input type="url" class="form-input" id="externalLink" name="externalLink" placeholder="https://drive.google.com/file/d/... أو رابط ملف مباشر">
+                <small style="color: var(--text-secondary); font-size: 0.75rem;">رابط إضافي لملفات أو موارد خارجية</small>
+              </div>
+              
+              <div class="form-group">
                 <label class="form-label">موعد النشر (جدولة)</label>
                 <input type="datetime-local" class="form-input" id="scheduledTime" name="scheduledTime">
                 <small style="color: var(--text-secondary); font-size: 0.75rem;">اترك فارغًا للنشر الفوري أو حدد موعدًا في المستقبل</small>
@@ -299,6 +332,29 @@
       
       let missingFields = [];
       
+      // Check prerequisite fields if needed
+      const prerequisites = document.getElementById('prerequisites').value;
+      if (prerequisites === 'WithHw' || prerequisites === 'WithExamaAndHw') {
+        const prerequisiteGrade = document.getElementById('prerequisiteGrade').value;
+        const prerequisiteVideo = document.getElementById('AccessibleAfterViewing').value;
+        
+        if (!prerequisiteGrade) {
+          missingFields.push('اختيار الصف للفيديو المطلوب');
+          document.getElementById('prerequisiteGrade').classList.add('is-invalid');
+        } else {
+          document.getElementById('prerequisiteGrade').classList.remove('is-invalid');
+          document.getElementById('prerequisiteGrade').classList.add('is-valid');
+        }
+        
+        if (!prerequisiteVideo) {
+          missingFields.push('اختيار الفيديو المطلوب مشاهدته');
+          document.getElementById('AccessibleAfterViewing').classList.add('is-invalid');
+        } else {
+          document.getElementById('AccessibleAfterViewing').classList.remove('is-invalid');
+          document.getElementById('AccessibleAfterViewing').classList.add('is-valid');
+        }
+      }
+      
       requiredFields.forEach(field => {
         const element = document.getElementById(field.id);
         console.log(`Checking field ${field.id}: value = "${element.value}"`);
@@ -357,17 +413,77 @@
     // Toggle accessible after viewing field based on prerequisites
     const prerequisitesSelect = document.getElementById('prerequisites');
     const accessibleGroup = document.getElementById('accessibleAfterViewingGroup');
+    const videoSelectionGroup = document.getElementById('videoSelectionGroup');
+    const prerequisiteGradeSelect = document.getElementById('prerequisiteGrade');
+    const accessibleAfterViewingSelect = document.getElementById('AccessibleAfterViewing');
     
     function toggleAccessibleField() {
-      if (prerequisitesSelect.value === 'WithExam' || prerequisitesSelect.value === 'WithHw' || prerequisitesSelect.value === 'WithExamaAndHw') {
+      if (prerequisitesSelect.value === 'WithHw' || prerequisitesSelect.value === 'WithExamaAndHw') {
         accessibleGroup.style.display = 'block';
       } else {
         accessibleGroup.style.display = 'none';
+        videoSelectionGroup.style.display = 'none';
+        // Clear selections
+        prerequisiteGradeSelect.value = '';
+        accessibleAfterViewingSelect.innerHTML = '<option value="">اختر الفيديو</option>';
       }
+    }
+    
+    function loadVideosByGrade() {
+      const selectedGrade = prerequisiteGradeSelect.value;
+      if (!selectedGrade) {
+        videoSelectionGroup.style.display = 'none';
+        accessibleAfterViewingSelect.innerHTML = '<option value="">اختر الفيديو</option>';
+        return;
+      }
+      
+      // Show loading state
+      accessibleAfterViewingSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+      videoSelectionGroup.style.display = 'block';
+      
+      // Fetch videos by grade for prerequisites
+      fetch(`/teacher/api/videos/grade/${selectedGrade}?forPrerequisites=true`)
+        .then(response => response.json())
+        .then(data => {
+          console.log('API Response:', data);
+          if (data.success && data.videos.length > 0) {
+            accessibleAfterViewingSelect.innerHTML = '<option value="">اختر الفيديو</option>';
+            data.videos.forEach(video => {
+              const option = document.createElement('option');
+              option.value = video._id;
+              option.textContent = `${video.title} (${video.chapterName}) - ${video.type === 'lecture' ? 'محاضرة' : video.type === 'summary' ? 'ملخص' : 'حل تمارين'}`;
+              accessibleAfterViewingSelect.appendChild(option);
+            });
+          } else {
+            console.log('No videos found or API error:', data);
+            accessibleAfterViewingSelect.innerHTML = '<option value="">لا توجد فيديوهات متاحة</option>';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading videos:', error);
+          accessibleAfterViewingSelect.innerHTML = '<option value="">حدث خطأ في التحميل</option>';
+          showTemporaryAlert('danger', 'حدث خطأ في تحميل قائمة الفيديوهات');
+        });
     }
     
     toggleAccessibleField();
     prerequisitesSelect.addEventListener('change', toggleAccessibleField);
+    prerequisiteGradeSelect.addEventListener('change', loadVideosByGrade);
+    
+    // Debug system button
+    document.getElementById('debugSystemBtn').addEventListener('click', function() {
+      console.log('=== DEBUGGING SYSTEM ===');
+      fetch('/teacher/api/debug/system')
+        .then(response => response.json())
+        .then(data => {
+          console.log('System debug data:', data);
+          alert(`تم العثور على ${data.totalChapters} فصل في النظام\n\nالفصول:\n${data.chapters.map(c => `- ${c.name} (الصف ${c.grade}) - محاضرات: ${c.lectures}, ملخصات: ${c.summaries}, حلول: ${c.solvings}`).join('\n')}`);
+        })
+        .catch(error => {
+          console.error('Debug error:', error);
+          alert('حدث خطأ في فحص النظام');
+        });
+    });
     
     // Live preview
     const titleInput = document.getElementById('videoTitle');

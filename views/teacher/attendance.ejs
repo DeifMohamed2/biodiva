@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <%- include('./partials/head.ejs') %>
+  <style>
+    .attendance-card {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .attendance-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    
+    .stat-icon.attendance {
+      background-color: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+    
+    .stat-icon.students {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+    
+    .stat-icon.average {
+      background-color: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+      line-height: 1;
+    }
+    
+    .stat-label {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 0.5rem 0 0;
+    }
+    
+    .attendance-table {
+      background: white;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .table-header {
+      background: #f8fafc;
+      padding: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .attendance-row {
+      padding: 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      transition: all 0.3s ease;
+    }
+    
+    .attendance-row:hover {
+      background-color: #f8fafc;
+    }
+    
+    .grade-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .grade-1 { background-color: #dbeafe; color: #1e40af; }
+    .grade-2 { background-color: #dcfce7; color: #166534; }
+    .grade-3 { background-color: #fef3c7; color: #92400e; }
+    
+    .center-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="teacher-container">
+    <!-- Sidebar -->
+    <%- include('./partials/nav.ejs') %>
+    
+    <!-- Main Content -->
+    <main class="teacher-main">
+      <!-- Header -->
+      <%- include('./partials/top.ejs') %>
+      
+      <!-- Content -->
+      <div class="teacher-content">
+        <div class="page-header">
+          <h1 class="page-title">إدارة الحضور</h1>
+          <div class="page-actions">
+            <a href="/teacher/attendance/review" class="btn btn-primary">
+              <i class="fas fa-search"></i>
+              مراجعة الحضور
+            </a>
+            <a href="/teacher/attendance/manage" class="btn btn-secondary">
+              <i class="fas fa-clipboard-list"></i>
+              إدارة الحضور
+            </a>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="attendance-stats">
+          <div class="stat-card">
+            <div class="stat-icon attendance">
+              <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value"><%= stats.totalAttendances %></h3>
+              <p class="stat-label">إجمالي سجلات الحضور</p>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon students">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value"><%= stats.totalStudents %></h3>
+              <p class="stat-label">إجمالي الطلاب الحاضرين</p>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon average">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value"><%= Math.round(stats.totalStudents / Math.max(stats.totalAttendances, 1)) %></h3>
+              <p class="stat-label">متوسط الحضور</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Records -->
+        <div class="attendance-table">
+          <div class="table-header">
+            <h3 class="mb-0">
+              <i class="fas fa-clipboard-list"></i>
+              جميع سجلات الحضور
+            </h3>
+          </div>
+      
+      <% if (attendances && attendances.length > 0) { %>
+        <% attendances.forEach((attendance, index) => { %>
+          <div class="attendance-row">
+            <div class="row align-items-center">
+              <div class="col-md-2">
+                <div class="d-flex align-items-center">
+                  <div class="me-3">
+                    <i class="fas fa-calendar-alt text-primary"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold"><%= attendance.Date %></div>
+                    <small class="text-muted">التاريخ</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <span class="grade-badge grade-<%= attendance.Grade.slice(-1) %>">
+                  <%= attendance.Grade === 'Grade1' ? 'الصف الأول' : 
+                      attendance.Grade === 'Grade2' ? 'الصف الثاني' : 'الصف الثالث' %>
+                </span>
+              </div>
+              
+              <div class="col-md-2">
+                <span class="center-badge">
+                  <%= attendance.CenterName.replace('center', '') %>
+                </span>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-users text-success me-2"></i>
+                  <span class="fw-bold"><%= attendance.Students.length %></span>
+                  <small class="text-muted me-1">طالب</small>
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-clock text-info me-2"></i>
+                  <span><%= attendance.GroupTime %></span>
+                </div>
+              </div>
+              
+              <div class="col-md-2">
+                <div class="action-buttons">
+                  <a href="/teacher/attendance/manage?Grade=<%= attendance.Grade %>&CenterName=<%= attendance.CenterName %>&GroupTime=<%= attendance.GroupTime %>&Date=<%= attendance.Date %>" 
+                     class="btn btn-primary btn-sm">
+                    <i class="fas fa-eye"></i>
+                    عرض
+                  </a>
+                  <a href="/teacher/attendance/review?Grade=<%= attendance.Grade %>&CenterName=<%= attendance.CenterName %>&GroupTime=<%= attendance.GroupTime %>&Date=<%= attendance.Date %>" 
+                     class="btn btn-info btn-sm">
+                    <i class="fas fa-search"></i>
+                    مراجعة
+                  </a>
+                  <button class="btn btn-success btn-sm" onclick="exportAttendance('<%= attendance._id %>')">
+                    <i class="fas fa-download"></i>
+                    تصدير
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+          <% } else { %>
+            <div class="text-center py-5">
+              <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+              <h4 class="text-muted">لا توجد سجلات حضور</h4>
+              <p class="text-muted">ابدأ بإنشاء سجل حضور جديد</p>
+              <a href="/teacher/attendance/review" class="btn btn-primary">
+                <i class="fas fa-search"></i>
+                مراجعة الحضور
+              </a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    async function exportAttendance(attendanceId) {
+      try {
+        // Show loading message
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-info position-fixed';
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تحضير التقرير...';
+        document.body.appendChild(toast);
+        
+        const response = await fetch('/teacher/attendance/export', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            attendanceId: attendanceId
+          })
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `attendance_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          // Update toast to success
+          toast.className = 'alert alert-success position-fixed';
+          toast.innerHTML = '<i class="fas fa-check"></i> تم تصدير التقرير بنجاح';
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 3000);
+        } else {
+          throw new Error('فشل في تصدير التقرير');
+        }
+      } catch (error) {
+        // Update toast to error
+        const toast = document.querySelector('.alert.position-fixed');
+        if (toast) {
+          toast.className = 'alert alert-danger position-fixed';
+          toast.innerHTML = '<i class="fas fa-exclamation-triangle"></i> حدث خطأ في تصدير التقرير';
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 3000);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

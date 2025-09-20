@@ -166,13 +166,9 @@
               <div class="form-group">
                 <label class="form-label">فيديو سيتم فتحه بعد الاختبار (اختياري)</label>
                 <select class="form-select" id="videoWillbeOpen" name="videoWillbeOpen">
-                  <option value="">لا يوجد</option>
-                  <% if (locals.videos && videos.length > 0) { %>
-                    <% videos.forEach(function(video) { %>
-                      <option value="<%= video._id %>"><%= video.videoTitle || video.lectureName %></option>
-                    <% }); %>
-                  <% } %>
+                  <option value="">لا يوجد - اختر الصف أولاً</option>
                 </select>
+                <small style="color: var(--text-secondary); font-size: 0.75rem;">سيتم عرض الفيديوهات التي تتطلب اختبار بعد اختيار الصف</small>
               </div>
               
               <div class="form-group">

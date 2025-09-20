@@ -132,6 +132,35 @@
             position: relative;
         }
         
+        .video-card.locked {
+            opacity: 0.7;
+            border-color: #ffc107;
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, white 100%);
+        }
+        
+        .video-card.locked .video-thumbnail::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 193, 7, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Prerequisites section styling */
+        .prerequisites-section {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         .video-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.12);
@@ -562,8 +591,59 @@
                             const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === lecture._id.toString()) : null;
                             const watchesLeft = videoInfo ? videoInfo.videoAllowedAttemps : 3;
                             const hasAccess = lecture.paymentStatus === 'Free' || (userData.videosPaid && userData.videosPaid.includes(lecture._id.toString())) || hasChapterAccess;
+                            
+                            // Check prerequisites
+                            let videoPrerequisitesName = null;
+                            let quizName = null;
+                            let isUserCanEnter = true;
+                            let prerequisiteMessage = '';
+                            let detailedPrerequisiteInfo = '';
+                            
+                            if (lecture.prerequisites === 'WithExamaAndHw' || lecture.prerequisites === 'WithExam' || lecture.prerequisites === 'WithHw') {
+                                const prerequisiteVideo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === lecture.AccessibleAfterViewing.toString()) : null;
+                                videoPrerequisitesName = prerequisiteVideo ? prerequisiteVideo.videoName : null;
+                                
+                                // Find quiz name if it exists - look for quiz that opens the prerequisite video
+                                if (userData.quizesInfo && prerequisiteVideo) {
+                                    // Search for a quiz that opens this video (videoWillbeOpen field)
+                                    const relatedQuiz = userData.quizesInfo.find(q => 
+                                        q._id && q._id.toString() === prerequisiteVideo._id.toString()
+                                    );
+                                    if (relatedQuiz) {
+                                        quizName = relatedQuiz.quizName;
+                                    }
+                                }
+                                
+                                if (lecture.prerequisites === 'WithExamaAndHw') {
+                                    isUserCanEnter = videoInfo?.isUserEnterQuiz && videoInfo?.isUserUploadPerviousHWAndApproved;
+                                    if (!videoInfo?.isUserEnterQuiz && !videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار وتسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}" وتسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    } else if (!videoInfo?.isUserEnterQuiz) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}"`;
+                                    } else if (!videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    }
+                                } else if (lecture.prerequisites === 'WithExam') {
+                                    isUserCanEnter = videoInfo?.isUserEnterQuiz;
+                                    if (!videoInfo?.isUserEnterQuiz) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}"`;
+                                    }
+                                } else if (lecture.prerequisites === 'WithHw') {
+                                    isUserCanEnter = videoInfo?.isUserUploadPerviousHWAndApproved;
+                                    if (!videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    }
+                                }
+                            }
+                            
+                            const canWatch = hasAccess && isUserCanEnter;
                         %>
-                        <div class="video-card">
+                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %>">
                             <div class="video-thumbnail">
                                 <% if (lecture.imgURL && lecture.imgURL.trim() !== '') { %>
                                     <img src="<%= lecture.imgURL %>" alt="<%= lecture.lectureName || lecture.videoName %>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -595,8 +675,22 @@
                                         <% } %>
                                     </div>
                                 </div>
+                                
+                                <!-- Prerequisites Section -->
+                                <% if (!canWatch && hasAccess && !isUserCanEnter && detailedPrerequisiteInfo) { %>
+                                <div class="prerequisites-section" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <i class="fas fa-exclamation-triangle" style="color: #856404; font-size: 1rem;"></i>
+                                        <span style="font-weight: 600; color: #856404; font-size: 0.875rem;">المتطلبات المسبقة</span>
+                                    </div>
+                                    <p style="margin: 0; color: #856404; font-size: 0.8rem; line-height: 1.4;">
+                                        <%= detailedPrerequisiteInfo %>
+                                    </p>
+                                </div>
+                                <% } %>
+                                
                                 <div class="video-actions">
-                                    <% if (hasAccess) { %>
+                                    <% if (canWatch) { %>
                                         <% if (watchesLeft <= 0) { %>
                                         <div class="btn btn-secondary btn-lg" style="cursor: not-allowed;">
                                             <i class="fas fa-check-circle ms-2"></i>
@@ -608,11 +702,16 @@
                                             مشاهدة
                                         </a>
                                         <% } %>
-                                    <% } else { %>
+                                    <% } else if (!hasAccess) { %>
                                         <button class="btn-video btn-purchase" onclick="showCodeModal('video', '<%= lecture._id %>', '<%= lecture.lectureName || lecture.videoName %>', '<%= chapter._id %>')">
                                             <i class="fas fa-shopping-cart"></i>
                                             شراء (<span class="price-display"><%= lecture.lecturePrice || lecture.price || '25' %> ج</span>)
                                         </button>
+                                    <% } else if (!isUserCanEnter) { %>
+                                        <div class="btn btn-warning btn-lg" style="cursor: not-allowed; text-align: center; font-size: 0.8rem; padding: 0.5rem;">
+                                            <i class="fas fa-lock ms-2"></i>
+                                            مقفل - راجع المتطلبات أعلاه
+                                        </div>
                                     <% } %>
                                     <button class="btn-video btn-info" title="معلومات الدرس">
                                         <i class="fas fa-info"></i>
@@ -640,8 +739,92 @@
                             const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === summary._id.toString()) : null;
                             const watchesLeft = videoInfo ? Math.max(0, (videoInfo.videoAllowedAttemps || 3) - (videoInfo.numberOfWatches || 0)) : 3;
                             const hasAccess = summary.paymentStatus === 'Free' || (userData.videosPaid && userData.videosPaid.includes(summary._id.toString())) || hasChapterAccess;
+                            
+                            // Check prerequisites
+                            let videoPrerequisitesName = null;
+                            let quizName = null;
+                            let isUserCanEnter = true;
+                            let prerequisiteMessage = '';
+                            let detailedPrerequisiteInfo = '';
+                            
+                            if (summary.prerequisites === 'WithExamaAndHw' || summary.prerequisites === 'WithExam' || summary.prerequisites === 'WithHw') {
+                                const prerequisiteVideo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === summary.AccessibleAfterViewing.toString()) : null;
+                                videoPrerequisitesName = prerequisiteVideo ? prerequisiteVideo.videoName : null;
+                                
+                                // Find quiz name if it exists - look for quiz that opens the prerequisite video
+                                if (prerequisiteVideo && typeof allGradeQuizzes !== 'undefined') {
+                                    console.log('Looking for quiz that opens video:', prerequisiteVideo.videoName, 'Video ID:', prerequisiteVideo._id);
+                                    
+                                    // Find quiz that has videoWillbeOpen pointing to prerequisiteVideo._id
+                                    const relatedQuiz = allGradeQuizzes.find(quiz => 
+                                        quiz.videoWillbeOpen && quiz.videoWillbeOpen.toString() === prerequisiteVideo._id.toString()
+                                    );
+                                    
+                                    if (relatedQuiz) {
+                                        quizName = relatedQuiz.quizName;
+                                        console.log('Found exact quiz match:', quizName);
+                                    } else {
+                                        console.log('No exact quiz match found, trying fallback methods');
+                                        
+                                        // Fallback 1: Try to find quiz by name similarity
+                                        let fallbackQuiz = allGradeQuizzes.find(quiz => 
+                                            quiz.quizName && quiz.quizName.toLowerCase().includes(
+                                                prerequisiteVideo.videoName?.toLowerCase().substring(0, Math.min(8, prerequisiteVideo.videoName?.length || 0))
+                                            )
+                                        );
+                                        
+                                        if (fallbackQuiz) {
+                                            quizName = fallbackQuiz.quizName;
+                                            console.log('Found quiz by name similarity:', quizName);
+                                        } else if (allGradeQuizzes.length > 0) {
+                                            // Fallback 2: Use the first available quiz
+                                            quizName = allGradeQuizzes[0].quizName;
+                                            console.log('Using first available quiz as fallback:', quizName);
+                                        } else {
+                                            // Last resort - generic message
+                                            quizName = 'الاختبار المطلوب';
+                                            console.log('No quizzes available, using generic message');
+                                        }
+                                    }
+                                } else if (userData.quizesInfo && userData.quizesInfo.length > 0) {
+                                    // Legacy fallback if allGradeQuizzes is not available
+                                    quizName = userData.quizesInfo[0].quizName;
+                                    console.log('Using legacy fallback quiz:', quizName);
+                                } else {
+                                    quizName = 'الاختبار المطلوب';
+                                    console.log('No quiz data available, using generic message');
+                                }
+                                
+                                if (summary.prerequisites === 'WithExamaAndHw') {
+                                    isUserCanEnter = videoInfo?.isUserEnterQuiz && videoInfo?.isUserUploadPerviousHWAndApproved;
+                                    if (!videoInfo?.isUserEnterQuiz && !videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار وتسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}" وتسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    } else if (!videoInfo?.isUserEnterQuiz) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}"`;
+                                    } else if (!videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    }
+                                } else if (summary.prerequisites === 'WithExam') {
+                                    isUserCanEnter = videoInfo?.isUserEnterQuiz;
+                                    if (!videoInfo?.isUserEnterQuiz) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}"`;
+                                    }
+                                } else if (summary.prerequisites === 'WithHw') {
+                                    isUserCanEnter = videoInfo?.isUserUploadPerviousHWAndApproved;
+                                    if (!videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    }
+                                }
+                            }
+                            
+                            const canWatch = hasAccess && isUserCanEnter;
                         %>
-                        <div class="video-card">
+                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %>">
                             <div class="video-thumbnail">
                                 <% if (summary.imgURL && summary.imgURL.trim() !== '') { %>
                                     <img src="<%= summary.imgURL %>" alt="<%= summary.lectureName || summary.videoName %>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -673,8 +856,22 @@
                                         <% } %>
                                     </div>
                                 </div>
+                                
+                                <!-- Prerequisites Section -->
+                                <% if (!canWatch && hasAccess && !isUserCanEnter && detailedPrerequisiteInfo) { %>
+                                <div class="prerequisites-section" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <i class="fas fa-exclamation-triangle" style="color: #856404; font-size: 1rem;"></i>
+                                        <span style="font-weight: 600; color: #856404; font-size: 0.875rem;">المتطلبات المسبقة</span>
+                                    </div>
+                                    <p style="margin: 0; color: #856404; font-size: 0.8rem; line-height: 1.4;">
+                                        <%= detailedPrerequisiteInfo %>
+                                    </p>
+                                </div>
+                                <% } %>
+                                
                                 <div class="video-actions">
-                                    <% if (hasAccess) { %>
+                                    <% if (canWatch) { %>
                                         <% if (watchesLeft <= 0) { %>
                                         <div class="btn btn-secondary btn-lg" style="cursor: not-allowed;">
                                             <i class="fas fa-check-circle ms-2"></i>
@@ -686,11 +883,16 @@
                                             مشاهدة
                                         </a>
                                         <% } %>
-                                    <% } else { %>
+                                    <% } else if (!hasAccess) { %>
                                         <button class="btn-video btn-purchase" onclick="showCodeModal('video', '<%= summary._id %>', '<%= summary.lectureName || summary.videoName %>', '<%= chapter._id %>')">
                                             <i class="fas fa-shopping-cart"></i>
                                             شراء (<span class="price-display"><%= summary.lecturePrice || summary.price || '15' %> ج</span>)
                                         </button>
+                                    <% } else if (!isUserCanEnter) { %>
+                                        <div class="btn btn-warning btn-lg" style="cursor: not-allowed; text-align: center; font-size: 0.8rem; padding: 0.5rem;">
+                                            <i class="fas fa-lock ms-2"></i>
+                                            مقفل - راجع المتطلبات أعلاه
+                                        </div>
                                     <% } %>
                                     <button class="btn-video btn-info" title="معلومات الملخص">
                                         <i class="fas fa-info"></i>
@@ -718,8 +920,92 @@
                             const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === solving._id.toString()) : null;
                             const watchesLeft = videoInfo ? Math.max(0, (videoInfo.videoAllowedAttemps || 3) - (videoInfo.numberOfWatches || 0)) : 3;
                             const hasAccess = solving.paymentStatus === 'Free' || (userData.videosPaid && userData.videosPaid.includes(solving._id.toString())) || hasChapterAccess;
+                            
+                            // Check prerequisites
+                            let videoPrerequisitesName = null;
+                            let quizName = null;
+                            let isUserCanEnter = true;
+                            let prerequisiteMessage = '';
+                            let detailedPrerequisiteInfo = '';
+                            
+                            if (solving.prerequisites === 'WithExamaAndHw' || solving.prerequisites === 'WithExam' || solving.prerequisites === 'WithHw') {
+                                const prerequisiteVideo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === solving.AccessibleAfterViewing.toString()) : null;
+                                videoPrerequisitesName = prerequisiteVideo ? prerequisiteVideo.videoName : null;
+                                
+                                // Find quiz name if it exists - look for quiz that opens the prerequisite video
+                                if (prerequisiteVideo && typeof allGradeQuizzes !== 'undefined') {
+                                    console.log('Looking for quiz that opens video:', prerequisiteVideo.videoName, 'Video ID:', prerequisiteVideo._id);
+                                    
+                                    // Find quiz that has videoWillbeOpen pointing to prerequisiteVideo._id
+                                    const relatedQuiz = allGradeQuizzes.find(quiz => 
+                                        quiz.videoWillbeOpen && quiz.videoWillbeOpen.toString() === prerequisiteVideo._id.toString()
+                                    );
+                                    
+                                    if (relatedQuiz) {
+                                        quizName = relatedQuiz.quizName;
+                                        console.log('Found exact quiz match:', quizName);
+                                    } else {
+                                        console.log('No exact quiz match found, trying fallback methods');
+                                        
+                                        // Fallback 1: Try to find quiz by name similarity
+                                        let fallbackQuiz = allGradeQuizzes.find(quiz => 
+                                            quiz.quizName && quiz.quizName.toLowerCase().includes(
+                                                prerequisiteVideo.videoName?.toLowerCase().substring(0, Math.min(8, prerequisiteVideo.videoName?.length || 0))
+                                            )
+                                        );
+                                        
+                                        if (fallbackQuiz) {
+                                            quizName = fallbackQuiz.quizName;
+                                            console.log('Found quiz by name similarity:', quizName);
+                                        } else if (allGradeQuizzes.length > 0) {
+                                            // Fallback 2: Use the first available quiz
+                                            quizName = allGradeQuizzes[0].quizName;
+                                            console.log('Using first available quiz as fallback:', quizName);
+                                        } else {
+                                            // Last resort - generic message
+                                            quizName = 'الاختبار المطلوب';
+                                            console.log('No quizzes available, using generic message');
+                                        }
+                                    }
+                                } else if (userData.quizesInfo && userData.quizesInfo.length > 0) {
+                                    // Legacy fallback if allGradeQuizzes is not available
+                                    quizName = userData.quizesInfo[0].quizName;
+                                    console.log('Using legacy fallback quiz:', quizName);
+                                } else {
+                                    quizName = 'الاختبار المطلوب';
+                                    console.log('No quiz data available, using generic message');
+                                }
+                                
+                                if (solving.prerequisites === 'WithExamaAndHw') {
+                                    isUserCanEnter = videoInfo?.isUserEnterQuiz && videoInfo?.isUserUploadPerviousHWAndApproved;
+                                    if (!videoInfo?.isUserEnterQuiz && !videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار وتسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}" وتسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    } else if (!videoInfo?.isUserEnterQuiz) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}"`;
+                                    } else if (!videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    }
+                                } else if (solving.prerequisites === 'WithExam') {
+                                    isUserCanEnter = videoInfo?.isUserEnterQuiz;
+                                    if (!videoInfo?.isUserEnterQuiz) {
+                                        prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار "${quizName || 'الاختبار'}"`;
+                                    }
+                                } else if (solving.prerequisites === 'WithHw') {
+                                    isUserCanEnter = videoInfo?.isUserUploadPerviousHWAndApproved;
+                                    if (!videoInfo?.isUserUploadPerviousHWAndApproved) {
+                                        prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+                                        detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${videoPrerequisitesName || 'الفيديو السابق'}"`;
+                                    }
+                                }
+                            }
+                            
+                            const canWatch = hasAccess && isUserCanEnter;
                         %>
-                        <div class="video-card">
+                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %>">
                             <div class="video-thumbnail">
                                 <% if (solving.imgURL && solving.imgURL.trim() !== '') { %>
                                     <img src="<%= solving.imgURL %>" alt="<%= solving.lectureName || solving.videoName %>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -751,8 +1037,22 @@
                                         <% } %>
                                     </div>
                                 </div>
+                                
+                                <!-- Prerequisites Section -->
+                                <% if (!canWatch && hasAccess && !isUserCanEnter && detailedPrerequisiteInfo) { %>
+                                <div class="prerequisites-section" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <i class="fas fa-exclamation-triangle" style="color: #856404; font-size: 1rem;"></i>
+                                        <span style="font-weight: 600; color: #856404; font-size: 0.875rem;">المتطلبات المسبقة</span>
+                                    </div>
+                                    <p style="margin: 0; color: #856404; font-size: 0.8rem; line-height: 1.4;">
+                                        <%= detailedPrerequisiteInfo %>
+                                    </p>
+                                </div>
+                                <% } %>
+                                
                                 <div class="video-actions">
-                                    <% if (hasAccess) { %>
+                                    <% if (canWatch) { %>
                                         <% if (watchesLeft <= 0) { %>
                                         <div class="btn btn-secondary btn-lg" style="cursor: not-allowed;">
                                             <i class="fas fa-check-circle ms-2"></i>
@@ -764,11 +1064,16 @@
                                             مشاهدة
                                         </a>
                                         <% } %>
-                                    <% } else { %>
+                                    <% } else if (!hasAccess) { %>
                                         <button class="btn-video btn-purchase" onclick="showCodeModal('video', '<%= solving._id %>', '<%= solving.lectureName || solving.videoName %>', '<%= chapter._id %>')">
                                             <i class="fas fa-shopping-cart"></i>
                                             شراء (<span class="price-display"><%= solving.lecturePrice || solving.price || '20' %> ج</span>)
                                         </button>
+                                    <% } else if (!isUserCanEnter) { %>
+                                        <div class="btn btn-warning btn-lg" style="cursor: not-allowed; text-align: center; font-size: 0.8rem; padding: 0.5rem;">
+                                            <i class="fas fa-lock ms-2"></i>
+                                            مقفل - راجع المتطلبات أعلاه
+                                        </div>
                                     <% } %>
                                     <button class="btn-video btn-info" title="معلومات التطبيق">
                                         <i class="fas fa-info"></i>

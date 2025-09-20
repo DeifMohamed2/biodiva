@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const teacherController = require('../controllers/teacherController');
 const { authenticateTeacher } = require('../controllers/homeController');
+// Using express-fileupload globally in app.js; no multer here
 
 // ================== Teacher Authentication Middleware ====================== //
 
@@ -97,12 +98,17 @@ router.post("/codes/generate/general", authenticateTeacherRoute, teacherControll
 
 // ================== Attendance Management Routes ====================== //
 router.get("/attendance", authenticateTeacherRoute, teacherController.attendance_get);
-router.get("/attendance/create", authenticateTeacherRoute, teacherController.attendance_create_get);
-router.post("/attendance/create", authenticateTeacherRoute, teacherController.attendance_create_post);
+router.get("/attendance/review", authenticateTeacherRoute, teacherController.attendance_review_get);
+router.post("/attendance/review", authenticateTeacherRoute, teacherController.attendance_review_post);
 router.get("/attendance/manage", authenticateTeacherRoute, teacherController.attendance_manage_get);
-router.post("/attendance/:sessionId/mark", authenticateTeacherRoute, teacherController.attendance_mark);
-router.delete("/attendance/:sessionId", authenticateTeacherRoute, teacherController.attendance_delete);
-router.get("/attendance/export", authenticateTeacherRoute, teacherController.attendance_export);
+router.post("/attendance/mark", authenticateTeacherRoute, teacherController.attendance_mark);
+router.delete("/attendance/remove/:studentId", authenticateTeacherRoute, teacherController.attendance_delete);
+router.post("/attendance/export", authenticateTeacherRoute, teacherController.attendance_export);
+
+// Additional attendance routes
+router.post("/attendance/getDates", authenticateTeacherRoute, teacherController.get_attendance_dates);
+router.post("/attendance/getAttendees", authenticateTeacherRoute, teacherController.get_attendance_students);
+router.post("/addCard", authenticateTeacherRoute, teacherController.add_card_to_student);
 
 // ================== Analytics Routes ====================== //
 router.get("/analytics/students", authenticateTeacherRoute, teacherController.analytics_students);
@@ -113,8 +119,14 @@ router.get("/analytics/revenue", authenticateTeacherRoute, teacherController.ana
 // ================== Communication Routes ====================== //
 router.get("/communication", authenticateTeacherRoute, teacherController.communication_get);
 router.get("/whatsapp", authenticateTeacherRoute, teacherController.whatsapp_get);
-router.post("/whatsapp/send", authenticateTeacherRoute, teacherController.whatsapp_send);
-router.post("/grades/send", authenticateTeacherRoute, teacherController.send_grades);
+router.post("/sendTextMessages", authenticateTeacherRoute, teacherController.sendTextMessages);
+router.post("/sendImageMessages", authenticateTeacherRoute, teacherController.sendImageMessages);
+router.post("/sendGradeMessages", authenticateTeacherRoute, teacherController.sendGradeMessages);
+
+// Legacy attendance endpoints (previous system structure)
+router.post("/handelAttendance/getDates", authenticateTeacherRoute, teacherController.get_attendance_dates);
+router.post("/handelAttendance/getAttendees", authenticateTeacherRoute, teacherController.get_attendance_students);
+router.post("/handelAttendance/convertAttendeesToExcel", authenticateTeacherRoute, teacherController.attendance_export);
 
 // ================== Settings Routes ====================== //
 router.get("/settings", authenticateTeacherRoute, teacherController.settings_get);
@@ -128,10 +140,17 @@ router.get("/api/dashboard/analytics", authenticateTeacherRoute, teacherControll
 
 // API routes for dynamic content loading
 router.get("/api/videos/chapter/:chapterId", authenticateTeacherRoute, teacherController.api_videos_by_chapter);
+router.get("/api/videos/grade/:grade", authenticateTeacherRoute, teacherController.api_videos_by_grade);
 router.get("/api/quizzes/grade/:grade", authenticateTeacherRoute, teacherController.api_quizzes_by_grade);
+router.get("/api/debug/system", authenticateTeacherRoute, teacherController.api_debug_system);
 
 // Utility routes
 router.post("/chapters/:chapterId/sync-video-access", authenticateTeacherRoute, teacherController.sync_video_access_for_chapter_owners);
+
+// Homework Management routes
+router.post("/homework/approve/:submissionId", authenticateTeacherRoute, teacherController.approveHomework);
+router.post("/homework/reject/:submissionId", authenticateTeacherRoute, teacherController.rejectHomework);
+router.post("/homework/review-notes/:submissionId", authenticateTeacherRoute, teacherController.updateReviewNotes);
 
 // ================== Auth Routes ====================== //
 router.get("/logout", teacherController.logout);

@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <%- include('./partials/head.ejs') %>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  
+  <style>
+    .attendance-card {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+    
+    .form-select, .form-control {
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .form-select:focus, .form-control:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      outline: none;
+    }
+    
+    .qr-scanner {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 1rem;
+      padding: 2rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+    
+    #reader {
+      width: 300px;
+      height: 300px;
+      margin: auto;
+      border-radius: 1rem;
+      border: 2px solid #e5e7eb;
+      display: none;
+    }
+    
+    .student-table {
+      background: white;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .table-header {
+      background: #f8fafc;
+      padding: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .table th {
+      border: none;
+      padding: 1rem;
+      font-weight: 600;
+      background-color: #f8fafc;
+    }
+    
+    .table td {
+      border: none;
+      padding: 1rem;
+      vertical-align: middle;
+    }
+    
+    .table tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+      background-color: #f8fafc;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      display: none;
+    }
+    
+    .success-message {
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #16a34a;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      display: none;
+    }
+    
+    .btn-group-custom {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .btn-custom {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .btn-primary-custom {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary-custom:hover {
+      background: #2563eb;
+    }
+    
+    .btn-success-custom {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-success-custom:hover {
+      background: #059669;
+    }
+    
+    .btn-warning-custom {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .btn-warning-custom:hover {
+      background: #d97706;
+    }
+    
+    .btn-danger-custom {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger-custom:hover {
+      background: #dc2626;
+    }
+    
+    .avatar-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .input-group-lg .form-control {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+    }
+    
+    .input-group-lg .input-group-text {
+      padding: 0.75rem 1rem;
+    }
+    
+    .table th {
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .table td {
+      vertical-align: middle;
+      padding: 1rem 0.75rem;
+    }
+    
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+    }
+    
+    /* Enhanced Card Styling */
+    .enhanced-card {
+      border: 1px solid #e3e6f0;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-card:hover {
+      box-shadow: 0 0.25rem 2rem 0 rgba(58, 59, 69, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .card-header-enhanced {
+      background: linear-gradient(135deg, #f8f9fc 0%, #f1f3f6 100%);
+      border-bottom: 2px solid #e3e6f0;
+      padding: 1.5rem;
+      margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
+    
+    .card-body-enhanced {
+      padding: 0;
+    }
+    
+    .enhanced-input .form-control {
+      border: 2px solid #e3e6f0;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-input .form-control:focus {
+      border-color: #4e73df;
+      box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .enhanced-input .input-group-text {
+      background: #f8f9fc;
+      border: 2px solid #e3e6f0;
+      border-right: none;
+      font-weight: 600;
+    }
+    
+    .enhanced-input .btn {
+      border: 2px solid #28a745;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .enhanced-input .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    /* Enhanced Table Styling */
+    .enhanced-table {
+      border: 1px solid #e3e6f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    
+    .enhanced-table thead th {
+      background: #5a5c69;
+      color: white;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      padding: 1rem 0.75rem;
+      border: none;
+    }
+    
+    .enhanced-table tbody td {
+      padding: 1rem 0.75rem;
+      vertical-align: middle;
+      border-bottom: 1px solid #f8f9fc;
+      font-weight: 600;
+    }
+    
+    .enhanced-table tbody tr:hover {
+      background-color: #f8f9fc;
+      transform: scale(1.01);
+      transition: all 0.2s ease;
+    }
+    
+    .enhanced-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Avatar Enhancement */
+    .avatar-sm {
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    
+    /* Badge Enhancement */
+    .badge {
+      font-size: 0.8rem;
+      padding: 0.5rem 0.75rem;
+      font-weight: 700;
+    }
+    
+    /* Simple QR Scanner Styling */
+    .qr-scanner {
+      background: #f8f9fa;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      border: 1px solid #e9ecef;
+    }
+    
+    /* Feedback Section */
+    .feedback-section {
+      min-height: 50px;
+    }
+    
+    /* Simple Attendance Card Design */
+    .simple-attendance-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .simple-card-header {
+      padding: 1.5rem 1.5rem 0 1.5rem;
+      border-bottom: none;
+    }
+    
+    .simple-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #5a5c69;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .simple-title i {
+      color: #4e73df;
+    }
+    
+    .simple-card-body {
+      padding: 1.5rem;
+    }
+    
+    .simple-input-row {
+      margin-bottom: 1rem;
+    }
+    
+    .simple-input-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+      justify-content: center;
+    }
+    
+    .simple-input {
+      width: 400px;
+      max-width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #d1d3e2;
+      border-radius: 0.375rem;
+      font-size: 1rem;
+      background: white;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .simple-input:focus {
+      border-color: #4e73df;
+      outline: 0;
+      box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .simple-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+    
+    .simple-btn-primary {
+      background: #4e73df;
+      color: white;
+    }
+    
+    .simple-btn-primary:hover {
+      background: #2e59d9;
+      color: white;
+    }
+    
+    .simple-btn-secondary {
+      background: white;
+      color: #4e73df;
+      border: 1px solid #4e73df;
+    }
+    
+    .simple-btn-secondary:hover {
+      background: #4e73df;
+      color: white;
+    }
+    
+    .simple-actions {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    
+    .simple-qr-scanner {
+      background: #f8f9fc;
+      border: 1px solid #e3e6f0;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .simple-feedback {
+      min-height: 2rem;
+    }
+    
+    .simple-error {
+      color: #e74a3b;
+      font-weight: 500;
+      display: none;
+    }
+    
+    .simple-success {
+      color: #1cc88a;
+      font-weight: 500;
+      display: none;
+    }
+    
+    .simple-spinner {
+      text-align: center;
+      color: #4e73df;
+      padding: 1rem;
+    }
+    
+    .simple-spinner::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4e73df;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 0.5rem;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .simple-card-body {
+        padding: 1rem;
+      }
+      
+      .simple-input-group {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      
+      .simple-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="teacher-container">
+    <!-- Sidebar -->
+    <%- include('./partials/nav.ejs') %>
+    
+    <!-- Main Content -->
+    <main class="teacher-main">
+      <!-- Header -->
+      <%- include('./partials/top.ejs') %>
+      
+      <!-- Content -->
+      <div class="teacher-content">
+        <div class="page-header">
+          <h1 class="page-title">إدارة الحضور</h1>
+          <p class="page-subtitle">تسجيل حضور الطلاب باستخدام الكارت أو الكود</p>
+        </div>
+
+        <!-- Add Card Section -->
+        <div class="attendance-card">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">
+              <i class="fas fa-id-card text-primary"></i>
+              إدارة الكروت
+            </h3>
+            <button type="button" id="showAddCardForm" class="btn btn-outline-primary">
+              <i class="fas fa-plus"></i>
+              إضافة كارت جديد
+            </button>
+          </div>
+          
+          <div class="d-none" id="addCardForm">
+            <div class="card border-0 bg-light">
+              <div class="card-body">
+                <form id="addCardFormElement">
+                  <div class="row align-items-end">
+                    <div class="col-md-4 mb-3">
+                      <label for="studentCode" class="form-label">كود الطالب</label>
+                      <input type="number" class="form-control" id="studentCode" name="studentCode" required>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                      <label for="assignedCard" class="form-label">رقم الكارت</label>
+                      <input type="number" class="form-control" id="assignedCard" name="assignedCard" required>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                      <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-save"></i>
+                        ربط الكارت
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="spinner d-none mx-auto" id="cardSpinner"></div>
+                  
+                  <div class="alert alert-success d-none" id="cardSuccessMessage">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-check-circle me-2"></i>
+                      <div>
+                        <strong id="cardMessage"></strong>
+                        <div class="text-muted">اسم الطالب: <span id="studentName"></span></div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Form -->
+        <div class="attendance-card">
+          <h3 class="mb-4">
+            <i class="fas fa-cog text-primary"></i>
+            إعدادات الحضور
+          </h3>
+          
+          <form id="attendanceForm">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="CardGrade" class="form-label">الصف الدراسي</label>
+                <select name="Grade" class="form-select" id="CardGrade" required>
+                  <option value="">اختر الصف الدراسي</option>
+                  <option value="Grade1">الصف الأول الثانوي</option>
+                  <option value="Grade2">الصف الثاني الثانوي</option>
+                  <option value="Grade3">الصف الثالث الثانوي</option>
+                </select>
+              </div>
+              
+              <div class="col-md-4">
+                <label for="centerName" class="form-label">اسم السنتر</label>
+                <select name="centerName" class="form-select" id="centerName" required>
+                  <option value="">اختر اسم السنتر</option>
+                  <option value="centerBasmala">البسمله</option>
+                  <option value="centerDHL">DHL</option>
+                  <option value="centerDarElsa3da">دار السعاده</option>
+                  <option value="centerFutureSoft">Future Soft</option>
+                  <option value="centerInfinity">Infinity</option>
+                  <option value="centerElra3y">الراعي</option>
+                  <option value="centerNewFuture">New Future</option>
+                  <option value="centerHarverd">هارفرد</option>
+                  <option value="centerA1">A1</option>
+                </select>
+              </div>
+              
+              <div class="col-md-4">
+                <label for="groupTime" class="form-label">المجموعة</label>
+                <select name="groupTime" class="form-select" id="groupTime" required>
+                  <option value="">اختر المجموعة</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="text-center mt-4">
+              <button type="button" id="saveAndStart" class="btn btn-primary btn-lg">
+                <i class="fas fa-play"></i>
+                بدء تسجيل الحضور
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Attendance Input -->
+        <div class="attendance-card simple-attendance-card">
+          <div class="simple-card-header">
+            <h3 class="simple-title">
+              <i class="fas fa-user-plus"></i>
+              تسجيل حضور الطلاب
+            </h3>
+          </div>
+          
+          <div class="simple-card-body">
+            <div class="simple-input-row">
+              <div class="simple-input-group">
+                <input type="text" class="simple-input" id="attendeeID" 
+                       placeholder="رقم الكارت، كود الطالب، أو رقم الهاتف" 
+                       autocomplete="off" required>
+                <button type="submit" form="attendanceForm" class="simple-btn simple-btn-primary">
+                  <i class="fas fa-check"></i>
+                  تحضير بشكل يدوي
+                </button>
+              </div>
+            </div>
+            
+            <div class="simple-actions">
+              <button type="button" class="simple-btn simple-btn-secondary" id="openQrCamera">
+                <i class="fas fa-qrcode"></i>
+                مسح بالكاميرا
+              </button>
+            </div>
+            
+            <div class="simple-qr-scanner" id="qrScannerContainer">
+              <div id="reader"></div>
+            </div>
+            
+            <div class="simple-feedback">
+              <div class="simple-error" id="errorMessage"></div>
+              <div class="simple-success" id="successMessage"></div>
+              <div class="simple-spinner d-none" id="spinner">جاري تسجيل الحضور...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Students Table -->
+        <div class="attendance-card enhanced-card">
+          <div class="card-header-enhanced">
+            <div class="d-flex justify-content-between align-items-center">
+              <h3 class="mb-0">
+                <i class="fas fa-users text-primary"></i>
+                قائمة الطلاب الحاضرين
+              </h3>
+              <span class="badge bg-primary fs-6 px-3 py-2" id="studentCount">0 طالب</span>
+            </div>
+            <div class="mt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="input-group">
+                    <span class="input-group-text">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="studentSearchManage" placeholder="البحث بالاسم أو الكود...">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <button type="button" class="btn btn-outline-secondary" id="clearSearchManage">
+                    <i class="fas fa-times"></i>
+                    مسح البحث
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-body-enhanced">
+            <div class="table-responsive">
+              <table class="table table-hover enhanced-table">
+                <thead class="table-dark">
+                  <tr>
+                    <th width="5%" class="text-center">#</th>
+                    <th width="20%">اسم الطالب</th>
+                    <th width="12%" class="text-center">كود الطالب</th>
+                    <th width="18%" class="text-center">رقم الهاتف</th>
+                    <th width="18%" class="text-center">رقم ولي الأمر</th>
+                    <th width="12%" class="text-center">الصف</th>
+                    <th width="15%" class="text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                      <i class="fas fa-users fa-3x mb-3 text-muted"></i>
+                      <div class="fs-5">لم يتم تسجيل أي طالب بعد</div>
+                      <div class="text-muted">ابدأ بتسجيل حضور الطلاب</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Button -->
+        <div class="text-center mt-4">
+          <button class="btn btn-success-custom btn-lg" id="exportToExcel">
+            <i class="fas fa-file-excel"></i>
+            حفظ وتصدير إلى Excel
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Group times configuration
+    const groupTimes = {
+      centerBasmala: [
+        { value: 'group1', text: 'السبت - 10 - 12' },
+        { value: 'group2', text: 'السبت - 12 - 2' }
+      ],
+      centerDHL: [
+        { value: 'group1', text: 'السبت - 3 - 5' },
+        { value: 'group2', text: 'السبت - 5 - 7' }
+      ],
+      centerDarElsa3da: [
+        { value: 'group1', text: 'الأحد - 3:30 - 5:30' },
+        { value: 'group2', text: 'الاثنين - 5 - 7' }
+      ],
+      centerFutureSoft: [
+        { value: 'group1', text: 'الأحد - 6 - 8' },
+        { value: 'group2', text: 'الخميس - 7 - 9' }
+      ],
+      centerInfinity: [
+        { value: 'group1', text: 'الاثنين - 7 - 9' }
+      ],
+      centerElra3y: [
+        { value: 'group1', text: 'الثلاثاء - 3 - 5' },
+        { value: 'group2', text: 'الأربعاء - 5:30 - 7:30' },
+        { value: 'group3', text: 'الأربعاء - 7:30 - 9:30' }
+      ],
+      centerNewFuture: [
+        { value: 'group1', text: 'الثلاثاء - 5 - 7' },
+        { value: 'group2', text: 'الثلاثاء - 7 - 9' }
+      ],
+      centerHarverd: [
+        { value: 'group1', text: 'الخميس - 3 - 5' },
+        { value: 'group2', text: 'الخميس - 5 - 7' }
+      ],
+      centerA1: [
+        { value: 'group1', text: 'الجمعة - 3 - 5' },
+        { value: 'group2', text: 'الجمعة - 5 - 7' }
+      ]
+    };
+
+    // DOM elements
+    const showAddCardForm = document.getElementById('showAddCardForm');
+    const addCardForm = document.getElementById('addCardForm');
+    const addCardFormElement = document.getElementById('addCardFormElement');
+    const centerName = document.getElementById('centerName');
+    const groupTime = document.getElementById('groupTime');
+    const saveAndStart = document.getElementById('saveAndStart');
+    const attendanceForm = document.getElementById('attendanceForm');
+    const attendeeID = document.getElementById('attendeeID');
+    const openQrCamera = document.getElementById('openQrCamera');
+    const reader = document.getElementById('reader');
+    const studentsTableBody = document.getElementById('studentsTableBody');
+    const exportToExcel = document.getElementById('exportToExcel');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+    const spinner = document.getElementById('spinner');
+    let allStudentsManage = [];
+
+    // Toggle add card form
+    showAddCardForm.addEventListener('click', () => {
+      addCardForm.classList.toggle('d-none');
+      showAddCardForm.textContent = addCardForm.classList.contains('d-none') 
+        ? 'إظهار نموذج إضافة الكارت' 
+        : 'إخفاء نموذج إضافة الكارت';
+    });
+
+    // Handle center name change
+    centerName.addEventListener('change', function() {
+      const selectedCenter = this.value;
+      groupTime.innerHTML = '<option value="">اختر المجموعة</option>';
+      
+      if (groupTimes[selectedCenter]) {
+        groupTimes[selectedCenter].forEach(group => {
+          const option = document.createElement('option');
+          option.value = group.value;
+          option.textContent = group.text;
+          groupTime.appendChild(option);
+        });
+      }
+    });
+
+    // Add card form submission
+    addCardFormElement.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const studentCode = document.getElementById('studentCode').value;
+      const assignedCard = document.getElementById('assignedCard').value;
+      const cardSpinner = document.getElementById('cardSpinner');
+      const cardSuccessMessage = document.getElementById('cardSuccessMessage');
+      const cardMessage = document.getElementById('cardMessage');
+      const studentName = document.getElementById('studentName');
+      
+      cardSpinner.classList.remove('d-none');
+      cardSuccessMessage.classList.add('d-none');
+      
+      try {
+        const response = await fetch('/teacher/addCard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentCode, assignedCard })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          cardMessage.textContent = data.message;
+          studentName.textContent = data.Username;
+          cardSuccessMessage.classList.remove('d-none');
+          addCardFormElement.reset();
+        } else {
+          showToast('error', data.message);
+        }
+      } catch (error) {
+        showToast('error', 'حدث خطأ في الشبكة');
+      } finally {
+        cardSpinner.classList.add('d-none');
+      }
+    });
+
+    // Save and start attendance
+    saveAndStart.addEventListener('click', async () => {
+      const CardGrade = document.getElementById('CardGrade').value;
+      const centerNameValue = centerName.value;
+      const GroupTime = groupTime.value;
+      
+      if (!CardGrade || !centerNameValue || !GroupTime) {
+        showToast('warning', 'يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+      
+      try {
+        // Show loading
+        showToast('info', 'جاري تحميل بيانات الحضور...');
+        
+        // Fetch existing students for today's attendance
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch('/teacher/attendance/getAttendees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            CardGrade,
+            centerName: centerNameValue,
+            GroupTime,
+            date: today
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Update the students table with existing data
+          updateStudentsTable(data.students || []);
+          
+          // Disable form elements
+          document.getElementById('CardGrade').disabled = true;
+          centerName.disabled = true;
+          groupTime.disabled = true;
+          
+          attendeeID.focus();
+          showToast('success', 'تم حفظ الإعدادات وتحميل بيانات الحضور');
+        } else {
+          // Even if no existing attendance, still save settings
+          updateStudentsTable([]);
+          
+          // Disable form elements
+          document.getElementById('CardGrade').disabled = true;
+          centerName.disabled = true;
+          groupTime.disabled = true;
+          
+          attendeeID.focus();
+          showToast('success', 'تم حفظ الإعدادات، يمكنك الآن تسجيل الحضور');
+        }
+      } catch (error) {
+        console.error('Error loading attendance data:', error);
+        showToast('error', 'حدث خطأ في تحميل البيانات');
+      }
+    });
+
+    // Function to detect input type
+    function detectInputType(input) {
+      const value = input.trim();
+      
+      // Remove any non-digit characters for phone number detection
+      const digitsOnly = value.replace(/\D/g, '');
+      
+      // Check if it's a phone number (10-15 digits after removing non-digits)
+      if (digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+        return 'Phone';
+      }
+      
+      // Check if it's a card ID (contains only digits and is 4-8 digits long)
+      if (/^\d{4,8}$/.test(value)) {
+        return 'Card';
+      }
+      
+      // Check if it's a student code (contains only digits and is 3-6 digits long)
+      if (/^\d{3,6}$/.test(value)) {
+        return 'Code';
+      }
+      
+      // Default to Card if we can't determine
+      return 'Card';
+    }
+
+    // Attendance form submission
+    attendanceForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const CardGrade = document.getElementById('CardGrade').value;
+      const centerNameValue = centerName.value;
+      const GroupTime = groupTime.value;
+      const attendeeIDValue = attendeeID.value.trim();
+      
+      if (!attendeeIDValue) {
+        showToast('warning', 'يرجى إدخال رقم الكارت، كود الطالب، أو رقم الهاتف');
+        return;
+      }
+      
+      // Auto-detect input type
+      const detectedType = detectInputType(attendeeIDValue);
+      console.log('Detected input type:', detectedType, 'for value:', attendeeIDValue);
+      
+      spinner.classList.remove('d-none');
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+      
+      try {
+        const response = await fetch('/teacher/attendance/mark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            Grade: CardGrade,
+            CenterName: centerNameValue,
+            GroupTime: GroupTime,
+            Date: new Date().toISOString().split('T')[0],
+            CardType: detectedType,
+            attendeeID: attendeeIDValue
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          successMessage.textContent = data.message;
+          successMessage.style.display = 'block';
+          errorMessage.style.display = 'none';
+          attendeeID.value = '';
+          updateStudentsTable(data.attendanceRecord.Students);
+        } else {
+          errorMessage.textContent = data.message;
+          errorMessage.style.display = 'block';
+          successMessage.style.display = 'none';
+          // Don't clear the input on error so user can see what they entered
+        }
+      } catch (error) {
+        errorMessage.textContent = 'حدث خطأ في الشبكة';
+        errorMessage.style.display = 'block';
+      } finally {
+        spinner.classList.add('d-none');
+      }
+    });
+
+    // Update students table
+    function updateStudentsTable(students) {
+      const studentCount = document.getElementById('studentCount');
+      
+      // Store all students for search functionality
+      allStudentsManage = students || [];
+      
+      if (!students || students.length === 0) {
+        studentsTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+              <i class="fas fa-users fa-3x mb-3 text-muted"></i>
+              <div class="fs-5">لم يتم تسجيل أي طالب بعد</div>
+              <div class="text-muted">ابدأ بتسجيل حضور الطلاب</div>
+            </td>
+          </tr>
+        `;
+        studentCount.textContent = '0 طالب';
+        return;
+      }
+      
+      studentsTableBody.innerHTML = '';
+      students.forEach((student, index) => {
+        const row = document.createElement('tr');
+        // Clean student name (remove email domain if present)
+        const studentName = student.Username && student.Username.includes('@') ? 
+                           student.Username.split('@')[0] : student.Username;
+        const initials = studentName ? studentName.charAt(0).toUpperCase() : 'ط';
+        
+        // Get grade display text
+        const gradeText = student.Grade === 'Grade1' ? 'الأول' : 
+                         student.Grade === 'Grade2' ? 'الثاني' : 
+                         student.Grade === 'Grade3' ? 'الثالث' : student.Grade;
+        
+        row.innerHTML = `
+          <td class="text-center fw-bold text-dark">${index + 1}</td>
+          <td>
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center fw-bold">
+                ${initials}
+              </div>
+              <span class="fw-bold text-dark fs-6">${studentName}</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-primary fs-6 px-3 py-2 fw-bold">${student.Code}</span>
+          </td>
+          <td class="text-center fw-bold text-dark">${student.phone || 'غير محدد'}</td>
+          <td class="text-center fw-bold text-dark">${student.parentPhone || 'غير محدد'}</td>
+          <td class="text-center">
+            <span class="badge bg-info fs-6 px-3 py-2 fw-bold">${gradeText}</span>
+          </td>
+          <td class="text-center">
+            <button class="btn btn-outline-danger btn-sm fw-bold" onclick="removeStudent('${student._id}')">
+              <i class="fas fa-trash me-1"></i>
+              حذف
+            </button>
+          </td>
+        `;
+        studentsTableBody.appendChild(row);
+      });
+      
+      studentCount.textContent = `${students.length} طالب`;
+    }
+
+    // Remove student from attendance - Make this function globally accessible
+    window.removeStudent = async function(studentId) {
+      if (!confirm('هل أنت متأكد من حذف هذا الطالب من الحضور؟')) {
+        return;
+      }
+      
+      try {
+        const requestData = {
+          Grade: document.getElementById('CardGrade').value,
+          CenterName: centerName.value,
+          GroupTime: groupTime.value,
+          Date: new Date().toISOString().split('T')[0]
+        };
+        
+        console.log('Removing student with data:', { studentId, ...requestData });
+        
+        const response = await fetch(`/teacher/attendance/remove/${studentId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast('success', data.message);
+          // Update the table with the new data
+          if (data.attendanceRecord && data.attendanceRecord.Students) {
+            updateStudentsTable(data.attendanceRecord.Students);
+            // Also update the search array
+            allStudentsManage = data.attendanceRecord.Students;
+          }
+        } else {
+          showToast('error', data.message);
+        }
+      } catch (error) {
+        console.error('Error removing student:', error);
+        showToast('error', 'حدث خطأ في الشبكة');
+      }
+    };
+
+    // Export to Excel
+    exportToExcel.addEventListener('click', async () => {
+      const CardGrade = document.getElementById('CardGrade').value;
+      const centerNameValue = centerName.value;
+      const GroupTime = groupTime.value;
+      
+      if (!CardGrade || !centerNameValue || !GroupTime) {
+        showToast('warning', 'يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/teacher/attendance/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            Grade: CardGrade,
+            CenterName: centerNameValue,
+            GroupTime: GroupTime,
+            Date: new Date().toISOString().split('T')[0]
+          })
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'attendance_data.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          a.remove();
+          showToast('success', 'تم تصدير البيانات بنجاح');
+        } else {
+          const data = await response.json();
+          showToast('error', data.message);
+        }
+      } catch (error) {
+        showToast('error', 'حدث خطأ في تصدير البيانات');
+      }
+    });
+
+    // QR Code Scanner
+    openQrCamera.addEventListener('click', function() {
+      reader.style.display = 'block';
+      const html5QrCode = new Html5Qrcode('reader');
+      
+      html5QrCode.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText, decodedResult) => {
+          attendeeID.value = decodedText;
+          html5QrCode.stop().then(() => {
+            reader.style.display = 'none';
+          }).catch(err => {
+            console.error('Error stopping QR Code scan:', err);
+          });
+        },
+        (errorMessage) => {
+          // Ignore parse errors
+        }
+      ).catch(err => {
+        showToast('error', 'لا يمكن بدء المسح الضوئي');
+        reader.style.display = 'none';
+      });
+    });
+
+    // Load existing students if attendance data is available
+    async function loadExistingStudents() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const Grade = urlParams.get('Grade');
+      const CenterName = urlParams.get('CenterName');
+      const GroupTime = urlParams.get('GroupTime');
+      const Date = urlParams.get('Date');
+      
+      if (Grade && CenterName && GroupTime) {
+        try {
+          const response = await fetch('/teacher/attendance/getAttendees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              CardGrade: Grade,
+              centerName: CenterName,
+              GroupTime: GroupTime,
+              date: Date || new Date().toISOString().split('T')[0]
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.students) {
+            updateStudentsTable(data.students);
+            // Disable form elements since we have existing attendance
+            document.getElementById('CardGrade').disabled = true;
+            centerName.disabled = true;
+            groupTime.disabled = true;
+            document.getElementById('searchBy').disabled = true;
+          }
+        } catch (error) {
+          console.error('Error loading existing students:', error);
+        }
+      }
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set default values from URL parameters if available
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('Grade')) {
+        document.getElementById('CardGrade').value = urlParams.get('Grade');
+      }
+      if (urlParams.get('CenterName')) {
+        centerName.value = urlParams.get('CenterName');
+        // Trigger change event to populate group times
+        centerName.dispatchEvent(new Event('change'));
+      }
+      if (urlParams.get('GroupTime')) {
+        groupTime.value = urlParams.get('GroupTime');
+      }
+      
+      // Load existing students if parameters are available
+      loadExistingStudents();
+    });
+
+    // Search functionality for manage page
+    function filterStudentsManage(searchTerm) {
+      if (!searchTerm || searchTerm.trim() === '') {
+        return allStudentsManage;
+      }
+      
+      const term = searchTerm.toLowerCase().trim();
+      return allStudentsManage.filter(student => {
+        const studentName = student.Username && student.Username.includes('@') ? 
+                           student.Username.split('@')[0] : student.Username;
+        const name = studentName ? studentName.toLowerCase() : '';
+        const code = student.Code ? student.Code.toString() : '';
+        
+        return name.includes(term) || code.includes(term);
+      });
+    }
+
+    function updateStudentsTableWithSearch(students) {
+      const studentCount = document.getElementById('studentCount');
+      
+      if (!students || students.length === 0) {
+        studentsTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+              <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+              <div class="fs-5">لا توجد نتائج للبحث</div>
+              <div class="text-muted">جرب البحث بكلمات مختلفة</div>
+            </td>
+          </tr>
+        `;
+        studentCount.textContent = '0 طالب';
+        return;
+      }
+      
+      studentsTableBody.innerHTML = '';
+      students.forEach((student, index) => {
+        const row = document.createElement('tr');
+        // Clean student name (remove email domain if present)
+        const studentName = student.Username && student.Username.includes('@') ? 
+                           student.Username.split('@')[0] : student.Username;
+        const initials = studentName ? studentName.charAt(0).toUpperCase() : 'ط';
+        
+        // Get grade display text
+        const gradeText = student.Grade === 'Grade1' ? 'الأول' : 
+                         student.Grade === 'Grade2' ? 'الثاني' : 
+                         student.Grade === 'Grade3' ? 'الثالث' : student.Grade;
+        
+        row.innerHTML = `
+          <td class="text-center fw-bold text-dark">${index + 1}</td>
+          <td>
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center fw-bold">
+                ${initials}
+              </div>
+              <span class="fw-bold text-dark fs-6">${studentName}</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-primary fs-6 px-3 py-2 fw-bold">${student.Code}</span>
+          </td>
+          <td class="text-center fw-bold text-dark">${student.phone || 'غير محدد'}</td>
+          <td class="text-center fw-bold text-dark">${student.parentPhone || 'غير محدد'}</td>
+          <td class="text-center">
+            <span class="badge bg-info fs-6 px-3 py-2 fw-bold">${gradeText}</span>
+          </td>
+          <td class="text-center">
+            <button class="btn btn-outline-danger btn-sm fw-bold" onclick="removeStudent('${student._id}')">
+              <i class="fas fa-trash me-1"></i>
+              حذف
+            </button>
+          </td>
+        `;
+        studentsTableBody.appendChild(row);
+      });
+      
+      studentCount.textContent = `${students.length} طالب`;
+    }
+
+    // Add search event listeners for manage page
+    document.addEventListener('DOMContentLoaded', function() {
+      const studentSearchManage = document.getElementById('studentSearchManage');
+      const clearSearchManage = document.getElementById('clearSearchManage');
+      
+      if (studentSearchManage) {
+        studentSearchManage.addEventListener('input', function() {
+          const searchTerm = this.value;
+          const filteredStudents = filterStudentsManage(searchTerm);
+          updateStudentsTableWithSearch(filteredStudents);
+        });
+      }
+      
+      if (clearSearchManage) {
+        clearSearchManage.addEventListener('click', function() {
+          if (studentSearchManage) {
+            studentSearchManage.value = '';
+            updateStudentsTableWithSearch(allStudentsManage);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

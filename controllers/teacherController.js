@@ -7,25 +7,100 @@ const Attendance = require('../models/Attendance');
 const PDFs = require('../models/PDFs');
 const mongoose = require('mongoose');
 
-const jwt = require('jsonwebtoken');
-const jwtSecret = process.env.JWTSECRET;
+const wasender = require('../utils/wasender');
 
-const Excel = require('exceljs');
-const PDFDocument = require('pdfkit');
-const stream = require('stream');
+// ==================  WhatsApp Messaging Functions  ====================== //
 
-const { v4: uuidv4 } = require('uuid');
+async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, countryCode = '20') {
+  try {
+    // Skip if phone number is missing or invalid
+    const phoneAsString = (typeof phone === 'string' ? phone : String(phone || '')).trim();
+    if (!phoneAsString) {
+      console.warn('Skipping message - No phone number provided');
+      return { success: false, message: 'No phone number provided' };
+    }
+    
+    // Get all sessions to find the one with matching phone number
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      console.error(`Failed to get sessions: ${sessionsResponse.message}`);
+      return { success: false, message: `Failed to get sessions: ${sessionsResponse.message}` };
+    }
+    
+    const sessions = sessionsResponse.data;
+    let targetSession = null;
+    
+    // Find session by admin phone number
+    if (adminPhone == '01028772548') {
+      targetSession = sessions.find(s => s.phone_number === '+201003202768' || s.phone_number === '01003202768');
+    }
+    // } else if (adminPhone == '01055640148') {
+    //   targetSession = sessions.find(s => s.phone_number === '+201055640148' || s.phone_number === '01055640148');
+    // } else if (adminPhone == '01147929010') {
+    //   targetSession = sessions.find(s => s.phone_number === '+201147929010' || s.phone_number === '01147929010');
+    // }
+    
+    // If no specific match, try to find any connected session
+    if (!targetSession) {
+      targetSession = sessions.find(s => s.status === 'connected');
+    }
+    
+    if (!targetSession) {
+      console.error('No connected WhatsApp session found');
+      return { success: false, message: 'No connected WhatsApp session found' };
+    }
+    
+    if (!targetSession.api_key) {
+      console.error('Session API key not available');
+      return { success: false, message: 'Session API key not available' };
+    }
+    
+    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
+    
+    // Format the phone number properly
+    let countryCodeWithout0 = countryCode ? String(countryCode).replace(/^0+/, '') : '20'; // Remove leading zeros, default to 20
+    console.log('Country code:', countryCodeWithout0);
+
+    // Clean phone input to digits only
+    let cleanedPhone = phoneAsString.replace(/\D/g, '');
+    // Remove leading zero from national number (e.g., 010... -> 10...)
+    if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.slice(1);
+
+    // Build full international number (without +)
+    let phoneNumber = `${countryCodeWithout0}${cleanedPhone}`.replace(/\D/g, '');
+    // Ensure leading country indicator '2' for Egypt if missing
+    if (!phoneNumber.startsWith('2')) phoneNumber = `2${phoneNumber}`;
+    
+    // Format for WhatsApp (add @s.whatsapp.net suffix)
+    const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
+    
+    console.log('Sending message to:', formattedPhone);
+    
+    // Use the session-specific API key to send the message
+    const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
+    
+    if (!response.success) {
+      console.error(`Failed to send message: ${response.message}`);
+      return { success: false, message: `Failed to send message: ${response.message}` };
+    }
+    
+    return { success: true, data: response.data };
+  } catch (err) {
+    console.error('Error sending WhatsApp message:', err.message);
+    return { success: false, message: err.message };
+  }
+}
 
 // ==================  Dashboard  ====================== //
 
 const dash_get = async (req, res) => {
   // Update all users' video allowed attempts to 10
-  const updateResult = await User.updateMany(
-    { isTeacher: false }, // Target only student accounts
-    { $set: { "videosInfo.$[].videoAllowedAttemps": 10 } }
-  );
+  // const updateResult = await User.updateMany(
+  //   { isTeacher: false }, // Target only student accounts
+  //   { $set: { "videosInfo.$[].videoAllowedAttemps": 10 } }
+  // );
   
-  console.log(`Updated video attempts for ${updateResult.modifiedCount} users`);
+  // console.log(`Updated video attempts for ${updateResult.modifiedCount} users`);
   try {
     // Use Promise.all for parallel execution and optimize queries
     const [
@@ -515,7 +590,8 @@ const video_create_post = async (req, res) => {
       videoURL,
       scheduledTime,
       PDFURL,
-      videoDescription
+      videoDescription,
+      externalLink
     } = req.body;
     
     // Validation
@@ -558,6 +634,7 @@ const video_create_post = async (req, res) => {
         videoURL: videoURL || '',
         imgURL: imgURL || '',
         PDFURL: PDFURL || '',
+        externalLink: externalLink || '',
         scheduledTime: scheduledTime || '',
         videoDescription: videoDescription || '',
         views: 0,
@@ -735,6 +812,42 @@ const video_detail_get = async (req, res) => {
     const uniqueViewers = studentsStats.filter(s => s.numberOfWatches > 0).length;
     const unwatchedCount = studentsStats.filter(s => s.numberOfWatches === 0).length;
     
+    // Get homework submissions for this video
+    let homeworkSubmissions = [];
+    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
+      const studentsWithHomework = await User.find({
+        isTeacher: false,
+        'homeworkSubmissions.videoId': new mongoose.Types.ObjectId(videoId)
+      }, {
+        Username: 1,
+        Code: 1,
+        Grade: 1,
+        homeworkSubmissions: { $elemMatch: { videoId: new mongoose.Types.ObjectId(videoId) } }
+      });
+      
+      homeworkSubmissions = studentsWithHomework.map(student => {
+        const submission = student.homeworkSubmissions && student.homeworkSubmissions[0];
+        if (submission) {
+          return {
+            _id: submission._id,
+            studentId: student._id,
+            studentName: student.Username,
+            studentCode: student.Code,
+            studentGrade: student.Grade,
+            videoId: submission.videoId,
+            files: submission.files,
+            notes: submission.notes,
+            status: submission.status,
+            submittedAt: submission.submittedAt,
+            reviewedAt: submission.reviewedAt,
+            reviewedBy: submission.reviewedBy,
+            reviewNotes: submission.reviewNotes
+          };
+        }
+        return null;
+      }).filter(submission => submission !== null);
+    }
+    
     res.render('teacher/video-detail', {
       title: `${video.videoTitle || video.lectureName} - تفاصيل الفيديو`,
       path: req.path,
@@ -745,7 +858,8 @@ const video_detail_get = async (req, res) => {
       studentsStats,
       totalWatches,
       uniqueViewers,
-      unwatchedCount
+      unwatchedCount,
+      homeworkSubmissions
     });
   } catch (error) {
     console.error('Video detail error:', error);
@@ -829,7 +943,8 @@ const video_edit_post = async (req, res) => {
       videoURL,
       scheduledTime,
       PDFURL,
-      videoDescription
+      videoDescription,
+      externalLink
     } = req.body;
     
     // Validation
@@ -871,6 +986,7 @@ const video_edit_post = async (req, res) => {
     videoArray[videoIndex].prerequisites = prerequisites || '';
     videoArray[videoIndex].permissionToShow = permissionToShow === 'true';
     videoArray[videoIndex].AccessibleAfterViewing = AccessibleAfterViewing || '';
+    videoArray[videoIndex].externalLink = externalLink || '';
     videoArray[videoIndex].videoAllowedAttemps = parseInt(videoAllowedAttemps) || 3;
     videoArray[videoIndex].videoPrice = parseFloat(videoPrice) || 0;
     videoArray[videoIndex].videoURL = videoURL;
@@ -980,22 +1096,1062 @@ const pdf_edit_post = (req, res) => res.send('Feature coming soon');
 const pdf_delete = (req, res) => res.send('Feature coming soon');
 const chapter_pdf_create_get = (req, res) => res.send('Feature coming soon');
 const chapter_pdf_create_post = (req, res) => res.send('Feature coming soon');
-const attendance_get = (req, res) => res.send('Feature coming soon');
-const attendance_create_get = (req, res) => res.send('Feature coming soon');
-const attendance_create_post = (req, res) => res.send('Feature coming soon');
-const attendance_manage_get = (req, res) => res.send('Feature coming soon');
-const attendance_mark = (req, res) => res.send('Feature coming soon');
-const attendance_delete = (req, res) => res.send('Feature coming soon');
-const attendance_export = (req, res) => res.send('Feature coming soon');
+// ==================  Attendance Management  ====================== //
+
+const attendance_get = async (req, res) => {
+    try {
+        const attendances = await Attendance.find({ isActive: true })
+            .populate('Students', 'Username Code phone parentPhone Grade')
+            .populate('createdBy', 'Username phone')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.render('teacher/attendance', {
+            title: 'إدارة الحضور',
+            path: '/teacher/attendance',
+            attendances,
+            stats: {
+                totalAttendances: attendances.length,
+                totalStudents: attendances.reduce((sum, att) => sum + att.Students.length, 0)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching attendances:', error);
+        res.status(500).json({ message: 'خطأ في جلب بيانات الحضور' });
+    }
+};
+
+// Get attendance review page
+const attendance_review_get = async (req, res) => {
+    try {
+        res.render('teacher/attendance-review', {
+            title: 'مراجعة الحضور',
+            path: '/teacher/attendance/review'
+        });
+    } catch (error) {
+        console.error('Error loading attendance review page:', error);
+        res.status(500).json({ message: 'خطأ في تحميل صفحة مراجعة الحضور' });
+    }
+};
+
+// Search for attendance records
+const attendance_review_post = async (req, res) => {
+    try {
+        const { Grade, CenterName, GroupTime, Date } = req.body;
+        
+        // Build search criteria
+        const searchCriteria = { isActive: true };
+        
+        if (Grade) searchCriteria.Grade = Grade;
+        if (CenterName) searchCriteria.CenterName = CenterName;
+        if (GroupTime) searchCriteria.GroupTime = GroupTime;
+        if (Date) searchCriteria.Date = Date;
+        
+        // Find attendance record
+        const attendance = await Attendance.findOne(searchCriteria)
+            .populate('Students', 'Username Code phone parentPhone Grade')
+            .populate('createdBy', 'Username phone');
+        
+        if (attendance) {
+            // Clean up student names (remove email domains if present)
+            if (attendance.Students) {
+                attendance.Students.forEach(student => {
+                    if (student.Username && student.Username.includes('@')) {
+                        // Extract name from email (part before @)
+                        student.Username = student.Username.split('@')[0];
+                    }
+                });
+            }
+            
+            res.json({ 
+                success: true, 
+                attendance: attendance 
+            });
+        } else {
+            res.json({ 
+                success: true, 
+                attendance: null,
+                message: 'لم يتم العثور على سجل حضور بهذه المعايير'
+            });
+        }
+    } catch (error) {
+        console.error('Error searching attendance:', error);
+        res.status(500).json({ message: 'خطأ في البحث عن سجل الحضور' });
+    }
+};
+
+const attendance_create_post = async (req, res) => {
+    try {
+        const { Grade, CenterName, GroupTime, Date } = req.body;
+        
+        // Check if attendance already exists
+        const existingAttendance = await Attendance.findByCriteria(Grade, CenterName, GroupTime, Date);
+        if (existingAttendance) {
+            return res.status(400).json({ 
+                message: 'يوجد حضور مسجل بالفعل لهذا اليوم والمجموعة' 
+            });
+        }
+
+        const attendance = new Attendance({
+            Grade,
+            CenterName,
+            GroupTime,
+            Date,
+            Students: [],
+            createdBy: req.userData._id
+        });
+
+        await attendance.save();
+        
+        res.json({ 
+            message: 'تم إنشاء سجل الحضور بنجاح',
+            attendanceId: attendance._id 
+        });
+    } catch (error) {
+        console.error('Error creating attendance:', error);
+        res.status(500).json({ message: 'خطأ في إنشاء سجل الحضور' });
+    }
+};
+
+const attendance_manage_get = async (req, res) => {
+    try {
+        const { Grade, CenterName, GroupTime, Date } = req.query;
+        
+        // If no parameters provided, render the management page without specific attendance data
+        if (!Grade || !CenterName || !GroupTime || !Date) {
+            return res.render('teacher/attendance-manage', {
+                title: 'إدارة الحضور',
+                path: '/teacher/attendance/manage',
+                attendance: null,
+                Grade: '',
+                CenterName: '',
+                GroupTime: '',
+                Date: ''
+            });
+        }
+
+        const attendance = await Attendance.findByCriteria(Grade, CenterName, GroupTime, Date);
+        
+        res.render('teacher/attendance-manage', {
+            title: 'إدارة الحضور',
+            path: '/teacher/attendance/manage',
+            attendance,
+            Grade,
+            CenterName,
+            GroupTime,
+            Date
+        });
+    } catch (error) {
+        console.error('Error loading attendance management:', error);
+        res.status(500).json({ message: 'خطأ في تحميل صفحة إدارة الحضور' });
+    }
+};
+
+const attendance_mark = async (req, res) => {
+    try {
+        const { Grade, CenterName, GroupTime, Date, CardType, attendeeID } = req.body;
+        
+        // Validate required fields
+        if (!Grade || !CenterName || !GroupTime || !CardType || !attendeeID) {
+            return res.status(400).json({ message: 'جميع الحقول مطلوبة' });
+        }
+        
+        // Validate CardType
+        if (!['Card', 'Code', 'Phone'].includes(CardType)) {
+            return res.status(400).json({ message: 'نوع البحث غير صحيح' });
+        }
+        
+        // Use current date if no date provided
+        const attendanceDate = Date || new Date().toISOString().split('T')[0];
+        
+        // Find or create attendance record
+        let attendance = await Attendance.findByCriteria(Grade, CenterName, GroupTime, attendanceDate);
+        
+        if (!attendance) {
+            attendance = new Attendance({
+                Grade,
+                CenterName,
+                GroupTime,
+                Date: attendanceDate,
+                Students: [],
+                createdBy: req.userData._id
+            });
+            await attendance.save();
+        }
+
+        // Find student by card, code, or phone
+        let student;
+        if (CardType === 'Card') {
+            const card = await Card.findByCardOrCode(attendeeID);
+            if (!card) {
+                return res.status(404).json({ message: 'لم يتم العثور على الكارت' });
+            }
+            student = card.userId;
+        } else if (CardType === 'Code') {
+            student = await User.findOne({ Code: attendeeID, isTeacher: false });
+            if (!student) {
+                return res.status(404).json({ message: 'لم يتم العثور على الطالب بالكود المحدد' });
+            }
+        } else if (CardType === 'Phone') {
+            // Clean phone number (remove non-digits)
+            const cleanPhone = attendeeID.replace(/\D/g, '');
+            student = await User.findOne({ phone: cleanPhone, isTeacher: false });
+            if (!student) {
+                return res.status(404).json({ message: 'لم يتم العثور على الطالب برقم الهاتف المحدد' });
+            }
+        } else {
+            return res.status(400).json({ message: 'نوع البحث غير صحيح' });
+        }
+
+        // Check if student is already marked (handle both ObjectId and populated objects)
+        const studentExists = attendance.Students.some(existingStudent => {
+            const existingId = existingStudent._id ? existingStudent._id.toString() : existingStudent.toString();
+            return existingId === student._id.toString();
+        });
+        
+        if (studentExists) {
+            return res.status(400).json({ message: 'الطالب مسجل حضور بالفعل' });
+        }
+
+        // Add student to attendance
+        await attendance.addStudent(student._id);
+        
+        // Update card history if using card
+        if (CardType === 'Card') {
+            const card = await Card.findByCardOrCode(attendeeID);
+            if (card) {
+                await card.addHistoryEntry('used_for_attendance', attendance._id, `Attendance marked for ${Date}`);
+            }
+        }
+
+        // Get updated attendance with populated students
+        const updatedAttendance = await Attendance.findById(attendance._id)
+            .populate('Students', 'Username Code phone parentPhone Grade');
+        
+        // Clean up student names (remove email domains if present)
+        if (updatedAttendance.Students) {
+            updatedAttendance.Students.forEach(student => {
+                if (student.Username && student.Username.includes('@')) {
+                    // Extract name from email (part before @)
+                    student.Username = student.Username.split('@')[0];
+                }
+            });
+        }
+
+        // Send WhatsApp notification to parent
+        try {
+            if (student.parentPhone) {
+                const studentName = student.Username || 'الطالب';
+                const message = `نود إعلام سيادتكم بتسجيل حضور ${studentName} في المجموعة الدراسية ${GroupTime} بتاريخ ${attendanceDate}.\n\nمع تحيات  Biodiva Team `;
+                await sendWasenderMessage(message, student.parentPhone, req.userData.phone || '01028772548');
+            }
+     
+        } catch (msgError) {
+            console.error('Error sending attendance notification:', msgError);
+            // Continue execution even if message sending fails
+        }
+
+        res.json({
+            message: 'تم تسجيل الحضور بنجاح',
+            attendanceRecord: updatedAttendance
+        });
+    } catch (error) {
+        console.error('Error marking attendance:', error);
+        res.status(500).json({ message: 'خطأ في تسجيل الحضور' });
+    }
+};
+
+const attendance_delete = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { Grade, CenterName, GroupTime, Date } = req.body;
+        
+        console.log('Removing student:', { studentId, Grade, CenterName, GroupTime, Date });
+        
+        // Use provided date or current date
+        const attendanceDate = Date || new Date().toISOString().split('T')[0];
+        
+        const attendance = await Attendance.findByCriteria(Grade, CenterName, GroupTime, attendanceDate);
+        
+        if (!attendance) {
+            console.log('No attendance found for criteria:', { Grade, CenterName, GroupTime, attendanceDate });
+            return res.status(404).json({ message: 'لم يتم العثور على سجل الحضور' });
+        }
+
+        console.log('Found attendance:', attendance._id, 'Students before:', attendance.Students.length);
+        
+        await attendance.removeStudent(studentId);
+        
+        console.log('Student removed, fetching updated attendance...');
+        
+        // Get updated attendance with populated students
+        const updatedAttendance = await Attendance.findById(attendance._id)
+            .populate('Students', 'Username Code phone parentPhone Grade');
+        
+        console.log('Updated attendance students:', updatedAttendance.Students.length);
+        
+        // Clean up student names (remove email domains if present)
+        if (updatedAttendance.Students) {
+            updatedAttendance.Students.forEach(student => {
+                if (student.Username && student.Username.includes('@')) {
+                    // Extract name from email (part before @)
+                    student.Username = student.Username.split('@')[0];
+                }
+            });
+        }
+        
+        res.json({ 
+            message: 'تم حذف الطالب من الحضور بنجاح',
+            attendanceRecord: updatedAttendance
+        });
+    } catch (error) {
+        console.error('Error removing attendance:', error);
+        res.status(500).json({ message: 'خطأ في حذف الحضور' });
+    }
+};
+
+const attendance_export = async (req, res) => {
+    try {
+        const { Grade, CenterName, GroupTime, Date, attendanceId } = req.body;
+        
+        let attendance;
+        
+        // If attendanceId is provided, find by ID, otherwise use criteria
+        if (attendanceId) {
+            attendance = await Attendance.findById(attendanceId)
+                .populate('Students', 'Username Code phone parentPhone Grade');
+        } else {
+            attendance = await Attendance.findByCriteria(Grade, CenterName, GroupTime, Date);
+        }
+        
+        if (!attendance) {
+            return res.status(404).json({ message: 'لم يتم العثور على سجل الحضور' });
+        }
+
+        // Create Excel workbook
+        const workbook = new Excel.Workbook();
+        const worksheet = workbook.addWorksheet('Attendance Report');
+
+        // Add headers
+        worksheet.columns = [
+            { header: 'الرقم', key: 'index', width: 10 },
+            { header: 'اسم الطالب', key: 'name', width: 25 },
+            { header: 'كود الطالب', key: 'code', width: 15 },
+            { header: 'رقم الهاتف', key: 'phone', width: 20 },
+            { header: 'رقم ولي الأمر', key: 'parentPhone', width: 20 },
+            { header: 'الصف', key: 'grade', width: 15 }
+        ];
+
+        // Add data
+        attendance.Students.forEach((student, index) => {
+            // Clean student name (remove email domain if present)
+            let studentName = student.Username;
+            if (studentName && studentName.includes('@')) {
+                studentName = studentName.split('@')[0];
+            }
+            
+            worksheet.addRow({
+                index: index + 1,
+                name: studentName,
+                code: student.Code,
+                phone: student.phone,
+                parentPhone: student.parentPhone,
+                grade: student.Grade
+            });
+        });
+
+        // Style the header
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+        };
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=attendance_${Date}.xlsx`);
+
+        // Write to response
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting attendance:', error);
+        res.status(500).json({ message: 'خطأ في تصدير بيانات الحضور' });
+    }
+};
+
+// Additional attendance functions
+const get_attendance_dates = async (req, res) => {
+    try {
+        const { CardGrade, centerName, GroupTime } = req.body;
+        
+        const attendances = await Attendance.find({
+            Grade: CardGrade,
+            CenterName: centerName,
+            GroupTime: GroupTime,
+            isActive: true
+        }).select('Date').sort({ Date: -1 });
+
+        const dates = attendances.map(att => att.Date);
+        
+        res.json({ Dates: dates });
+    } catch (error) {
+        console.error('Error fetching attendance dates:', error);
+        res.status(500).json({ message: 'خطأ في جلب التواريخ' });
+    }
+};
+
+const get_attendance_students = async (req, res) => {
+    try {
+        const { CardGrade, centerName, GroupTime, date } = req.body;
+        
+        const attendance = await Attendance.findByCriteria(CardGrade, centerName, GroupTime, date);
+        
+        if (!attendance) {
+            return res.status(404).json({ message: 'لم يتم العثور على سجل الحضور' });
+        }
+
+        // Clean up student names (remove email domains if present)
+        if (attendance.Students) {
+            attendance.Students.forEach(student => {
+                if (student.Username && student.Username.includes('@')) {
+                    // Extract name from email (part before @)
+                    student.Username = student.Username.split('@')[0];
+                }
+            });
+        }
+
+        res.json({ students: attendance.Students });
+    } catch (error) {
+        console.error('Error fetching attendance students:', error);
+        res.status(500).json({ message: 'خطأ في جلب بيانات الطلاب' });
+    }
+};
+
+const add_card_to_student = async (req, res) => {
+    try {
+        const { studentCode, assignedCard } = req.body;
+        
+        // Find student by code
+        const student = await User.findOne({ Code: studentCode, isTeacher: false });
+        if (!student) {
+            return res.status(404).json({ message: 'لم يتم العثور على الطالب' });
+        }
+
+        // Check if card already exists
+        const existingCard = await Card.findOne({ cardId: assignedCard, isActive: true });
+        if (existingCard) {
+            return res.status(400).json({ message: 'هذا الكارت مستخدم بالفعل' });
+        }
+
+        // Create new card
+        const card = new Card({
+            cardId: assignedCard,
+            userCode: studentCode,
+            userId: student._id,
+            assignedBy: req.userData._id
+        });
+
+        // Clean up student name for display
+        let displayName = student.Username;
+        if (displayName && displayName.includes('@')) {
+            displayName = displayName.split('@')[0];
+        }
+
+        await card.addHistoryEntry('assigned', null, `Card assigned to student ${displayName}`);
+        await card.save();
+
+        res.json({ 
+            message: 'تم ربط الكارت بالطالب بنجاح',
+            Username: displayName,
+            studentName: displayName,
+            studentCode: student.Code
+        });
+    } catch (error) {
+        console.error('Error adding card to student:', error);
+        res.status(500).json({ message: 'خطأ في ربط الكارت بالطالب' });
+    }
+};
 const analytics_get = (req, res) => res.send('Feature coming soon');
 const analytics_students = (req, res) => res.send('Feature coming soon');
 const analytics_videos = (req, res) => res.send('Feature coming soon');
 const analytics_quizzes = (req, res) => res.send('Feature coming soon');
 const analytics_revenue = (req, res) => res.send('Feature coming soon');
 const communication_get = (req, res) => res.send('Feature coming soon');
-const whatsapp_get = (req, res) => res.send('Feature coming soon');
-const whatsapp_send = (req, res) => res.send('Feature coming soon');
-const send_grades = (req, res) => res.send('Feature coming soon');
+// ==================  WhatsApp Functions  ====================== //
+
+const whatsapp_get = async (req, res) => {
+  try {
+    res.render('teacher/whatsApp', {
+      title: 'WhatsApp',
+      path: '/teacher/whatsapp'
+    });
+  } catch (error) {
+    console.error('Error rendering WhatsApp page:', error);
+    res.status(500).render('404', { title: 'خطأ في الخادم' });
+  }
+};
+
+const sendTextMessages = async (req, res) => {
+  try {
+    const { message, targetType, recipientType, grade } = req.body;
+    
+    if (!message || !message.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يرجى إدخال نص الرسالة' 
+      });
+    }
+
+    let targets = [];
+
+    if (targetType === 'existing') {
+      // Build query for existing students
+      let query = { 
+        isTeacher: false, 
+        subscribe: true,
+        phone: { $exists: true, $ne: null, $ne: '' }
+      };
+
+      // Add grade filter if specified
+      if (grade && grade !== '') {
+        query.Grade = grade;
+      }
+
+      // Get students based on recipient type
+      const students = await User.find(query).select('phone name parentPhone parentName Grade');
+
+      if (recipientType === 'students') {
+        targets = students.map(student => ({
+          phone: student.phone,
+          name: student.name,
+          type: 'student'
+        }));
+      } else if (recipientType === 'parents') {
+        targets = students
+          .filter(student => student.parentPhone)
+          .map(student => ({
+            phone: student.parentPhone,
+            name: student.parentName || student.name,
+            type: 'parent'
+          }));
+      } else if (recipientType === 'both') {
+        // Add students
+        targets = students.map(student => ({
+          phone: student.phone,
+          name: student.name,
+          type: 'student'
+        }));
+        
+        // Add parents
+        const parents = students
+          .filter(student => student.parentPhone)
+          .map(student => ({
+            phone: student.parentPhone,
+            name: student.parentName || student.name,
+            type: 'parent'
+          }));
+        
+        targets = [...targets, ...parents];
+      }
+
+    } else if (targetType === 'excel') {
+      // Handle Excel file upload
+      const excelFileField = req.files && (req.files.excelFile || req.files.textExcelFile);
+      const excelFile = Array.isArray(excelFileField) ? excelFileField[0] : excelFileField;
+      const { phoneColumn, studentNameColumn, parentPhoneColumn } = req.body;
+      
+      if (!excelFile) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'يرجى رفع ملف Excel' 
+        });
+      }
+
+      if (!phoneColumn) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'يرجى إدخال اسم عمود رقم الهاتف' 
+        });
+      }
+
+      try {
+        const XLSX = require('xlsx');
+        const workbook = XLSX.read(excelFile.data);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        for (const row of data) {
+          const phone = row[phoneColumn];
+          const studentName = studentNameColumn ? row[studentNameColumn] : null;
+          const parentPhone = parentPhoneColumn ? row[parentPhoneColumn] : null;
+
+          if (recipientType === 'students' && phone) {
+            targets.push({
+              phone: phone.toString(),
+              name: studentName || 'الطالب',
+              type: 'student'
+            });
+          } else if (recipientType === 'parents' && parentPhone) {
+            targets.push({
+              phone: parentPhone.toString(),
+              name: studentName || 'ولي الأمر',
+              type: 'parent'
+            });
+          } else if (recipientType === 'both') {
+            if (phone) {
+              targets.push({
+                phone: phone.toString(),
+                name: studentName || 'الطالب',
+                type: 'student'
+              });
+            }
+            if (parentPhone) {
+              targets.push({
+                phone: parentPhone.toString(),
+                name: studentName || 'ولي الأمر',
+                type: 'parent'
+              });
+            }
+          }
+        }
+      } catch (excelError) {
+        console.error('Excel parsing error:', excelError);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'خطأ في قراءة ملف Excel' 
+        });
+      }
+    }
+
+    if (targets.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'لا توجد أرقام هواتف متاحة للإرسال' 
+      });
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Determine admin phone from authenticated teacher (fallback to default)
+    const adminPhone = (req.userData && req.userData.phone) || (req.teacherData && req.teacherData.phone) || '01028772548';
+
+    // Send messages to all targets
+    for (const target of targets) {
+      try {
+        // Customize message based on recipient type
+        let customizedMessage = message;
+        if (target.name && target.name !== 'الطالب' && target.name !== 'ولي الأمر') {
+          customizedMessage = message.replace(/{name}/g, target.name);
+        }
+
+        const result = await sendWasenderMessage(
+          customizedMessage, 
+          target.phone, 
+          adminPhone
+        );
+        
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+          console.error(`Failed to send to ${target.phone}:`, result.message);
+        }
+        
+        // Add randomized delay between messages to avoid rate limiting (5-8 seconds)
+        const delayMs = Math.floor(5000 + Math.random() * 3000);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } catch (error) {
+        failCount++;
+        console.error(`Error sending to ${target.phone}:`, error.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      count: successCount,
+      failed: failCount,
+      total: targets.length,
+      message: `تم إرسال ${successCount} رسالة من أصل ${targets.length}`
+    });
+
+  } catch (error) {
+    console.error('Error in sendTextMessages:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'حدث خطأ في الخادم أثناء الإرسال' 
+    });
+  }
+};
+
+const sendImageMessages = async (req, res) => {
+  try {
+    const { message, targetType, recipientType, grade } = req.body;
+    const imageUrlFromBody = req.body && req.body.imageUrl;
+    const imageField = req.files && req.files.image;
+    const imageFile = Array.isArray(imageField) ? imageField[0] : imageField;
+    const excelField = req.files && (req.files.excelFile || req.files.imageExcelFile);
+    const excelFile = Array.isArray(excelField) ? excelField[0] : excelField;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يرجى إدخال نص الرسالة' 
+      });
+    }
+
+    if (!imageFile && !imageUrlFromBody) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يرجى اختيار صورة للإرسال' 
+      });
+    }
+
+    let targets = [];
+
+    if (targetType === 'existing') {
+      // Build query for existing students
+      let query = { 
+        isTeacher: false, 
+        subscribe: true,
+        phone: { $exists: true, $ne: null, $ne: '' }
+      };
+
+      // Add grade filter if specified
+      if (grade && grade !== '') {
+        query.Grade = grade;
+      }
+
+      // Get students based on recipient type
+      const students = await User.find(query).select('phone name parentPhone parentName Grade');
+
+      if (recipientType === 'students') {
+        targets = students.map(student => ({
+          phone: student.phone,
+          name: student.name,
+          type: 'student'
+        }));
+      } else if (recipientType === 'parents') {
+        targets = students
+          .filter(student => student.parentPhone)
+          .map(student => ({
+            phone: student.parentPhone,
+            name: student.parentName || student.name,
+            type: 'parent'
+          }));
+      } else if (recipientType === 'both') {
+        // Add students
+        targets = students.map(student => ({
+          phone: student.phone,
+          name: student.name,
+          type: 'student'
+        }));
+        
+        // Add parents
+        const parents = students
+          .filter(student => student.parentPhone)
+          .map(student => ({
+            phone: student.parentPhone,
+            name: student.parentName || student.name,
+            type: 'parent'
+          }));
+        
+        targets = [...targets, ...parents];
+      }
+
+    } else if (targetType === 'excel') {
+      // Handle Excel file upload
+      const { phoneColumn, studentNameColumn, parentPhoneColumn } = req.body;
+      
+      if (!excelFile) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'يرجى رفع ملف Excel' 
+        });
+      }
+
+      if (!phoneColumn) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'يرجى إدخال اسم عمود رقم الهاتف' 
+        });
+      }
+
+      try {
+        const XLSX = require('xlsx');
+        const workbook = XLSX.read(excelFile.data);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        for (const row of data) {
+          const phone = row[phoneColumn];
+          const studentName = studentNameColumn ? row[studentNameColumn] : null;
+          const parentPhone = parentPhoneColumn ? row[parentPhoneColumn] : null;
+
+          if (recipientType === 'students' && phone) {
+            targets.push({
+              phone: phone.toString(),
+              name: studentName || 'الطالب',
+              type: 'student'
+            });
+          } else if (recipientType === 'parents' && parentPhone) {
+            targets.push({
+              phone: parentPhone.toString(),
+              name: studentName || 'ولي الأمر',
+              type: 'parent'
+            });
+          } else if (recipientType === 'both') {
+            if (phone) {
+              targets.push({
+                phone: phone.toString(),
+                name: studentName || 'الطالب',
+                type: 'student'
+              });
+            }
+            if (parentPhone) {
+              targets.push({
+                phone: parentPhone.toString(),
+                name: studentName || 'ولي الأمر',
+                type: 'parent'
+              });
+            }
+          }
+        }
+      } catch (excelError) {
+        console.error('Excel parsing error:', excelError);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'خطأ في قراءة ملف Excel' 
+        });
+      }
+    }
+
+    if (targets.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'لا توجد أرقام هواتف متاحة للإرسال' 
+      });
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Determine admin phone from authenticated teacher (fallback to default)
+    const adminPhone = (req.userData && req.userData.phone) || (req.teacherData && req.teacherData.phone) || '01028772548';
+
+    // Get sessions to find the appropriate one
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'فشل في الاتصال بخدمة الواتساب' 
+      });
+    }
+
+    const sessions = sessionsResponse.data;
+    let targetSession = sessions.find(s => s.status === 'connected');
+    
+    if (!targetSession) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'لا توجد جلسة واتساب متصلة' 
+      });
+    }
+
+    // Determine final image URL: use provided Cloudinary URL, otherwise upload
+    let finalImageUrl = imageUrlFromBody;
+    if (!finalImageUrl) {
+      const uploadResponse = await wasender.uploadMedia(targetSession.api_key, imageFile, 'image');
+      if (!uploadResponse.success) {
+        return res.status(500).json({ 
+          success: false, 
+          message: 'فشل في رفع الصورة' 
+        });
+      }
+      finalImageUrl = uploadResponse.data.url;
+    }
+
+    // Send messages to all targets
+    for (const target of targets) {
+      try {
+        // Customize message based on recipient type
+        let customizedMessage = message;
+        if (target.name && target.name !== 'الطالب' && target.name !== 'ولي الأمر') {
+          customizedMessage = message.replace(/{name}/g, target.name);
+        }
+
+        // Format phone number
+        const phoneAsString = String(target.phone || '').trim();
+        if (!phoneAsString) continue;
+
+        let cleanedPhone = phoneAsString.replace(/\D/g, '');
+        if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.slice(1);
+        let phoneNumber = `20${cleanedPhone}`.replace(/\D/g, '');
+        if (!phoneNumber.startsWith('2')) phoneNumber = `2${phoneNumber}`;
+        const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
+
+        const result = await wasender.sendImageMessage(
+          targetSession.api_key, 
+          formattedPhone, 
+          finalImageUrl, 
+          customizedMessage
+        );
+        
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+          console.error(`Failed to send image to ${target.phone}:`, result.message);
+        }
+        
+        // Add randomized delay between messages (5-8 seconds)
+        const delayMs = Math.floor(5000 + Math.random() * 3000);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } catch (error) {
+        failCount++;
+        console.error(`Error sending image to ${target.phone}:`, error.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      count: successCount,
+      failed: failCount,
+      total: targets.length,
+      message: `تم إرسال ${successCount} رسالة مع صورة من أصل ${targets.length}`
+    });
+
+  } catch (error) {
+    console.error('Error in sendImageMessages:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'حدث خطأ في الخادم أثناء الإرسال' 
+    });
+  }
+};
+
+const sendGradeMessages = async (req, res) => {
+  try {
+    const { 
+      studentNameColumn, 
+      parentPhoneColumn, 
+      gradeColumnName, 
+      quizName, 
+      dataToSend,
+      finalTotalGrade,
+      parentExtraMessage 
+    } = req.body;
+
+    // Debug logging
+    console.log('Received data:', {
+      studentNameColumn,
+      parentPhoneColumn,
+      gradeColumnName,
+      quizName,
+      dataToSendLength: dataToSend ? dataToSend.length : 0,
+      finalTotalGrade,
+      parentExtraMessage
+    });
+
+    // Extract the parent phone column name, either directly provided or fallback to phoneColumnName
+    const resolvedParentPhoneColumn = parentPhoneColumn; 
+
+    if (!gradeColumnName || !quizName || !dataToSend) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يرجى ملء جميع الحقول المطلوبة' 
+      });
+    }
+
+    if (!resolvedParentPhoneColumn) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يرجى إدخال اسم عمود هاتف ولي الأمر' 
+      });
+    }
+
+    if (!Array.isArray(dataToSend) || dataToSend.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'لا توجد بيانات للإرسال' 
+      });
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    for (const row of dataToSend) {
+      try {
+
+        const grade = row[gradeColumnName];
+        const studentName = studentNameColumn ? row[studentNameColumn] : null;
+
+   
+        if (!grade && grade !== 0) {
+          failCount++;
+          errors.push(`الدرجة مفقودة في الصف`);
+          continue;
+        }
+
+        // Prepare message for parent only
+        const studentInfo = studentName ? `الطالب/ة: ${studentName}` : '';
+        const gradeLine = finalTotalGrade ? `درجة ${studentInfo ? 'الطالب/ة' : ''}: ${finalTotalGrade} / ${grade}` : `درجة ${studentInfo ? 'الطالب/ة' : ''}: ${grade}`;
+        const parentMessage = `مرحباً ولي الأمر \n\n${studentInfo ? studentInfo + '\n' : ''}نتائج امتحان: ${quizName}\n${gradeLine}${parentExtraMessage ? `\n\n${parentExtraMessage}` : ''}\n\nنتمنى لأبنائكم التوفيق دائماً\nBiodiva Team`;
+
+        const parentPhone = row[resolvedParentPhoneColumn];
+        
+        if (parentPhone) {
+          const result = await sendWasenderMessage(
+            parentMessage, 
+            parentPhone, 
+            (req.userData && req.userData.phone) || (req.teacherData && req.teacherData.phone) || '01028772548'
+          );
+
+
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            errors.push(`فشل الإرسال لولي الأمر ${parentPhone}: ${result.message}`);
+          }
+        } else {
+          failCount++;
+          errors.push(`رقم هاتف ولي الأمر مفقود في الصف`);
+        }
+
+        // Add delay between messages to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        failCount++;
+        errors.push(`خطأ في معالجة الصف: ${error.message}`);
+        console.error('Error processing row:', error);
+      }
+    }
+
+    res.json({
+      success: true,
+      count: successCount,
+      failed: failCount,
+      total: dataToSend.length,
+      message: `تم إرسال ${successCount} رسالة درجات من أصل ${dataToSend.length}`,
+      errors: errors.slice(0, 10)
+    });
+
+  } catch (error) {
+    console.error('Error in sendGradeMessages:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'حدث خطأ في الخادم أثناء الإرسال' 
+    });
+  }
+};
+
+
 const settings_get = (req, res) => res.send('Feature coming soon');
 const settings_post = (req, res) => res.send('Feature coming soon');
 const api_chapters_get = (req, res) => res.send('Feature coming soon');
@@ -3190,12 +4346,219 @@ const api_videos_by_chapter = async (req, res) => {
   }
 };
 
+const api_videos_by_grade = async (req, res) => {
+  try {
+    const { grade } = req.params;
+    const { requireQuiz, forPrerequisites } = req.query;
+    
+    console.log('=== API VIDEOS BY GRADE DEBUG ===');
+    console.log('Grade:', grade);
+    console.log('requireQuiz:', requireQuiz);
+    console.log('forPrerequisites:', forPrerequisites);
+    
+    if (!grade) {
+      return res.status(400).json({ success: false, message: 'Grade is required' });
+    }
+    
+    // Get all chapters for the specified grade (handle both formats: "1" and "Grade1")
+    const gradeFormats = [grade, `Grade${grade}`];
+    const chapters = await Chapter.find({ 
+      isActive: true, 
+      chapterGrade: { $in: gradeFormats }
+    }).select('_id chapterName chapterGrade chapterLectures chapterSummaries chapterSolvings');
+    
+    console.log('Searching for grades:', gradeFormats);
+    console.log('Found chapters:', chapters.length);
+    chapters.forEach(chapter => {
+      console.log(`Chapter: ${chapter.chapterName} (Grade: ${chapter.chapterGrade})`);
+      console.log(`  - Lectures: ${chapter.chapterLectures?.length || 0}`);
+      console.log(`  - Summaries: ${chapter.chapterSummaries?.length || 0}`);
+      console.log(`  - Solvings: ${chapter.chapterSolvings?.length || 0}`);
+    });
+    
+    const videos = [];
+    
+    chapters.forEach(chapter => {
+      // Add lectures
+      if (chapter.chapterLectures && chapter.chapterLectures.length > 0) {
+        chapter.chapterLectures.forEach(video => {
+          // Different filtering logic based on use case
+          if (requireQuiz === 'true') {
+            // For quiz creation: Only include videos that require a quiz
+            if (video.prerequisites === 'WithExam' || video.prerequisites === 'WithExamaAndHw') {
+              videos.push({
+                _id: video._id,
+                title: video.videoTitle || video.lectureName,
+                type: 'lecture',
+                chapterId: chapter._id,
+                chapterName: chapter.chapterName,
+                prerequisites: video.prerequisites
+              });
+            }
+          } else if (forPrerequisites === 'true') {
+            // For video creation prerequisites: Include ALL videos (teacher can choose any video as prerequisite)
+            videos.push({
+              _id: video._id,
+              title: video.videoTitle || video.lectureName,
+              type: 'lecture',
+              chapterId: chapter._id,
+              chapterName: chapter.chapterName,
+              prerequisites: video.prerequisites
+            });
+          } else {
+            // Default: Include all videos
+            videos.push({
+              _id: video._id,
+              title: video.videoTitle || video.lectureName,
+              type: 'lecture',
+              chapterId: chapter._id,
+              chapterName: chapter.chapterName,
+              prerequisites: video.prerequisites
+            });
+          }
+        });
+      }
+      
+      // Add summaries
+      if (chapter.chapterSummaries && chapter.chapterSummaries.length > 0) {
+        chapter.chapterSummaries.forEach(video => {
+          if (requireQuiz === 'true') {
+            // For quiz creation: Only include videos that require a quiz
+            if (video.prerequisites === 'WithExam' || video.prerequisites === 'WithExamaAndHw') {
+              videos.push({
+                _id: video._id,
+                title: video.videoTitle || video.lectureName,
+                type: 'summary',
+                chapterId: chapter._id,
+                chapterName: chapter.chapterName,
+                prerequisites: video.prerequisites
+              });
+            }
+          } else if (forPrerequisites === 'true') {
+            // For video creation prerequisites: Include ALL videos
+            videos.push({
+              _id: video._id,
+              title: video.videoTitle || video.lectureName,
+              type: 'summary',
+              chapterId: chapter._id,
+              chapterName: chapter.chapterName,
+              prerequisites: video.prerequisites
+            });
+          } else {
+            // Default: Include all videos
+            videos.push({
+              _id: video._id,
+              title: video.videoTitle || video.lectureName,
+              type: 'summary',
+              chapterId: chapter._id,
+              chapterName: chapter.chapterName,
+              prerequisites: video.prerequisites
+            });
+          }
+        });
+      }
+      
+      // Add solvings
+      if (chapter.chapterSolvings && chapter.chapterSolvings.length > 0) {
+        chapter.chapterSolvings.forEach(video => {
+          if (requireQuiz === 'true') {
+            // For quiz creation: Only include videos that require a quiz
+            if (video.prerequisites === 'WithExam' || video.prerequisites === 'WithExamaAndHw') {
+              videos.push({
+                _id: video._id,
+                title: video.videoTitle || video.lectureName,
+                type: 'solving',
+                chapterId: chapter._id,
+                chapterName: chapter.chapterName,
+                prerequisites: video.prerequisites
+              });
+            }
+          } else if (forPrerequisites === 'true') {
+            // For video creation prerequisites: Include ALL videos
+            videos.push({
+              _id: video._id,
+              title: video.videoTitle || video.lectureName,
+              type: 'solving',
+              chapterId: chapter._id,
+              chapterName: chapter.chapterName,
+              prerequisites: video.prerequisites
+            });
+          } else {
+            // Default: Include all videos
+            videos.push({
+              _id: video._id,
+              title: video.videoTitle || video.lectureName,
+              type: 'solving',
+              chapterId: chapter._id,
+              chapterName: chapter.chapterName,
+              prerequisites: video.prerequisites
+            });
+          }
+        });
+      }
+    });
+    
+    console.log('Total videos found:', videos.length);
+    console.log('Videos:', videos.map(v => ({ title: v.title, type: v.type, prerequisites: v.prerequisites })));
+    console.log('=== END API VIDEOS BY GRADE DEBUG ===');
+    
+    res.json({ success: true, videos });
+  } catch (error) {
+    console.error('API videos by grade error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Debug endpoint to check system data
+const api_debug_system = async (req, res) => {
+  try {
+    console.log('=== SYSTEM DEBUG ===');
+    
+    // Get all chapters
+    const allChapters = await Chapter.find({}).select('_id chapterName chapterGrade chapterLectures chapterSummaries chapterSolvings isActive');
+    console.log('All chapters:', allChapters.length);
+    
+    allChapters.forEach(chapter => {
+      console.log(`Chapter: ${chapter.chapterName} (Grade: ${chapter.chapterGrade}, Active: ${chapter.isActive})`);
+      console.log(`  - Lectures: ${chapter.chapterLectures?.length || 0}`);
+      console.log(`  - Summaries: ${chapter.chapterSummaries?.length || 0}`);
+      console.log(`  - Solvings: ${chapter.chapterSolvings?.length || 0}`);
+      
+      // Show sample video data
+      if (chapter.chapterLectures && chapter.chapterLectures.length > 0) {
+        console.log(`  - Sample lecture:`, {
+          title: chapter.chapterLectures[0].videoTitle || chapter.chapterLectures[0].lectureName,
+          prerequisites: chapter.chapterLectures[0].prerequisites
+        });
+      }
+    });
+    
+    res.json({ 
+      success: true, 
+      totalChapters: allChapters.length,
+      chapters: allChapters.map(c => ({
+        name: c.chapterName,
+        grade: c.chapterGrade,
+        isActive: c.isActive,
+        lectures: c.chapterLectures?.length || 0,
+        summaries: c.chapterSummaries?.length || 0,
+        solvings: c.chapterSolvings?.length || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 const api_quizzes_by_grade = async (req, res) => {
   try {
     const { grade } = req.params;
     
+    // Handle both grade formats: "1" and "Grade1"
+    const gradeFormats = [grade, `Grade${grade}`];
     const quizzes = await Quiz.find({ 
-      Grade: grade, 
+      Grade: { $in: gradeFormats }, 
       isQuizActive: true 
     }).select('quizName _id');
     
@@ -3256,6 +4619,218 @@ const sync_video_access_for_chapter_owners = async (req, res) => {
   } catch (error) {
     console.error('Sync video access error:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ==================  Homework Management  ====================== //
+
+const approveHomework = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { studentId } = req.body;
+    
+    if (!submissionId || !studentId) {
+      return res.status(400).json({ success: false, message: 'Submission ID and Student ID are required' });
+    }
+    
+    // Find and update the homework submission
+    const result = await User.findOneAndUpdate(
+      { 
+        _id: studentId,
+        'homeworkSubmissions._id': submissionId 
+      },
+      { 
+        $set: { 
+          'homeworkSubmissions.$.status': 'approved',
+          'homeworkSubmissions.$.reviewedAt': new Date(),
+          'homeworkSubmissions.$.reviewedBy': req.userData._id,
+          'homeworkSubmissions.$.reviewNotes': 'تم قبول الواجب'
+        }
+      },
+      { new: true }
+    );
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Homework submission not found' });
+    }
+    
+    // Find the submission to get video ID
+    const submission = result.homeworkSubmissions.find(s => s._id.toString() === submissionId);
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+    
+    // Update the video info to mark homework as approved
+    await User.findOneAndUpdate(
+      { 
+        _id: studentId,
+        'videosInfo._id': submission.videoId 
+      },
+      { 
+        $set: { 
+          'videosInfo.$.isUserUploadPerviousHWAndApproved': true
+        }
+      }
+    );
+    
+    // Check if this unlocks any dependent videos
+    const unlockedCount = await unlockDependentVideos(studentId, submission.videoId);
+    
+    res.json({ 
+      success: true, 
+      message: 'Homework approved successfully',
+      unlockedVideos: unlockedCount
+    });
+    
+  } catch (error) {
+    console.error('Approve homework error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const rejectHomework = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { studentId, reviewNotes } = req.body;
+    
+    if (!submissionId || !studentId) {
+      return res.status(400).json({ success: false, message: 'Submission ID and Student ID are required' });
+    }
+    
+    // Find and update the homework submission
+    const result = await User.findOneAndUpdate(
+      { 
+        _id: studentId,
+        'homeworkSubmissions._id': submissionId 
+      },
+      { 
+        $set: { 
+          'homeworkSubmissions.$.status': 'rejected',
+          'homeworkSubmissions.$.reviewedAt': new Date(),
+          'homeworkSubmissions.$.reviewedBy': req.userData._id,
+          'homeworkSubmissions.$.reviewNotes': reviewNotes || 'تم رفض الواجب'
+        }
+      },
+      { new: true }
+    );
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Homework submission not found' });
+    }
+    
+    // Reset the video info to mark homework as not approved
+    const submission = result.homeworkSubmissions.find(s => s._id.toString() === submissionId);
+    if (submission) {
+      await User.findOneAndUpdate(
+        { 
+          _id: studentId,
+          'videosInfo._id': submission.videoId 
+        },
+        { 
+          $set: { 
+            'videosInfo.$.isUserUploadPerviousHWAndApproved': false
+          }
+        }
+      );
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Homework rejected successfully'
+    });
+    
+  } catch (error) {
+    console.error('Reject homework error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+const updateReviewNotes = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { reviewNotes } = req.body;
+    
+    if (!submissionId) {
+      return res.status(400).json({ success: false, message: 'Submission ID is required' });
+    }
+    
+    // Find and update the homework submission
+    const result = await User.findOneAndUpdate(
+      { 
+        'homeworkSubmissions._id': submissionId 
+      },
+      { 
+        $set: { 
+          'homeworkSubmissions.$.reviewNotes': reviewNotes || '',
+          'homeworkSubmissions.$.reviewedAt': new Date(),
+          'homeworkSubmissions.$.reviewedBy': req.userData._id
+        }
+      },
+      { new: true }
+    );
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Homework submission not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Review notes updated successfully'
+    });
+    
+  } catch (error) {
+    console.error('Update review notes error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Helper function to unlock dependent videos when homework is approved
+const unlockDependentVideos = async (studentId, approvedVideoId) => {
+  try {
+    // Find all videos that depend on the approved video
+    const chapters = await Chapter.find({});
+    const dependentVideos = [];
+    
+    chapters.forEach(chapter => {
+      const allVideos = [
+        ...(chapter.chapterLectures || []),
+        ...(chapter.chapterSummaries || []),
+        ...(chapter.chapterSolvings || [])
+      ];
+      
+      allVideos.forEach(video => {
+        if (video.AccessibleAfterViewing && 
+            video.AccessibleAfterViewing.toString() === approvedVideoId &&
+            (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw')) {
+          dependentVideos.push({
+            videoId: video._id,
+            chapterId: chapter._id,
+            chapterGrade: chapter.chapterGrade
+          });
+        }
+      });
+    });
+    
+    // Update user's video access for dependent videos
+    for (const dependentVideo of dependentVideos) {
+      await User.findOneAndUpdate(
+        { 
+          _id: studentId,
+          'videosInfo._id': dependentVideo.videoId 
+        },
+        { 
+          $set: { 
+            'videosInfo.$.isUserUploadPerviousHWAndApproved': true
+          }
+        }
+      );
+    }
+    
+    return dependentVideos.length;
+    
+  } catch (error) {
+    console.error('Unlock dependent videos error:', error);
+    return 0;
   }
 };
 
@@ -3333,12 +4908,15 @@ module.exports = {
   
   // Attendance Management
   attendance_get,
-  attendance_create_get,
-  attendance_create_post,
+  attendance_review_get,
+  attendance_review_post,
   attendance_manage_get,
   attendance_mark,
   attendance_delete,
   attendance_export,
+  get_attendance_dates,
+  get_attendance_students,
+  add_card_to_student,
   
   // Analytics
   analytics_get,
@@ -3350,8 +4928,9 @@ module.exports = {
   // Communication
   communication_get,
   whatsapp_get,
-  whatsapp_send,
-  send_grades,
+  sendTextMessages,
+  sendImageMessages,
+  sendGradeMessages,
   
   // Settings
   settings_get,
@@ -3372,8 +4951,16 @@ module.exports = {
   
   // API routes for dynamic content loading
   api_videos_by_chapter,
+  api_videos_by_grade,
   api_quizzes_by_grade,
+  api_debug_system,
   
   // Utility functions
-  sync_video_access_for_chapter_owners
+  sync_video_access_for_chapter_owners,
+  
+  // Homework Management
+  approveHomework,
+  rejectHomework,
+  updateReviewNotes,
+  unlockDependentVideos
 };

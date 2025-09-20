@@ -329,7 +329,15 @@
           <!-- Students Table -->
           <div class="students-table">
             <div class="table-header">
-              قائمة الطلاب
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>قائمة الطلاب</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="text" id="studentSearch" placeholder="البحث بالكود أو رقم الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+                  <button id="clearSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="student-row" style="background: #f8f9fa; font-weight: bold;">
               <div>اسم الطالب</div>
@@ -417,6 +425,38 @@
       setInterval(() => {
         // You can add auto-refresh logic here if needed
       }, 30000);
+      
+      // Student search functionality
+      const studentSearchInput = document.getElementById('studentSearch');
+      const clearSearchBtn = document.getElementById('clearSearch');
+      const studentRows = document.querySelectorAll('.student-row:not([style*="background: #f8f9fa"])');
+      
+      function filterStudents() {
+        const searchTerm = studentSearchInput.value.toLowerCase().trim();
+        
+        studentRows.forEach(row => {
+          const studentCode = row.children[1].textContent.toLowerCase();
+          const phoneNumber = row.children[3].textContent.toLowerCase();
+          const parentPhone = row.children[4].textContent.toLowerCase();
+          
+          if (searchTerm === '' || 
+              studentCode.includes(searchTerm) || 
+              phoneNumber.includes(searchTerm) || 
+              parentPhone.includes(searchTerm)) {
+            row.style.display = 'grid';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      }
+      
+      studentSearchInput.addEventListener('input', filterStudents);
+      
+      clearSearchBtn.addEventListener('click', function() {
+        studentSearchInput.value = '';
+        filterStudents();
+        studentSearchInput.focus();
+      });
     });
   </script>
 </body>

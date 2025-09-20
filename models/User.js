@@ -72,6 +72,74 @@ const VideoInfoSchema = new Schema({
     }
 }, { _id: false });
 
+// Homework submission schema
+const HomeworkSubmissionSchema = new Schema({
+    _id: {
+        type: Schema.Types.ObjectId,
+        required: true
+    },
+    videoId: {
+        type: Schema.Types.ObjectId,
+        required: true
+    },
+    studentId: {
+        type: Schema.Types.ObjectId,
+        required: true
+    },
+    studentName: {
+        type: String,
+        required: true
+    },
+    studentCode: {
+        type: String,
+        required: true
+    },
+    files: [{
+        name: {
+            type: String,
+            required: true
+        },
+        url: {
+            type: String,
+            required: true
+        },
+        publicId: {
+            type: String,
+            required: true
+        },
+        size: {
+            type: Number,
+            required: true
+        }
+    }],
+    notes: {
+        type: String,
+        default: ''
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+    submittedAt: {
+        type: Date,
+        default: Date.now
+    },
+    reviewedAt: {
+        type: Date,
+        default: null
+    },
+    reviewedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    reviewNotes: {
+        type: String,
+        default: ''
+    }
+}, { _id: false });
+
 // Enhanced quiz info schema
 const QuizInfoSchema = new Schema({
     _id: {
@@ -251,6 +319,7 @@ const userSchema = new Schema({
     chaptersPurchased: [ChapterPurchaseSchema],
     videosInfo: [VideoInfoSchema],
     quizesInfo: [QuizInfoSchema],
+    homeworkSubmissions: [HomeworkSubmissionSchema],
     
 
     
