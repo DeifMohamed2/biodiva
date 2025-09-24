@@ -894,7 +894,7 @@
       // Create Excel content
       const headers = ['الكود', 'النوع', 'الصف', 'المحتوى', 'تاريخ الإنشاء'];
       const rows = codes.map(code => [
-        code.Code,
+        `\t${code.Code}`,
         getCodeTypeName(code.codeType),
         code.codeGrade,
         code.contentName || code.chapterName || 'عام',
@@ -979,7 +979,7 @@
       
       const csvContent = "data:text/csv;charset=utf-8," 
         + "الكود,النوع,الصف,المحتوى\n"
-        + codes.map(row => `${row.code},${row.type},${row.grade},${row.content}`).join("\n");
+        + codes.map(row => `\t${row.code},${row.type},${row.grade},${row.content}`).join("\n");
       
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");

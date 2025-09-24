@@ -3337,28 +3337,59 @@ const codes_export = async (req, res) => {
     
     const codes = await Code.find(query)
       .sort({ createdAt: -1 });
-    
-    // Create CSV content
-    let csvContent = 'الكود,النوع,الصف,المحتوى المرتبط,الحالة,مستخدم بواسطة,تاريخ الإنشاء,تاريخ الاستخدام\n';
-    
-    codes.forEach(code => {
-      const codeType = code.codeType === 'Chapter' ? 'فصل' : 
-                      code.codeType === 'Video' ? 'فيديو' : 
-                      code.codeType === 'Quiz' ? 'اختبار' : 
+
+    // Create XLSX with ExcelJS to force text format and set column width
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('الأكواد');
+
+    worksheet.columns = [
+      { header: 'الكود', key: 'code', width: 30 },
+      { header: 'النوع', key: 'type', width: 15 },
+      { header: 'الصف', key: 'grade', width: 12 },
+      { header: 'المحتوى المرتبط', key: 'content', width: 30 },
+      { header: 'الحالة', key: 'status', width: 12 },
+      { header: 'مستخدم بواسطة', key: 'usedBy', width: 18 },
+      { header: 'تاريخ الإنشاء', key: 'createdAt', width: 22 },
+      { header: 'تاريخ الاستخدام', key: 'usageDate', width: 22 }
+    ];
+
+    // Force first column (code) to be treated as text
+    worksheet.getColumn(1).numFmt = '@';
+
+    codes.forEach((code) => {
+      const codeType = code.codeType === 'Chapter' ? 'فصل' :
+                      code.codeType === 'Video' ? 'فيديو' :
+                      code.codeType === 'Quiz' ? 'اختبار' :
                       code.codeType === 'PDF' ? 'PDF' : code.codeType;
-      
-      const status = code.isUsed ? 'مستخدم' : 'متاح';
+
+      const statusLabel = code.isUsed ? 'مستخدم' : 'متاح';
       const usedBy = code.usedBy || 'غير مستخدم';
       const createdAt = new Date(code.createdAt).toLocaleString('ar-EG');
       const usageDate = code.usageDate ? new Date(code.usageDate).toLocaleString('ar-EG') : 'غير مستخدم';
       const content = code.contentName || code.chapterName || 'غير محدد';
-      
-      csvContent += `"${code.Code}","${codeType}","${code.codeGrade || 'غير محدد'}","${content}","${status}","${usedBy}","${createdAt}","${usageDate}"\n`;
+
+      const row = worksheet.addRow({
+        code: String(code.Code),
+        type: codeType,
+        grade: code.codeGrade || 'غير محدد',
+        content,
+        status: statusLabel,
+        usedBy,
+        createdAt,
+        usageDate
+      });
+
+      // Ensure cell is stored as text to avoid scientific notation
+      const codeCell = row.getCell('code');
+      codeCell.value = String(code.Code);
+      codeCell.numFmt = '@';
     });
-    
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="codes-export.csv"');
-    res.send(csvContent);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="codes-export.xlsx"');
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (error) {
     console.error('Codes export error:', error);
     res.status(500).send('Internal Server Error');
