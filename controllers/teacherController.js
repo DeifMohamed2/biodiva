@@ -1593,6 +1593,124 @@ const whatsapp_get = async (req, res) => {
   }
 };
 
+// New: WhatsApp Connect page (QR + Status) for phone 201044943954 only
+const TARGET_PHONE = '201044943954';
+
+const findTargetSession = (sessions) => {
+  if (!Array.isArray(sessions)) return null;
+  return sessions.find(s => s.phone_number === '+201044943954' || s.phone_number === '01044943954' || s.phone_number === TARGET_PHONE);
+};
+
+function normalizeQrCodeForImg(qr) {
+  if (!qr) return null;
+  const s = String(qr).trim();
+  
+  // If it's already a valid data URL or HTTP URL, return as-is
+  if (s.startsWith('data:') || s.startsWith('http')) return s;
+  
+  // If it's SVG content, encode it properly
+  if (s.startsWith('<svg')) {
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
+  }
+  
+  // If it looks like a raw QR string (contains @ and other special chars), 
+  // return it as-is for the frontend to handle with QRCode.js
+  if (s.includes('@') || s.includes('+') || s.includes('/') || s.includes('=')) {
+    return s; // Return raw string for QRCode.js to process
+  }
+  
+  // Only treat as base64 if it looks like valid base64 (no special chars except =)
+  if (/^[A-Za-z0-9+/]*={0,2}$/.test(s) && s.length > 50) {
+    return 'data:image/png;base64,' + s.replace(/\n|\r/g, '');
+  }
+  
+  // Default: return as raw string for QRCode.js
+  return s;
+}
+
+const whatsapp_connect_get = async (req, res) => {
+  try {
+    // Fetch sessions and decide target
+    const sessionsResponse = await wasender.getAllSessions();
+    let session = null;
+    if (sessionsResponse.success) {
+      session = findTargetSession(sessionsResponse.data) || sessionsResponse.data.find(s => s.status === 'connected');
+    }
+
+    // If we have a session id but not connected, try to get QR
+    let qrcode = null;
+    let status = session ? session.status : 'UNKNOWN';
+    if (session && session.id && status && status.toLowerCase() !== 'connected') {
+      const qrRes = await wasender.getQRCode(session.id);
+      if (qrRes.success) {
+        qrcode = normalizeQrCodeForImg(qrRes.data.qrcode || qrRes.data.qrCode);
+        status = 'NEED_SCAN';
+      }
+    }
+
+    res.render('teacher/whatsapp-connect', {
+      title: 'ربط واتساب',
+      path: '/teacher/whatsapp/connect',
+      session,
+      status,
+      qrcode
+    });
+  } catch (error) {
+    console.error('Error rendering WhatsApp connect page:', error);
+    res.status(500).render('404', { title: 'خطأ في الخادم' });
+  }
+};
+
+// Poll status endpoint
+const whatsapp_connect_status = async (req, res) => {
+  try {
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      return res.status(500).json({ success: false, message: sessionsResponse.message });
+    }
+    const sessions = sessionsResponse.data;
+    const target = findTargetSession(sessions) || sessions.find(s => s.status === 'connected');
+    if (!target) {
+      return res.json({ success: true, status: 'DISCONNECTED', hasSession: false });
+    }
+
+    let payload = { success: true, status: target.status || 'UNKNOWN', hasSession: true };
+    if (target.status && target.status.toLowerCase() !== 'connected' && target.id) {
+      const qrRes = await wasender.getQRCode(target.id);
+      if (qrRes.success) {
+        payload.qrcode = normalizeQrCodeForImg(qrRes.data.qrcode || qrRes.data.qrCode);
+        payload.status = 'NEED_SCAN';
+      }
+    }
+    return res.json(payload);
+  } catch (error) {
+    console.error('Error getting WhatsApp status:', error);
+    return res.status(500).json({ success: false, message: 'Internal error' });
+  }
+};
+
+// Regenerate QR endpoint
+const whatsapp_connect_regenerate_qr = async (req, res) => {
+  try {
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      return res.status(500).json({ success: false, message: sessionsResponse.message });
+    }
+    const target = findTargetSession(sessionsResponse.data);
+    if (!target || !target.id) {
+      return res.status(404).json({ success: false, message: 'لم يتم العثور على الجلسة' });
+    }
+    const regen = await wasender.regenerateQRCode(target.id);
+    if (!regen.success) {
+      return res.status(500).json({ success: false, message: regen.message || 'فشل إعادة توليد QR' });
+    }
+    return res.json({ success: true, qrcode: normalizeQrCodeForImg(regen.data.qrcode || regen.data.qrCode) });
+  } catch (error) {
+    console.error('Error regenerating QR:', error);
+    return res.status(500).json({ success: false, message: 'Internal error' });
+  }
+};
+
 const sendTextMessages = async (req, res) => {
   try {
     const { message, targetType, recipientType, grade } = req.body;
@@ -4960,6 +5078,9 @@ module.exports = {
   // Communication
   communication_get,
   whatsapp_get,
+  whatsapp_connect_get,
+  whatsapp_connect_status,
+  whatsapp_connect_regenerate_qr,
   sendTextMessages,
   sendImageMessages,
   sendGradeMessages,

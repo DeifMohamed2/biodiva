@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+  <%- include("./partials/head.ejs") %>
+
+<body>
+  <div class="teacher-container">
+    <%- include("./partials/nav.ejs") %>
+
+    <main class="teacher-main">
+      <div class="container" style="max-width: 960px; margin: 24px auto;">
+        <div class="card" style="background: var(--background-color); border:1px solid var(--border-color); border-radius:16px; padding:24px;">
+          <h1 style="margin:0 0 16px; display:flex; align-items:center; gap:10px;">
+            <i class="fab fa-whatsapp" style="color:#25D366"></i>
+            ربط واتساب - 201044943954
+          </h1>
+          <p class="text-muted" style="margin:0 0 16px;">عرض حالة الجلسة وكود QR للمسح.</p>
+
+          <div id="statusWrap" style="margin-bottom:16px;">
+            <span>الحالة الحالية:</span>
+            <span id="waStatus" style="font-weight:700; margin-right:8px;">
+              <%= (status || 'UNKNOWN') %>
+            </span>
+          </div>
+
+          <div id="qrWrap" style="text-align:center;">
+            <div id="qrContainer" style="display:inline-block; padding:8px; border:1px solid var(--border-color); border-radius:12px;"></div>
+            <p class="text-muted" style="margin-top:8px;">امسح الكود من تطبيق واتساب للاتصال.</p>
+          </div>
+
+          <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+            <button id="refreshBtn" class="btn btn-primary">تحديث الحالة</button>
+            <button id="regenBtn" class="btn btn-secondary">
+              <span id="regenText">إعادة توليد QR</span>
+              <span id="regenLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display:none; margin-right:8px;"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../assest/bootstrap.bundle.min.js"></script>
+  <script src="../assest/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <script>
+    const statusEl = document.getElementById('waStatus');
+    const qrWrap = document.getElementById('qrWrap');
+    const qrContainer = document.getElementById('qrContainer');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const regenBtn = document.getElementById('regenBtn');
+
+    function toQrSrc(qr) {
+      if (!qr) return null;
+      const s = String(qr);
+      if (s.startsWith('data:') || s.startsWith('http')) return s;
+      // If looks like inline SVG
+      if (s.trim().startsWith('<svg')) {
+        return 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
+      }
+      // Assume PNG base64 by default
+      return 'data:image/png;base64,' + s;
+    }
+
+    function isRawQrString(qr) {
+      if (!qr) return false;
+      const s = String(qr).trim();
+      if (s.startsWith('data:') || s.startsWith('http') || s.startsWith('<svg')) return false;
+      // Heuristic: Wasender returns a compact string like "2@..." that should be encoded as QR content
+      // Also check for base64-like strings that are actually raw QR content
+      if (s.includes('@') || (s.includes('+') && s.includes('/') && s.includes('='))) {
+        return true;
+      }
+      // If it's a long string without data: prefix, treat as raw QR
+      return s.length > 20 && !s.startsWith('data:') && !s.startsWith('http');
+    }
+
+    function renderQr(anyQr) {
+      console.log('renderQr called with:', anyQr);
+      // Clear previous content
+      qrContainer.innerHTML = '';
+      if (!anyQr) {
+        console.log('No QR data provided');
+        return;
+      }
+      if (isRawQrString(anyQr)) {
+        console.log('Rendering as raw QR string:', anyQr);
+        // Render using QRCode library
+        try {
+          // Clear any existing QR codes first
+          qrContainer.innerHTML = '';
+          new QRCode(qrContainer, {
+            text: String(anyQr),
+            width: 300,
+            height: 300,
+            correctLevel: QRCode.CorrectLevel.M,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+          });
+          console.log('QR code rendered successfully');
+        } catch (error) {
+          console.error('Error rendering QR code:', error);
+          qrContainer.innerHTML = '<p style="color:red;">Error rendering QR code: ' + error.message + '</p>';
+        }
+      } else {
+        console.log('Rendering as image');
+        // Treat as image/data url/svg
+        const src = toQrSrc(anyQr);
+        console.log('Image src:', src);
+        const img = document.createElement('img');
+        img.id = 'qrImage';
+        img.alt = 'WhatsApp QR';
+        img.style.maxWidth = '320px';
+        img.style.width = '100%';
+        img.style.border = '1px solid #ccc';
+        img.src = src;
+        img.onload = () => console.log('QR image loaded successfully');
+        img.onerror = (e) => {
+          console.error('QR image failed to load:', e);
+          qrContainer.innerHTML = '<p style="color:red;">Failed to load QR image. Invalid URL: ' + src + '</p>';
+        };
+        qrContainer.appendChild(img);
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        console.log('Fetching status...');
+        const r = await fetch('/teacher/whatsapp/connect/status');
+        const j = await r.json();
+        console.log('Status response:', j);
+        if (!j.success) {
+          showToast && showToast('error', j.message || 'تعذر جلب الحالة');
+          return;
+        }
+        statusEl.textContent = j.status || 'UNKNOWN';
+        if (j.qrcode) {
+          console.log('QR code received:', j.qrcode);
+          renderQr(j.qrcode);
+        } else {
+          console.log('No QR code in response');
+        }
+      } catch (e) {
+        console.error('Error fetching status:', e);
+      }
+    }
+
+    async function regenerateQR() {
+      try {
+        // show loader
+        regenBtn.disabled = true;
+        document.getElementById('regenLoading').style.display = 'inline-block';
+        document.getElementById('regenText').textContent = 'جارِ التوليد...';
+
+        const r = await fetch('/teacher/whatsapp/connect/regenerate-qr', { method: 'POST' });
+        const j = await r.json();
+        if (j.success && j.qrcode) {
+          renderQr(j.qrcode);
+          statusEl.textContent = 'NEED_SCAN';
+          showToast && showToast('success', 'تم توليد QR جديد');
+        } else {
+          showToast && showToast('error', j.message || 'تعذر توليد QR');
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        // hide loader
+        regenBtn.disabled = false;
+        document.getElementById('regenLoading').style.display = 'none';
+        document.getElementById('regenText').textContent = 'إعادة توليد QR';
+      }
+    }
+
+    refreshBtn.addEventListener('click', fetchStatus);
+    regenBtn.addEventListener('click', regenerateQR);
+
+    // Render initial QR if provided by server
+    <% if (qrcode) { %>
+      console.log('Initial QR from server:', '<%= qrcode %>');
+      renderQr('<%= qrcode %>');
+    <% } %>
+
+    // Initial fetch to normalize any initial QR and status
+    fetchStatus();
+    // Auto refresh every 10s
+    setInterval(fetchStatus, 10000);
+  </script>
+
+</body>
+</html>
+
+

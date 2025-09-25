@@ -119,6 +119,9 @@ router.get("/analytics/revenue", authenticateTeacherRoute, teacherController.ana
 // ================== Communication Routes ====================== //
 router.get("/communication", authenticateTeacherRoute, teacherController.communication_get);
 router.get("/whatsapp", authenticateTeacherRoute, teacherController.whatsapp_get);
+router.get("/whatsapp/connect", authenticateTeacherRoute, teacherController.whatsapp_connect_get);
+router.get("/whatsapp/connect/status", authenticateTeacherRoute, teacherController.whatsapp_connect_status);
+router.post("/whatsapp/connect/regenerate-qr", authenticateTeacherRoute, teacherController.whatsapp_connect_regenerate_qr);
 router.post("/sendTextMessages", authenticateTeacherRoute, teacherController.sendTextMessages);
 router.post("/sendImageMessages", authenticateTeacherRoute, teacherController.sendImageMessages);
 router.post("/sendGradeMessages", authenticateTeacherRoute, teacherController.sendGradeMessages);
