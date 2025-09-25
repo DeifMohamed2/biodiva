@@ -1761,8 +1761,8 @@ const sendTextMessages = async (req, res) => {
           console.error(`Failed to send to ${target.phone}:`, result.message);
         }
         
-        // Add randomized delay between messages to avoid rate limiting (5-8 seconds)
-        const delayMs = Math.floor(5000 + Math.random() * 3000);
+        // Add randomized delay between messages to avoid rate limiting (6-9 seconds)
+        const delayMs = Math.floor(6000 + Math.random() * 3000);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       } catch (error) {
         failCount++;
@@ -2008,8 +2008,8 @@ const sendImageMessages = async (req, res) => {
           console.error(`Failed to send image to ${target.phone}:`, result.message);
         }
         
-        // Add randomized delay between messages (5-8 seconds)
-        const delayMs = Math.floor(5000 + Math.random() * 3000);
+        // Add randomized delay between messages (6-9 seconds)
+        const delayMs = Math.floor(6000 + Math.random() * 3000);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       } catch (error) {
         failCount++;
@@ -2124,8 +2124,9 @@ const sendGradeMessages = async (req, res) => {
           errors.push(`رقم هاتف ولي الأمر مفقود في الصف`);
         }
 
-        // Add delay between messages to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add randomized delay between messages to avoid rate limiting (6-9 seconds)
+        const delayMs = Math.floor(6000 + Math.random() * 3000);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       } catch (error) {
         failCount++;
         errors.push(`خطأ في معالجة الصف: ${error.message}`);

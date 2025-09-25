@@ -835,7 +835,7 @@
 
             const btn = event.target;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="loading"></span> جاري الإرسال (تأخير 5-8 ثواني بين كل رسالة)...';
+            btn.innerHTML = '<span class="loading"></span> جاري الإرسال (تأخير 6-9 ثوانٍ بين كل رسالة)... لا تغلق الصفحة';
             btn.disabled = true;
 
             try {
@@ -853,6 +853,27 @@
                     const phoneColumn = document.getElementById('textPhoneColumn').value.trim();
                     const studentNameColumn = document.getElementById('textStudentNameColumn').value.trim();
                     const parentPhoneColumn = document.getElementById('textParentPhoneColumn').value.trim();
+
+                    // Estimate time based on row count (6-9 seconds per message)
+                    try {
+                        const rowsCount = await (async function countRows(file) {
+                            const buffer = await file.arrayBuffer();
+                            const wb = XLSX.read(buffer, { type: 'array' });
+                            const sheet = wb.Sheets[wb.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(sheet);
+                            return json.length;
+                        })(excelFile);
+                        const minSec = rowsCount * 6;
+                        const maxSec = rowsCount * 9;
+                        const estimateText = `الوقت المتوقع للإرسال: ${formatDuration(minSec)} - ${formatDuration(maxSec)} (${rowsCount} رسالة)`;
+                        output.classList.remove('hidden');
+                        output.className = 'output';
+                        output.innerHTML = `
+                            <h4><i class="fas fa-hourglass-half"></i> بدء الإرسال</h4>
+                            <p>${estimateText}</p>
+                            <p class="progress-note"><i class="fas fa-info-circle"></i> يرجى عدم إغلاق هذه الصفحة حتى يكتمل الإرسال.</p>
+                        `;
+                    } catch (_) {}
                     
                     const formData = new FormData();
                     formData.append('message', messageText);
@@ -904,7 +925,7 @@
                     output.innerHTML = `
                         <h4><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</h4>
                         <p>تم إرسال ${result.count} رسالة بنجاح</p>
-                        <div class="progress-note"><i class="fas fa-hourglass-half"></i> تم الإرسال مع تأخير عشوائي 5-8 ثوانٍ بين كل رسالة لتجنب الحظر.</div>
+                        <div class="progress-note"><i class="fas fa-hourglass-half"></i> تم الإرسال مع تأخير عشوائي 6-9 ثوانٍ بين كل رسالة لتجنب الحظر.</div>
                     `;
                 } else {
                     showToast('error', result.message || 'حدث خطأ أثناء الإرسال');
@@ -947,7 +968,7 @@
 
             const btn = event.target;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="loading"></span> جاري الرفع ثم الإرسال...';
+            btn.innerHTML = '<span class="loading"></span> جاري الرفع ثم الإرسال... لا تغلق الصفحة';
             btn.disabled = true;
 
             // Cloudinary config
@@ -1008,6 +1029,27 @@
                     const studentNameColumn = document.getElementById('imageStudentNameColumn').value.trim();
                     const parentPhoneColumn = document.getElementById('imageParentPhoneColumn').value.trim();
                     
+                    // Estimate time based on row count (6-9 seconds per message)
+                    try {
+                        const rowsCount = await (async function countRows(file) {
+                            const buffer = await file.arrayBuffer();
+                            const wb = XLSX.read(buffer, { type: 'array' });
+                            const sheet = wb.Sheets[wb.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(sheet);
+                            return json.length;
+                        })(excelFile);
+                        const minSec = rowsCount * 6;
+                        const maxSec = rowsCount * 9;
+                        const estimateText = `الوقت المتوقع للإرسال: ${formatDuration(minSec)} - ${formatDuration(maxSec)} (${rowsCount} رسالة)`;
+                        output.classList.remove('hidden');
+                        output.className = 'output';
+                        output.innerHTML = `
+                            <h4><i class="fas fa-hourglass-half"></i> بدء الإرسال</h4>
+                            <p>${estimateText}</p>
+                            <p class="progress-note"><i class="fas fa-info-circle"></i> يرجى عدم إغلاق هذه الصفحة حتى يكتمل الإرسال.</p>
+                        `;
+                    } catch (_) {}
+
                     formData.append('excelFile', excelFile);
                     formData.append('phoneColumn', phoneColumn);
                     formData.append('studentNameColumn', studentNameColumn);
@@ -1028,7 +1070,7 @@
                     output.innerHTML = `
                         <h4><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</h4>
                         <p>تم إرسال ${result.count} رسالة مع صورة بنجاح</p>
-                        <div class="progress-note"><i class="fas fa-hourglass-half"></i> تم الإرسال مع تأخير عشوائي 5-8 ثوانٍ بين كل رسالة لتجنب الحظر.</div>
+                        <div class="progress-note"><i class="fas fa-hourglass-half"></i> تم الإرسال مع تأخير عشوائي 6-9 ثوانٍ بين كل رسالة لتجنب الحظر.</div>
                     `;
                 } else {
                     showToast('error', result.message || 'حدث خطأ أثناء الإرسال');
@@ -1068,6 +1110,14 @@
             // Initialize with default selection
             updateGradeColumnRequirements('students');
         });
+
+        // Utils
+        function formatDuration(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            if (minutes <= 0) return `${seconds} ثانية`;
+            return `${minutes} دقيقة ${seconds > 0 ? (seconds + ' ثانية') : ''}`.trim();
+        }
     </script>
 
     <script>
@@ -1094,7 +1144,7 @@
             }
 
             const originalText = uploadBtn.innerHTML;
-            uploadBtn.innerHTML = '<span class="loading"></span> جاري المعالجة...';
+            uploadBtn.innerHTML = '<span class="loading"></span> جاري المعالجة... لا تغلق الصفحة';
             uploadBtn.disabled = true;
 
             const file = input.files[0];
@@ -1107,6 +1157,20 @@
                     const sheetName = workbook.SheetNames[0];
                     const sheet = workbook.Sheets[sheetName];
                     const json = XLSX.utils.sheet_to_json(sheet);
+
+                    // Estimate time based on row count (6-9 seconds per message)
+                    (function showEstimate(rowsCount){
+                        const minSec = rowsCount * 6;
+                        const maxSec = rowsCount * 9;
+                        const estimateText = `الوقت المتوقع للإرسال: ${formatDuration(minSec)} - ${formatDuration(maxSec)} (${rowsCount} رسالة)`;
+                        output.classList.remove('hidden');
+                        output.className = 'output';
+                        output.innerHTML = `
+                            <h4><i class=\"fas fa-hourglass-half\"></i> بدء الإرسال</h4>
+                            <p>${estimateText}</p>
+                            <p class=\"progress-note\"><i class=\"fas fa-info-circle\"></i> يرجى عدم إغلاق هذه الصفحة حتى يكتمل الإرسال.</p>
+                        `;
+                    })(json.length);
 
                     processAndSendGrades(json, phoneColumnName, studentNameColumn, phoneColumnName, gradeColumnName, quizName, 'parents');
                 } catch (error) {
