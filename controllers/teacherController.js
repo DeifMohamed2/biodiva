@@ -31,8 +31,8 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     let targetSession = null;
     
     // Find session by admin phone number
-    if (adminPhone == '01028772548') {
-      targetSession = sessions.find(s => s.phone_number === '+201003202768' || s.phone_number === '01003202768');
+    if (adminPhone == '01111111111') {
+      targetSession = sessions.find(s => s.phone_number === '+201044943954' || s.phone_number === '01044943954');
     }
     // } else if (adminPhone == '01055640148') {
     //   targetSession = sessions.find(s => s.phone_number === '+201055640148' || s.phone_number === '01055640148');
