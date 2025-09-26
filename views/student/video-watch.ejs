@@ -430,6 +430,34 @@
       margin-bottom: var(--spacing-xl);
       line-height: 1.6;
     }
+    
+    /* Homework Section Hover Effects */
+    .homework-section .file-upload-area:hover {
+      border-color: #3b82f6 !important;
+      background: #eff6ff !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    
+    .homework-section button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .homework-section textarea:focus {
+      border-color: #3b82f6 !important;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .homework-section textarea::placeholder {
+      color: #9ca3af;
+    }
+    
+    .homework-section a:hover {
+      background: #f3f4f6 !important;
+      border-color: #d1d5db !important;
+    }
   </style>
 </head>
 <body>
@@ -657,131 +685,129 @@
           </div>
 
           <!-- Homework Submission Section -->
-          <div class="homework-section">
-            <div class="homework-header">
-              <div class="homework-icon">
-                <i class="material-icons-outlined">assignment</i>
+          <div class="homework-section" style="background: var(--white); border-radius: 12px; padding: 24px; margin: 24px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+            <div class="homework-header" style="text-align: center; margin-bottom: 24px;">
+              <div class="homework-icon" style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <i class="material-icons-outlined" style="font-size: 36px; color: #374151;">assignment</i>
               </div>
-              <div class="homework-info">
-                <h3>تسليم الواجب</h3>
-                <p>رفع حل الواجب للمراجعة</p>
-              </div>
+              <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 28px; font-weight: 700;">تسليم الواجب</h3>
+              <p style="color: #6b7280; margin: 0; font-size: 16px; line-height: 1.5;">رفع حل الواجب للمراجعة</p>
             </div>
 
-            <!-- Always show homework section, but with different content based on prerequisites -->
-            <div id="homeworkStatus" style="margin-bottom: var(--spacing-lg);">
-              <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
-                <!-- Video requires homework -->
-                <% if (homeworkSubmission && homeworkSubmission.status === 'approved') { %>
-                  <div style="background: var(--success-light); border: 1px solid var(--success-color); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <i class="material-icons-outlined" style="color: var(--success-color);">check_circle</i>
-                    <span style="color: var(--success-color); font-weight: 500;">تم قبول الواجب بنجاح</span>
+            <!-- Show homework status for any video -->
+            <div id="homeworkStatus" style="margin-bottom: 24px;">
+              <% if (homeworkSubmission && homeworkSubmission.status === 'approved') { %>
+                <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="material-icons-outlined" style="color: #22c55e; font-size: 28px;">check_circle</i>
+                  <div>
+                    <span style="color: #22c55e; font-weight: 700; font-size: 18px; display: block;">تم قبول الواجب بنجاح</span>
+                    <span style="color: #16a34a; font-size: 14px;">الواجب مقبول ومكتمل</span>
                   </div>
-                <% } else if (homeworkSubmission && homeworkSubmission.status === 'pending') { %>
-                  <div style="background: var(--warning-light); border: 1px solid var(--warning-color); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <i class="material-icons-outlined" style="color: var(--warning-color);">schedule</i>
-                    <span style="color: var(--warning-color); font-weight: 500;">الواجب في انتظار المراجعة</span>
+                </div>
+              <% } else if (homeworkSubmission && homeworkSubmission.status === 'pending') { %>
+                <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="material-icons-outlined" style="color: #f59e0b; font-size: 28px;">schedule</i>
+                  <div>
+                    <span style="color: #f59e0b; font-weight: 700; font-size: 18px; display: block;">الواجب في انتظار المراجعة</span>
+                    <span style="color: #d97706; font-size: 14px;">سيتم مراجعة الواجب قريباً</span>
                   </div>
-                <% } else if (homeworkSubmission && homeworkSubmission.status === 'rejected') { %>
-                  <div style="background: var(--error-light); border: 1px solid var(--error); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <i class="material-icons-outlined" style="color: var(--error);">cancel</i>
-                    <span style="color: var(--error); font-weight: 500;">تم رفض الواجب - يرجى إعادة التسليم</span>
+                </div>
+              <% } else if (homeworkSubmission && homeworkSubmission.status === 'rejected') { %>
+                <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="material-icons-outlined" style="color: #ef4444; font-size: 28px;">cancel</i>
+                  <div>
+                    <span style="color: #ef4444; font-weight: 700; font-size: 18px; display: block;">تم رفض الواجب</span>
+                    <span style="color: #dc2626; font-size: 14px;">يرجى إعادة التسليم بعد المراجعة</span>
                   </div>
-                <% } else { %>
-                  <div style="background: var(--primary-light); border: 1px solid var(--primary-color); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <i class="material-icons-outlined" style="color: var(--primary-color);">info</i>
-                    <span style="color: var(--primary-color); font-weight: 500;">يجب تسليم الواجب لفتح الفيديو التالي</span>
-                  </div>
-                <% } %>
+                </div>
               <% } else { %>
-                <!-- Video doesn't require homework -->
-                <div style="background: var(--gray-100); border: 1px solid var(--gray-300); border-radius: var(--radius); padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm);">
-                  <i class="material-icons-outlined" style="color: var(--gray-500);">info</i>
-                  <span style="color: var(--gray-600); font-weight: 500;">هذا الفيديو لا يتطلب تسليم واجب</span>
+                <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="material-icons-outlined" style="color: #3b82f6; font-size: 28px;">assignment</i>
+                  <div>
+                    <span style="color: #3b82f6; font-weight: 700; font-size: 18px; display: block;">يمكنك تسليم واجب لهذا الفيديو</span>
+                    <span style="color: #2563eb; font-size: 14px;">اضغط على زر "رفع الحل" لبدء التسليم</span>
+                  </div>
                 </div>
               <% } %>
             </div>
             
-            <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
-              <!-- Show homework form if video requires homework -->
-              <% if (!homeworkSubmission || homeworkSubmission.status === 'rejected') { %>
-                <div class="homework-actions">
-                  <button class="btn btn-primary" onclick="toggleHomeworkUpload()">
-                    <i class="material-icons-outlined" style="margin-left: 8px;">cloud_upload</i>
+            <!-- Show homework form for any video -->
+            <% if (!homeworkSubmission || homeworkSubmission.status === 'rejected') { %>
+                <div class="homework-actions" style="text-align: center;">
+                  <button class="btn btn-primary" onclick="toggleHomeworkUpload()" style="background: #3b82f6; border: none; border-radius: 8px; padding: 16px 32px; color: white; font-weight: 700; font-size: 18px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="material-icons-outlined" style="font-size: 24px;">cloud_upload</i>
                     رفع الحل
                   </button>
                 </div>
 
                 <!-- File Upload Area -->
-                <div id="homeworkUploadArea" style="display: none;">
-                  <div class="file-upload-area" onclick="document.getElementById('homeworkFiles').click()">
-                    <div class="upload-icon">
-                      <i class="material-icons-outlined">cloud_upload</i>
+                <div id="homeworkUploadArea" style="display: none; margin-top: 24px;">
+                  <div class="file-upload-area" onclick="document.getElementById('homeworkFiles').click()" style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.3s ease; background: #f9fafb;">
+                    <div class="upload-icon" style="margin-bottom: 20px;">
+                      <i class="material-icons-outlined" style="font-size: 56px; color: #6b7280;">cloud_upload</i>
                     </div>
-                    <div class="upload-text">اسحب الملفات هنا أو اضغط للاختيار</div>
-                    <div class="upload-hint">يمكنك رفع ملفات PDF، صور، أو مستندات Word</div>
+                    <div class="upload-text" style="color: #374151; font-size: 20px; font-weight: 700; margin-bottom: 12px;">اسحب الملفات هنا أو اضغط للاختيار</div>
+                    <div class="upload-hint" style="color: #6b7280; font-size: 16px; line-height: 1.5;">يمكنك رفع ملفات PDF، صور، أو مستندات Word<br>الحد الأقصى: 10 ملفات</div>
                     <input type="file" id="homeworkFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
                   </div>
                   
                   <div id="fileList" class="file-list"></div>
                   
-                  <div style="margin-top: var(--spacing-lg);">
-                    <label style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--gray-700);">ملاحظات (اختياري)</label>
-                    <textarea id="homeworkNotes" rows="3" placeholder="أي ملاحظات أو توضيحات حول الواجب..." style="width: 100%; padding: var(--spacing-md); border: 1px solid var(--gray-300); border-radius: var(--radius); resize: vertical; font-family: inherit;"></textarea>
+                  <div style="margin-top: 24px;">
+                    <label style="display: block; margin-bottom: 12px; font-weight: 700; color: #374151; font-size: 18px;">ملاحظات (اختياري)</label>
+                    <textarea id="homeworkNotes" rows="4" placeholder="أي ملاحظات أو توضيحات حول الواجب..." style="width: 100%; padding: 16px; border: 2px solid #d1d5db; border-radius: 8px; resize: vertical; font-family: inherit; background: #ffffff; color: #111827; font-size: 16px; line-height: 1.5;"></textarea>
                   </div>
                   
-                  <button id="uploadHomeworkBtn" class="btn btn-success" style="width: 100%; margin-top: var(--spacing-md); display: none;">
-                    <i class="material-icons-outlined" style="margin-left: 8px;">send</i>
+                  <button id="uploadHomeworkBtn" class="btn btn-success" style="width: 100%; margin-top: 24px; display: none; background: #22c55e; border: none; border-radius: 8px; padding: 18px 32px; color: white; font-weight: 700; font-size: 18px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="material-icons-outlined" style="font-size: 24px;">send</i>
                     رفع الواجب
                   </button>
                 </div>
               <% } %>
               
               <% if (homeworkSubmission) { %>
-                <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--gray-200);">
-                  <h6 style="margin-bottom: var(--spacing-md);">تفاصيل التسليم:</h6>
-                  <p style="margin: var(--spacing-xs) 0; color: var(--gray-600);">
-                    <strong>تاريخ التسليم:</strong> <%= new Date(homeworkSubmission.submittedAt).toLocaleString('ar-EG') %>
-                  </p>
-                  <% if (homeworkSubmission.notes) { %>
-                    <p style="margin: var(--spacing-xs) 0; color: var(--gray-600);">
-                      <strong>ملاحظات:</strong> <%= homeworkSubmission.notes %>
-                    </p>
-                  <% } %>
-                  <% if (homeworkSubmission.files && homeworkSubmission.files.length > 0) { %>
-                    <p style="margin: var(--spacing-xs) 0; color: var(--gray-600);">
-                      <strong>الملفات المرفوعة:</strong>
-                    </p>
-                    <ul style="margin: var(--spacing-xs) 0; padding-right: var(--spacing-lg);">
-                      <% homeworkSubmission.files.forEach(function(file) { %>
-                        <li style="color: var(--gray-600);">
-                          <a href="<%= file.url %>" target="_blank" style="color: var(--primary-color);">
-                            <i class="material-icons-outlined" style="font-size: 1rem; vertical-align: middle;">description</i> <%= file.name %>
-                          </a>
-                        </li>
-                      <% }); %>
-                    </ul>
-                  <% } %>
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+                  <h6 style="margin-bottom: 20px; color: #111827; font-size: 20px; font-weight: 700;">تفاصيل التسليم</h6>
+                  <div style="background: #f9fafb; border-radius: 12px; padding: 20px; border: 1px solid #e5e7eb;">
+                    <div style="display: grid; gap: 16px;">
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="material-icons-outlined" style="color: #6b7280; font-size: 20px;">schedule</i>
+                        <div>
+                          <span style="color: #374151; font-weight: 600; font-size: 16px;">تاريخ التسليم:</span>
+                          <span style="color: #6b7280; font-size: 16px; margin-right: 8px;"><%= new Date(homeworkSubmission.submittedAt).toLocaleString('ar-EG') %></span>
+                        </div>
+                      </div>
+                      
+                      <% if (homeworkSubmission.notes) { %>
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                          <i class="material-icons-outlined" style="color: #6b7280; font-size: 20px; margin-top: 2px;">note</i>
+                          <div>
+                            <span style="color: #374151; font-weight: 600; font-size: 16px; display: block; margin-bottom: 4px;">ملاحظات:</span>
+                            <span style="color: #6b7280; font-size: 16px; line-height: 1.5;"><%= homeworkSubmission.notes %></span>
+                          </div>
+                        </div>
+                      <% } %>
+                      
+                      <% if (homeworkSubmission.files && homeworkSubmission.files.length > 0) { %>
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                          <i class="material-icons-outlined" style="color: #6b7280; font-size: 20px; margin-top: 2px;">folder</i>
+                          <div style="flex: 1;">
+                            <span style="color: #374151; font-weight: 600; font-size: 16px; display: block; margin-bottom: 8px;">الملفات المرفوعة:</span>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <% homeworkSubmission.files.forEach(function(file) { %>
+                                <a href="<%= file.url %>" target="_blank" style="color: #3b82f6; text-decoration: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb; transition: all 0.2s;">
+                                  <i class="material-icons-outlined" style="font-size: 18px;">description</i> 
+                                  <span style="font-weight: 500;"><%= file.name %></span>
+                                </a>
+                              <% }); %>
+                            </div>
+                          </div>
+                        </div>
+                      <% } %>
+                    </div>
+                  </div>
                 </div>
               <% } %>
-            <% } else { %>
-              <!-- Show disabled form if video doesn't require homework -->
-              <div id="homeworkUploadArea" style="opacity: 0.6;">
-                <div class="file-upload-area" style="border-color: var(--gray-300); background: var(--gray-50);">
-                  <div class="upload-icon" style="color: var(--gray-400);">
-                    <i class="material-icons-outlined">block</i>
-                  </div>
-                  <div class="upload-text" style="color: var(--gray-400);">هذا الفيديو لا يتطلب تسليم واجب</div>
-                  <div class="upload-hint" style="color: var(--gray-400);">لا يمكن رفع ملفات للفيديوهات التي لا تتطلب واجب</div>
-                  <input type="file" disabled style="display: none;">
-                </div>
-                
-                <button class="btn btn-outline-secondary" style="width: 100%; margin-top: var(--spacing-md); cursor: not-allowed;" disabled>
-                  <i class="material-icons-outlined" style="margin-left: 8px;">block</i>
-                  غير مطلوب
-                </button>
-              </div>
-            <% } %>
           </div>
         </div>
 
@@ -863,7 +889,7 @@
 
     function checkPrerequisites() {
       const videoPrerequisites = '<%= video.prerequisites %>';
-      const chapterAccess = <%= hasChapterAccess || false %>;
+      const chapterAccess = <%= hasChapterAccess ? 'true' : 'false' %>;
       
       if (videoPrerequisites === 'WithExamaAndHw' || videoPrerequisites === 'WithExam' || videoPrerequisites === 'WithHw') {
         const prerequisiteVideoId = '<%= video.AccessibleAfterViewing %>';

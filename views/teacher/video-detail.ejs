@@ -294,9 +294,7 @@
             <div class="tabs">
               <div class="tab active" data-tab="watched">الطلاب الذين شاهدوا</div>
               <div class="tab" data-tab="unwatched">الطلاب الذين لم يشاهدوا</div>
-              <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
-                <div class="tab" data-tab="homework">الواجبات المسلمة</div>
-              <% } %>
+              <div class="tab" data-tab="homework">الواجبات المسلمة</div>
             </div>
           </div>
           
@@ -452,8 +450,7 @@
           </div>
           
           <!-- Homework Submissions Tab -->
-          <% if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') { %>
-            <div class="tab-content" id="homework-tab">
+          <div class="tab-content" id="homework-tab">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <div style="display: flex; gap: 10px; align-items: center;">
                   <input type="text" id="homeworkSearch" placeholder="البحث بالاسم أو الكود..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
@@ -582,7 +579,6 @@
                 </div>
               <% } %>
             </div>
-          <% } %>
         </div>
       </div>
     </main>
@@ -999,6 +995,12 @@
           updateReviewNotes(submissionId, newNotes);
         }
       }
+      
+      if (e.target.closest('.view-homework-details')) {
+        const button = e.target.closest('.view-homework-details');
+        const submissionId = button.getAttribute('data-submission-id');
+        viewHomeworkDetails(submissionId);
+      }
     });
     
     function approveHomework(submissionId, studentId, studentName) {
@@ -1068,6 +1070,98 @@
         console.error('Error:', error);
         alert('حدث خطأ أثناء تحديث الملاحظات');
       });
+    }
+    
+    function viewHomeworkDetails(submissionId) {
+      fetch(`/teacher/homework/details/${submissionId}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const submission = data.submission;
+          
+          // Create modal content
+          let modalContent = `
+            <div class="modal-overlay show" id="homeworkDetailsModal">
+              <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                  <h3 class="modal-title">تفاصيل الواجب - ${submission.studentName}</h3>
+                  <button class="modal-close" onclick="closeHomeworkDetailsModal()">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                      <p><strong>اسم الطالب:</strong> ${submission.studentName}</p>
+                      <p><strong>الكود:</strong> ${submission.studentCode}</p>
+                      <p><strong>الصف:</strong> ${submission.studentGrade}</p>
+                    </div>
+                    <div>
+                      <p><strong>تاريخ التسليم:</strong> ${new Date(submission.submittedAt).toLocaleString('ar-EG')}</p>
+                      <p><strong>الحالة:</strong> 
+                        <span class="status-badge ${submission.status === 'approved' ? 'active' : submission.status === 'pending' ? 'pending' : 'rejected'}">
+                          ${submission.status === 'approved' ? 'مقبول' : submission.status === 'pending' ? 'في الانتظار' : 'مرفوض'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  ${submission.notes ? `
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4>ملاحظات الطالب:</h4>
+                      <p style="padding: 1rem; background: var(--surface-color); border-radius: var(--radius-md);">${submission.notes}</p>
+                    </div>
+                  ` : ''}
+                  
+                  ${submission.files && submission.files.length > 0 ? `
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4>الملفات المرفقة:</h4>
+                      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        ${submission.files.map(file => `
+                          <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--surface-color); border-radius: var(--radius-md);">
+                            <i class="fas fa-file" style="color: var(--primary-color);"></i>
+                            <span>${file.name}</span>
+                            <span style="color: var(--text-secondary); font-size: 0.875rem;">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                            <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline" style="margin-left: auto;">
+                              <i class="fas fa-download"></i> تحميل
+                            </a>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+                  
+                  ${submission.reviewNotes ? `
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4>ملاحظات المراجعة:</h4>
+                      <p style="padding: 1rem; background: var(--surface-color); border-radius: var(--radius-md);">${submission.reviewNotes}</p>
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-outline" onclick="closeHomeworkDetailsModal()">إغلاق</button>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // Add modal to page
+          document.body.insertAdjacentHTML('beforeend', modalContent);
+        } else {
+          alert('حدث خطأ: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء تحميل تفاصيل الواجب');
+      });
+    }
+    
+    function closeHomeworkDetailsModal() {
+      const modal = document.getElementById('homeworkDetailsModal');
+      if (modal) {
+        modal.remove();
+      }
     }
   </script>
 </body>

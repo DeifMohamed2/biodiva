@@ -812,41 +812,39 @@ const video_detail_get = async (req, res) => {
     const uniqueViewers = studentsStats.filter(s => s.numberOfWatches > 0).length;
     const unwatchedCount = studentsStats.filter(s => s.numberOfWatches === 0).length;
     
-    // Get homework submissions for this video
+    // Get homework submissions for this video (now available for any video)
     let homeworkSubmissions = [];
-    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
-      const studentsWithHomework = await User.find({
-        isTeacher: false,
-        'homeworkSubmissions.videoId': new mongoose.Types.ObjectId(videoId)
-      }, {
-        Username: 1,
-        Code: 1,
-        Grade: 1,
-        homeworkSubmissions: { $elemMatch: { videoId: new mongoose.Types.ObjectId(videoId) } }
-      });
-      
-      homeworkSubmissions = studentsWithHomework.map(student => {
-        const submission = student.homeworkSubmissions && student.homeworkSubmissions[0];
-        if (submission) {
-          return {
-            _id: submission._id,
-            studentId: student._id,
-            studentName: student.Username,
-            studentCode: student.Code,
-            studentGrade: student.Grade,
-            videoId: submission.videoId,
-            files: submission.files,
-            notes: submission.notes,
-            status: submission.status,
-            submittedAt: submission.submittedAt,
-            reviewedAt: submission.reviewedAt,
-            reviewedBy: submission.reviewedBy,
-            reviewNotes: submission.reviewNotes
-          };
-        }
-        return null;
-      }).filter(submission => submission !== null);
-    }
+    const studentsWithHomework = await User.find({
+      isTeacher: false,
+      'homeworkSubmissions.videoId': new mongoose.Types.ObjectId(videoId)
+    }, {
+      Username: 1,
+      Code: 1,
+      Grade: 1,
+      homeworkSubmissions: { $elemMatch: { videoId: new mongoose.Types.ObjectId(videoId) } }
+    });
+    
+    homeworkSubmissions = studentsWithHomework.map(student => {
+      const submission = student.homeworkSubmissions && student.homeworkSubmissions[0];
+      if (submission) {
+        return {
+          _id: submission._id,
+          studentId: student._id,
+          studentName: student.Username,
+          studentCode: student.Code,
+          studentGrade: student.Grade,
+          videoId: submission.videoId,
+          files: submission.files,
+          notes: submission.notes,
+          status: submission.status,
+          submittedAt: submission.submittedAt,
+          reviewedAt: submission.reviewedAt,
+          reviewedBy: submission.reviewedBy,
+          reviewNotes: submission.reviewNotes
+        };
+      }
+      return null;
+    }).filter(submission => submission !== null);
     
     res.render('teacher/video-detail', {
       title: `${video.videoTitle || video.lectureName} - تفاصيل الفيديو`,
@@ -4826,10 +4824,13 @@ const approveHomework = async (req, res) => {
     // Check if this unlocks any dependent videos
     const unlockedCount = await unlockDependentVideos(studentId, submission.videoId);
     
+    // Also check if this video can unlock other videos based on homework submissions
+    const additionalUnlockedCount = await checkAndUnlockVideosForHomework(studentId, submission.videoId);
+    
     res.json({ 
       success: true, 
       message: 'Homework approved successfully',
-      unlockedVideos: unlockedCount
+      unlockedVideos: unlockedCount + additionalUnlockedCount
     });
     
   } catch (error) {
@@ -4934,6 +4935,55 @@ const updateReviewNotes = async (req, res) => {
   }
 };
 
+// View homework submission details
+const viewHomeworkDetails = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    
+    if (!submissionId) {
+      return res.status(400).json({ success: false, message: 'Submission ID is required' });
+    }
+    
+    // Find the homework submission
+    const user = await User.findOne({
+      'homeworkSubmissions._id': submissionId
+    }, {
+      Username: 1,
+      Code: 1,
+      Grade: 1,
+      homeworkSubmissions: { $elemMatch: { _id: new mongoose.Types.ObjectId(submissionId) } }
+    });
+    
+    if (!user || !user.homeworkSubmissions || user.homeworkSubmissions.length === 0) {
+      return res.status(404).json({ success: false, message: 'Homework submission not found' });
+    }
+    
+    const submission = user.homeworkSubmissions[0];
+    
+    res.json({ 
+      success: true, 
+      submission: {
+        _id: submission._id,
+        studentName: user.Username,
+        studentCode: user.Code,
+        studentGrade: user.Grade,
+        videoId: submission.videoId,
+        files: submission.files,
+        notes: submission.notes,
+        status: submission.status,
+        submittedAt: submission.submittedAt,
+        reviewedAt: submission.reviewedAt,
+        reviewedBy: submission.reviewedBy,
+        reviewNotes: submission.reviewNotes
+      }
+    });
+    
+  } catch (error) {
+    console.error('View homework details error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 // Helper function to unlock dependent videos when homework is approved
 const unlockDependentVideos = async (studentId, approvedVideoId) => {
   try {
@@ -4980,6 +5030,67 @@ const unlockDependentVideos = async (studentId, approvedVideoId) => {
     
   } catch (error) {
     console.error('Unlock dependent videos error:', error);
+    return 0;
+  }
+};
+
+// Helper function to check and unlock videos based on any homework submission
+const checkAndUnlockVideosForHomework = async (studentId, videoId) => {
+  try {
+    // Find all videos that depend on this video
+    const chapters = await Chapter.find({});
+    const dependentVideos = [];
+    
+    chapters.forEach(chapter => {
+      const allVideos = [
+        ...(chapter.chapterLectures || []),
+        ...(chapter.chapterSummaries || []),
+        ...(chapter.chapterSolvings || [])
+      ];
+      
+      allVideos.forEach(video => {
+        if (video.AccessibleAfterViewing && 
+            video.AccessibleAfterViewing.toString() === videoId.toString() &&
+            (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw')) {
+          dependentVideos.push({
+            videoId: video._id,
+            chapterId: chapter._id,
+            chapterGrade: chapter.chapterGrade
+          });
+        }
+      });
+    });
+    
+    // Check if user has approved homework for the prerequisite video
+    const user = await User.findById(studentId);
+    if (!user) return 0;
+    
+    const prerequisiteHomework = user.homeworkSubmissions.find(submission => 
+      submission.videoId.toString() === videoId.toString() && 
+      submission.status === 'approved'
+    );
+    
+    if (prerequisiteHomework) {
+      // Update user's video access for dependent videos
+      for (const dependentVideo of dependentVideos) {
+        await User.findOneAndUpdate(
+          { 
+            _id: studentId,
+            'videosInfo._id': dependentVideo.videoId 
+          },
+          { 
+            $set: { 
+              'videosInfo.$.isUserUploadPerviousHWAndApproved': true
+            }
+          }
+        );
+      }
+    }
+    
+    return dependentVideos.length;
+    
+  } catch (error) {
+    console.error('Check and unlock videos error:', error);
     return 0;
   }
 };
@@ -5115,5 +5226,7 @@ module.exports = {
   approveHomework,
   rejectHomework,
   updateReviewNotes,
-  unlockDependentVideos
+  viewHomeworkDetails,
+  unlockDependentVideos,
+  checkAndUnlockVideosForHomework
 };

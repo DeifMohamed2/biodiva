@@ -154,6 +154,7 @@ router.post("/chapters/:chapterId/sync-video-access", authenticateTeacherRoute, 
 router.post("/homework/approve/:submissionId", authenticateTeacherRoute, teacherController.approveHomework);
 router.post("/homework/reject/:submissionId", authenticateTeacherRoute, teacherController.rejectHomework);
 router.post("/homework/review-notes/:submissionId", authenticateTeacherRoute, teacherController.updateReviewNotes);
+router.get("/homework/details/:submissionId", authenticateTeacherRoute, teacherController.viewHomeworkDetails);
 
 // ================== Auth Routes ====================== //
 router.get("/logout", teacherController.logout);

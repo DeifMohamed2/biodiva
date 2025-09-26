@@ -477,6 +477,50 @@ const authenticateUser = async (req, res, next) => {
     //   return res.redirect('/login?StudentCode=' + user.Code);
     // }
 
+    // Check and unlock videos based on approved homework submissions
+    if (!user.isTeacher && user.homeworkSubmissions) {
+      const approvedHomework = user.homeworkSubmissions.filter(submission => submission.status === 'approved');
+      
+      for (const homework of approvedHomework) {
+        // Check if this homework unlocks any dependent videos
+        const chapters = await Chapter.find({});
+        const dependentVideos = [];
+        
+        chapters.forEach(chapter => {
+          const allVideos = [
+            ...(chapter.chapterLectures || []),
+            ...(chapter.chapterSummaries || []),
+            ...(chapter.chapterSolvings || [])
+          ];
+          
+          allVideos.forEach(video => {
+            if (video.AccessibleAfterViewing && 
+                video.AccessibleAfterViewing.toString() === homework.videoId.toString() &&
+                (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw')) {
+              dependentVideos.push({
+                videoId: video._id,
+                chapterId: chapter._id
+              });
+            }
+          });
+        });
+        
+        // Update user's video access for dependent videos
+        for (const dependentVideo of dependentVideos) {
+          await User.findOneAndUpdate(
+            { 
+              _id: user._id,
+              'videosInfo._id': dependentVideo.videoId 
+            },
+            { 
+              $set: { 
+                'videosInfo.$.isUserUploadPerviousHWAndApproved': true
+              }
+            }
+          );
+        }
+      }
+    }
   
     req.userData = user;
     next();

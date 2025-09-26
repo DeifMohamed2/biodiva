@@ -640,14 +640,12 @@ const getVideoWatch = async (req, res) => {
     if (hasVideoAccess || hasChapterAccess) {
       await updateWatchInUser(req, res, VideoId, chapterID);
       
-      // Get homework submission for this video if it requires homework
+      // Get homework submission for this video (now available for any video)
       let homeworkSubmission = null;
-      if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
-        homeworkSubmission = req.userData.homeworkSubmissions && 
-          req.userData.homeworkSubmissions.find(submission => 
-            submission.videoId.toString() === VideoId.toString()
-          );
-      }
+      homeworkSubmission = req.userData.homeworkSubmissions && 
+        req.userData.homeworkSubmissions.find(submission => 
+          submission.videoId.toString() === VideoId.toString()
+        );
       
       res.render('student/watch', {
         title: 'Watch',
@@ -662,14 +660,12 @@ const getVideoWatch = async (req, res) => {
   } else {
     await updateWatchInUser(req, res, VideoId, chapterID);
     
-    // Get homework submission for this video if it requires homework
+    // Get homework submission for this video (now available for any video)
     let homeworkSubmission = null;
-    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
-      homeworkSubmission = req.userData.homeworkSubmissions && 
-        req.userData.homeworkSubmissions.find(submission => 
-          submission.videoId.toString() === VideoId.toString()
-        );
-    }
+    homeworkSubmission = req.userData.homeworkSubmissions && 
+      req.userData.homeworkSubmissions.find(submission => 
+        submission.videoId.toString() === VideoId.toString()
+      );
     
     res.render('student/watch', {
       title: 'Watch',
@@ -718,19 +714,19 @@ const submitHomework = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Video ID is required' });
     }
     
-    // Check if video exists and user has access
+    // Check if video exists (allow homework submission even without video access)
     const userVideo = req.userData.videosInfo.find(video => video._id.toString() === videoId);
     if (!userVideo) {
-      return res.status(404).json({ success: false, message: 'Video not found or no access' });
+      // If user doesn't have video access, we still allow homework submission
+      // This is useful for students who want to submit homework for videos they don't have access to yet
+      console.log('User submitting homework for video without access:', videoId);
     }
     
-    // Check if video requires homework
-    if (userVideo.prerequisites !== 'WithHw' && userVideo.prerequisites !== 'WithExamaAndHw') {
-      return res.status(400).json({ success: false, message: 'This video does not require homework submission' });
-    }
+    // Allow homework submission for any video (removed prerequisite check)
+    // Students can now submit homework for any video they have access to
     
-    // Check if homework is already submitted and approved
-    if (userVideo.isUserUploadPerviousHWAndApproved) {
+    // Check if homework is already submitted and approved (only if user has video access)
+    if (userVideo && userVideo.isUserUploadPerviousHWAndApproved) {
       return res.status(400).json({ success: false, message: 'Homework already submitted and approved' });
     }
     
@@ -760,20 +756,26 @@ const submitHomework = async (req, res) => {
     };
     
     // Save homework submission to database
+    const updateData = {
+      $push: { 
+        homeworkSubmissions: homeworkSubmission 
+      }
+    };
+    
+    // Only update video info if user has video access
+    if (userVideo) {
+      updateData.$set = {
+        'videosInfo.$[video].isHWIsUploaded': true,
+        'videosInfo.$[video].homeworkSubmissionId': homeworkSubmission._id
+      };
+    }
+    
     await User.findOneAndUpdate(
       { _id: userId },
-      { 
-        $push: { 
-          homeworkSubmissions: homeworkSubmission 
-        },
-        $set: { 
-          'videosInfo.$[video].isHWIsUploaded': true,
-          'videosInfo.$[video].homeworkSubmissionId': homeworkSubmission._id
-        }
-      },
-      {
+      updateData,
+      userVideo ? {
         arrayFilters: [{ 'video._id': new mongoose.Types.ObjectId(videoId) }]
-      }
+      } : {}
     );
     
     res.json({ 
@@ -2339,6 +2341,39 @@ const video_watch_get = async (req, res) => {
       return res.redirect(`/student/chapter/${chapterId}`);
     }
     
+    // Check prerequisites for this video
+    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw' || video.prerequisites === 'WithExam') {
+      if (video.AccessibleAfterViewing) {
+        const prerequisiteVideoInfo = req.userData.videosInfo.find(v => v._id.toString() === video.AccessibleAfterViewing.toString());
+        
+        if (prerequisiteVideoInfo) {
+          let canWatch = true;
+          let prerequisiteMessage = '';
+          
+          if (video.prerequisites === 'WithExamaAndHw') {
+            canWatch = prerequisiteVideoInfo.isUserEnterQuiz && prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+            if (!canWatch) {
+              prerequisiteMessage = 'يجب إكمال الاختبار وتسليم الواجب أولاً';
+            }
+          } else if (video.prerequisites === 'WithExam') {
+            canWatch = prerequisiteVideoInfo.isUserEnterQuiz;
+            if (!canWatch) {
+              prerequisiteMessage = 'يجب إكمال الاختبار أولاً';
+            }
+          } else if (video.prerequisites === 'WithHw') {
+            canWatch = prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+            if (!canWatch) {
+              prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+            }
+          }
+          
+          if (!canWatch) {
+            return res.redirect(`/student/chapter/${chapterId}?error=prerequisites_not_met&message=${encodeURIComponent(prerequisiteMessage)}`);
+          }
+        }
+      }
+    }
+    
     // Check if user has remaining attempts
     if (userVideoInfo && userVideoInfo.videoAllowedAttemps <= 0) {
       return res.redirect(`/student/chapter/${chapterId}?error=no_attempts`);
@@ -2400,14 +2435,12 @@ const video_watch_get = async (req, res) => {
     if (chapter.chapterSummaries) relatedVideos.push(...chapter.chapterSummaries);
     if (chapter.chapterSolvings) relatedVideos.push(...chapter.chapterSolvings);
     
-    // Get homework submission for this video if it requires homework
+    // Get homework submission for this video (now available for any video)
     let homeworkSubmission = null;
-    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw') {
-      homeworkSubmission = req.userData.homeworkSubmissions && 
-        req.userData.homeworkSubmissions.find(submission => 
-          submission.videoId.toString() === videoId.toString()
-        );
-    }
+    homeworkSubmission = req.userData.homeworkSubmissions && 
+      req.userData.homeworkSubmissions.find(submission => 
+        submission.videoId.toString() === videoId.toString()
+      );
     
     res.render('student/video-watch', {
       title: `${video.lectureName || video.videoName || video.name} - مشاهدة الفيديو`,
