@@ -534,13 +534,69 @@
       previewDescription.textContent = this.value || 'وصف الفيديو سيظهر هنا';
     });
     
+    // Convert common video URLs to embeddable URLs (YouTube, Vimeo) and extract from iframe HTML
+    function getEmbeddableURL(rawInput) {
+      if (!rawInput) return '';
+      const trimmed = rawInput.trim();
+
+      // If user pasted an iframe, extract the src
+      const iframeSrcMatch = trimmed.match(/<iframe[^>]*src=["']([^"']+)["'][^>]*><\/iframe>/i) || trimmed.match(/src=["']([^"']+)["']/i);
+      const urlToProcess = iframeSrcMatch ? iframeSrcMatch[1] : trimmed;
+
+      try {
+        const url = new URL(urlToProcess);
+        const host = url.hostname.replace('www.', '');
+
+        // YouTube full links: youtube.com/watch?v=VIDEO_ID
+        if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+          const videoId = url.searchParams.get('v');
+          if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+          // Playlist timestamp etc: still fallback to pathname-based if /shorts/
+          const shortsMatch = url.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{6,})/);
+          if (shortsMatch) return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+        }
+
+        // YouTube short links: youtu.be/VIDEO_ID
+        if (host === 'youtu.be') {
+          const idFromPath = url.pathname.replace('/', '');
+          if (idFromPath) return `https://www.youtube.com/embed/${idFromPath}`;
+        }
+
+        // Already an embeddable YouTube URL
+        if (host === 'youtube.com' || host === 'youtu.be') {
+          if (url.pathname.startsWith('/embed/')) return url.href;
+        }
+
+        // Vimeo links: vimeo.com/VIDEO_ID
+        if (host === 'vimeo.com') {
+          const vimeoId = url.pathname.split('/').filter(Boolean)[0];
+          if (vimeoId) return `https://player.vimeo.com/video/${vimeoId}`;
+        }
+
+        // Already a Vimeo embed
+        if (host === 'player.vimeo.com') {
+          return url.href;
+        }
+
+        // Fallback: return as-is (may work for platforms that already provide embeddable links)
+        return url.href;
+      } catch (e) {
+        // Not a valid URL; return empty so caller can handle
+        return '';
+      }
+    }
+
     // Preview video from URL
     document.getElementById('previewVideoBtn').addEventListener('click', function() {
       const videoURL = document.getElementById('videoURL').value;
       if (videoURL) {
-        // Use the video URL as is without any processing
+        const embeddable = getEmbeddableURL(videoURL);
+        if (!embeddable) {
+          showTemporaryAlert('danger', 'رابط غير صالح. يرجى إدخال رابط صحيح.');
+          return;
+        }
         document.getElementById('videoPreview').style.display = 'block';
-        document.getElementById('videoFrame').src = videoURL;
+        document.getElementById('videoFrame').src = embeddable;
       } else {
         showTemporaryAlert('danger', 'يرجى إدخال رابط الفيديو أولاً');
       }
