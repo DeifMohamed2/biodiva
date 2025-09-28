@@ -3,7 +3,7 @@ const axios = require('axios');
 // Wasender API configuration
 const BASE_URL = 'https://wasenderapi.com/api';
 // Access Token for authentication (this is used to access the API)
-// const ACCESS_TOKEN = '1170|7P8hgHjn8mkBNH7EJH8VFMGlyw1XRUatqzbMN5dA8c18ec60';
+const ACCESS_TOKEN = '1170|7P8hgHjn8mkBNH7EJH8VFMGlyw1XRUatqzbMN5dA8c18ec60';
 
 class WasenderClient {
   constructor(accessToken = ACCESS_TOKEN) {
