@@ -20,43 +20,6 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
       return { success: false, message: 'No phone number provided' };
     }
     
-    // Get all sessions to find the one with matching phone number
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      console.error(`Failed to get sessions: ${sessionsResponse.message}`);
-      return { success: false, message: `Failed to get sessions: ${sessionsResponse.message}` };
-    }
-    
-    const sessions = sessionsResponse.data;
-    let targetSession = null;
-    
-    // Find session by admin phone number
-  
-    targetSession = sessions.find(s => s.phone_number === '+201044943954' || s.phone_number === '01044943954');
-
-    // } else if (adminPhone == '01055640148') {
-    //   targetSession = sessions.find(s => s.phone_number === '+201055640148' || s.phone_number === '01055640148');
-    // } else if (adminPhone == '01147929010') {
-    //   targetSession = sessions.find(s => s.phone_number === '+201147929010' || s.phone_number === '01147929010');
-    // }
-    
-    // If no specific match, try to find any connected session
-    if (!targetSession) {
-      targetSession = sessions.find(s => s.status === 'connected');
-    }
-    
-    if (!targetSession) {
-      console.error('No connected WhatsApp session found');
-      return { success: false, message: 'No connected WhatsApp session found' };
-    }
-    
-    if (!targetSession.api_key) {
-      console.error('Session API key not available');
-      return { success: false, message: 'Session API key not available' };
-    }
-    
-    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
-    
     // Format the phone number properly
     let countryCodeWithout0 = countryCode ? String(countryCode).replace(/^0+/, '') : '20'; // Remove leading zeros, default to 20
     console.log('Country code:', countryCodeWithout0);
@@ -76,8 +39,8 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     
     console.log('Sending message to:', formattedPhone);
     
-    // Use the session-specific API key to send the message
-    const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
+    // Use the simplified sendMessage method with configured session API key
+    const response = await wasender.sendMessage(formattedPhone, message);
     
     if (!response.success) {
       console.error(`Failed to send message: ${response.message}`);
@@ -1591,14 +1554,7 @@ const whatsapp_get = async (req, res) => {
   }
 };
 
-// New: WhatsApp Connect page (QR + Status) for phone 201044943954 only
-const TARGET_PHONE = '201044943954';
-
-const findTargetSession = (sessions) => {
-  if (!Array.isArray(sessions)) return null;
-  return sessions.find(s => s.phone_number === '+201044943954' || s.phone_number === '01044943954' || s.phone_number === TARGET_PHONE);
-};
-
+// WhatsApp Connect page using single session API key
 function normalizeQrCodeForImg(qr) {
   if (!qr) return null;
   const s = String(qr).trim();
@@ -1628,28 +1584,29 @@ function normalizeQrCodeForImg(qr) {
 
 const whatsapp_connect_get = async (req, res) => {
   try {
-    // Fetch sessions and decide target
-    const sessionsResponse = await wasender.getAllSessions();
-    let session = null;
-    if (sessionsResponse.success) {
-      session = findTargetSession(sessionsResponse.data) || sessionsResponse.data.find(s => s.status === 'connected');
-    }
-
-    // If we have a session id but not connected, try to get QR
+    // Get session status using the configured session API key
+    const statusResponse = await wasender.getSessionStatus();
+    let status = 'UNKNOWN';
     let qrcode = null;
-    let status = session ? session.status : 'UNKNOWN';
-    if (session && session.id && status && status.toLowerCase() !== 'connected') {
-      const qrRes = await wasender.getQRCode(session.id);
-      if (qrRes.success) {
-        qrcode = normalizeQrCodeForImg(qrRes.data.qrcode || qrRes.data.qrCode);
-        status = 'NEED_SCAN';
+    
+    if (statusResponse.success) {
+      status = statusResponse.data?.status || 'UNKNOWN';
+      
+      // If not connected, try to get QR code
+      if (status && status.toLowerCase() !== 'connected') {
+        const qrRes = await wasender.getSessionQRCode();
+        if (qrRes.success) {
+          qrcode = normalizeQrCodeForImg(qrRes.data.qrcode);
+          status = 'NEED_SCAN';
+        }
       }
+    } else {
+      console.error('Failed to get session status:', statusResponse.message);
     }
 
     res.render('teacher/whatsapp-connect', {
       title: 'ربط واتساب',
       path: '/teacher/whatsapp/connect',
-      session,
       status,
       qrcode
     });
@@ -1662,24 +1619,28 @@ const whatsapp_connect_get = async (req, res) => {
 // Poll status endpoint
 const whatsapp_connect_status = async (req, res) => {
   try {
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      return res.status(500).json({ success: false, message: sessionsResponse.message });
-    }
-    const sessions = sessionsResponse.data;
-    const target = findTargetSession(sessions) || sessions.find(s => s.status === 'connected');
-    if (!target) {
-      return res.json({ success: true, status: 'DISCONNECTED', hasSession: false });
+    // Get session status using the configured session API key
+    const statusResponse = await wasender.getSessionStatus();
+    
+    if (!statusResponse.success) {
+      return res.status(500).json({ success: false, message: statusResponse.message });
     }
 
-    let payload = { success: true, status: target.status || 'UNKNOWN', hasSession: true };
-    if (target.status && target.status.toLowerCase() !== 'connected' && target.id) {
-      const qrRes = await wasender.getQRCode(target.id);
+    let payload = { 
+      success: true, 
+      status: statusResponse.data?.status || 'UNKNOWN', 
+      hasSession: true 
+    };
+    
+    // If not connected, try to get QR code
+    if (payload.status && payload.status.toLowerCase() !== 'connected') {
+      const qrRes = await wasender.getSessionQRCode();
       if (qrRes.success) {
-        payload.qrcode = normalizeQrCodeForImg(qrRes.data.qrcode || qrRes.data.qrCode);
+        payload.qrcode = normalizeQrCodeForImg(qrRes.data.qrcode);
         payload.status = 'NEED_SCAN';
       }
     }
+    
     return res.json(payload);
   } catch (error) {
     console.error('Error getting WhatsApp status:', error);
@@ -1690,19 +1651,17 @@ const whatsapp_connect_status = async (req, res) => {
 // Regenerate QR endpoint
 const whatsapp_connect_regenerate_qr = async (req, res) => {
   try {
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      return res.status(500).json({ success: false, message: sessionsResponse.message });
-    }
-    const target = findTargetSession(sessionsResponse.data);
-    if (!target || !target.id) {
-      return res.status(404).json({ success: false, message: 'لم يتم العثور على الجلسة' });
-    }
-    const regen = await wasender.regenerateQRCode(target.id);
+    // Regenerate QR code using the configured session API key
+    const regen = await wasender.regenerateSessionQRCode();
+    
     if (!regen.success) {
       return res.status(500).json({ success: false, message: regen.message || 'فشل إعادة توليد QR' });
     }
-    return res.json({ success: true, qrcode: normalizeQrCodeForImg(regen.data.qrcode || regen.data.qrCode) });
+    
+    return res.json({ 
+      success: true, 
+      qrcode: normalizeQrCodeForImg(regen.data.qrcode) 
+    });
   } catch (error) {
     console.error('Error regenerating QR:', error);
     return res.status(500).json({ success: false, message: 'Internal error' });

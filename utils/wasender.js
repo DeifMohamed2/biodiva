@@ -3,16 +3,28 @@ const axios = require('axios');
 // Wasender API configuration
 const BASE_URL = 'https://wasenderapi.com/api';
 // Access Token for authentication (this is used to access the API)
-const ACCESS_TOKEN = '';
+const ACCESS_TOKEN = '1185|Ly6teYxxGMI3zNdw6MDN4i5eg3D1bPW6j821KhSh321a51ed';
+// Single Session API Key for sending messages (replace with your actual session API key)
+const SESSION_API_KEY = '14da9136572ff1920fc31e36b7e3c66d99ad4c03efff05391afe83762658222c';
 
 class WasenderClient {
-  constructor(accessToken = ACCESS_TOKEN) {
+  constructor(accessToken = ACCESS_TOKEN, sessionApiKey = SESSION_API_KEY) {
     this.accessToken = accessToken;
+    this.sessionApiKey = sessionApiKey;
     this.http = axios.create({
       baseURL: BASE_URL,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.accessToken}`,
+      },
+      timeout: 30000,
+    });
+    // Create session-specific client for message operations
+    this.sessionClient = axios.create({
+      baseURL: BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.sessionApiKey}`,
       },
       timeout: 30000,
     });
@@ -327,6 +339,96 @@ class WasenderClient {
     } catch (error) {
       console.error('Wasender Send Message Error:', error.response?.status, error.response?.data);
       return { success: false, message: 'Failed to send message', error: error.response?.data };
+    }
+  }
+
+  // Simplified method using the configured session API key
+  async sendMessage(toJid, text) {
+    try {
+      if (!this.sessionApiKey) {
+        return { success: false, message: 'Session API key not configured' };
+      }
+      
+      const r = await this.sessionClient.post('/send-message', { to: toJid, text });
+      const body = r.data;
+      
+      if (!body.success) {
+        return { success: false, message: body.error || 'Failed to send message' };
+      }
+      
+      return { success: true, data: body.data ?? body };
+    } catch (error) {
+      console.error('Wasender Send Message Error:', error.response?.status, error.response?.data);
+      return { success: false, message: 'Failed to send message', error: error.response?.data };
+    }
+  }
+
+  // Session management methods using the configured session API key
+  async getSessionStatus() {
+    try {
+      if (!this.sessionApiKey) {
+        return { success: false, message: 'Session API key not configured' };
+      }
+      
+      // Use the session API key to get session info
+      const r = await this.sessionClient.get('/session-info');
+      const body = r.data;
+      
+      if (!body.success) {
+        return { success: false, message: body.error || 'Failed to get session status' };
+      }
+      
+      return { success: true, data: body.data ?? body };
+    } catch (error) {
+      console.error('Wasender Get Session Status Error:', error.response?.status, error.response?.data);
+      return { success: false, message: 'Failed to get session status', error: error.response?.data };
+    }
+  }
+
+  async getSessionQRCode() {
+    try {
+      if (!this.sessionApiKey) {
+        return { success: false, message: 'Session API key not configured' };
+      }
+      
+      const r = await this.sessionClient.get('/qrcode');
+      const body = r.data;
+      
+      if (!body.success) {
+        return { success: false, message: body.error || 'Failed to get QR code' };
+      }
+      
+      const qrcode = body.data?.qrCode ?? body.qrCode ?? body.data?.qrcode ?? body.qrcode ?? null;
+      return { success: true, data: { qrcode } };
+    } catch (error) {
+      console.error('Wasender Get QR Code Error:', error.response?.status, error.response?.data);
+      return { success: false, message: 'Failed to get QR code', error: error.response?.data };
+    }
+  }
+
+  async regenerateSessionQRCode() {
+    try {
+      if (!this.sessionApiKey) {
+        return { success: false, message: 'Session API key not configured' };
+      }
+      
+      // First disconnect the session
+      await this.sessionClient.post('/disconnect');
+      
+      // Wait a moment for disconnection to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Then connect to get a fresh QR code
+      const connectResult = await this.sessionClient.post('/connect');
+      if (!connectResult.data?.success) {
+        return { success: false, message: 'Failed to reconnect session for QR regeneration' };
+      }
+      
+      // Get the new QR code
+      return await this.getSessionQRCode();
+    } catch (error) {
+      console.error('Wasender QR Regeneration Error:', error);
+      return { success: false, message: 'Failed to regenerate QR code', error: error.message };
     }
   }
 
