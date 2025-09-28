@@ -21,59 +21,10 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
       return { success: false, message: 'No phone number provided' };
     }
     
-    // Get all sessions to find the one with matching phone number
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      console.error(`Failed to get sessions: ${sessionsResponse.message}`);
-      return { success: false, message: `Failed to get sessions: ${sessionsResponse.message}` };
-    }
+    console.log('Sending message to:', phoneAsString);
     
-    const sessions = sessionsResponse.data;
-    let targetSession = null;
-    
-    // Find session by admin phone number
-    if (adminPhone == '01028772548') {
-      targetSession = sessions.find(s => s.phone_number === '+201003202768' || s.phone_number === '01003202768');
-    }
-    
-    // If no specific match, try to find any connected session
-    if (!targetSession) {
-      targetSession = sessions.find(s => s.status === 'connected');
-    }
-    
-    if (!targetSession) {
-      console.error('No connected WhatsApp session found');
-      return { success: false, message: 'No connected WhatsApp session found' };
-    }
-    
-    if (!targetSession.api_key) {
-      console.error('Session API key not available');
-      return { success: false, message: 'Session API key not available' };
-    }
-    
-    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
-    
-    // Format the phone number properly
-    let countryCodeWithout0 = countryCode ? String(countryCode).replace(/^0+/, '') : '20'; // Remove leading zeros, default to 20
-    console.log('Country code:', countryCodeWithout0);
-
-    // Clean phone input to digits only
-    let cleanedPhone = phoneAsString.replace(/\D/g, '');
-    // Remove leading zero from national number (e.g., 010... -> 10...)
-    if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.slice(1);
-
-    // Build full international number (without +)
-    let phoneNumber = `${countryCodeWithout0}${cleanedPhone}`.replace(/\D/g, '');
-    // Ensure leading country indicator '2' for Egypt if missing
-    if (!phoneNumber.startsWith('2')) phoneNumber = `2${phoneNumber}`;
-    
-    // Format for WhatsApp (add @s.whatsapp.net suffix)
-    const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
-    
-    console.log('Sending message to:', formattedPhone);
-    
-    // Use the session-specific API key to send the message
-    const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
+    // Use the simplified sendTextMessage function from wasender
+    const response = await wasender.sendTextMessage(message, phoneAsString, countryCode);
     
     if (!response.success) {
       console.error(`Failed to send message: ${response.message}`);

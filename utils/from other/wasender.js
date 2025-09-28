@@ -1,12 +1,10 @@
 const axios = require('axios');
+const FormData = require('form-data');
 
 // Wasender API configuration
 const BASE_URL = 'https://wasenderapi.com/api';
 // Access Token for authentication (this is used to access the API)
 const ACCESS_TOKEN = '1185|Ly6teYxxGMI3zNdw6MDN4i5eg3D1bPW6j821KhSh321a51ed';
-
-// Session API Key for sending messages (replace with your actual session API key)
-const SESSION_API_KEY = '14da9136572ff1920fc31e36b7e3c66d99ad4c03efff05391afe83762658222c';
 
 class WasenderClient {
   constructor(accessToken = ACCESS_TOKEN) {
@@ -147,7 +145,13 @@ class WasenderClient {
       return { success: true, data: body.data ?? { id: sessionId, status: 'NEED_SCAN' } };
     } catch (error) {
       console.error('Wasender API Error:', error.response?.status, error.response?.data);
-      return { success: false, message: 'Failed to connect session', error: error.response?.data };
+      
+      // Extract the actual error message from the API response
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to connect session';
+      
+      return { success: false, message: errorMessage, error: error.response?.data };
     }
   }
 
@@ -165,7 +169,13 @@ class WasenderClient {
       return { success: true, data: { qrcode } };
     } catch (error) {
       console.error('Wasender API Error:', error.response?.status, error.response?.data);
-      return { success: false, message: 'Failed to get QR code', error: error.response?.data };
+      
+      // Extract the actual error message from the API response
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to get QR code';
+      
+      return { success: false, message: errorMessage, error: error.response?.data };
     }
   }
 
@@ -206,7 +216,13 @@ class WasenderClient {
       return { success: true, data: body.data ?? { id: sessionId, status: 'DISCONNECTED' } };
     } catch (error) {
       console.error('Wasender API Error:', error.response?.status, error.response?.data);
-      return { success: false, message: 'Failed to disconnect session', error: error.response?.data };
+      
+      // Extract the actual error message from the API response
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to disconnect session';
+      
+      return { success: false, message: errorMessage, error: error.response?.data };
     }
   }
 
@@ -476,31 +492,19 @@ class WasenderClient {
     }
   }
 
-  // Upload Media File
-  async uploadMedia(sessionApiKey, file, type = 'image') {
+  // Upload Media File (Buffer or Stream)
+  async uploadMedia(sessionApiKey, fileBuffer, fileName, type = 'image', contentType = 'application/octet-stream') {
     try {
       const sessionClient = this.createSessionClient(sessionApiKey);
-      // Many Wasender deployments expect JSON with base64 string, not multipart
-      let base64;
-      let mime = 'application/octet-stream';
-      let filename = 'upload.bin';
-      if (file && file.data && file.data.toString) {
-        base64 = file.data.toString('base64');
-        mime = file.mimetype || mime;
-        filename = file.name || filename;
-      } else if (Buffer.isBuffer(file)) {
-        base64 = file.toString('base64');
-      } else if (typeof file === 'string' && file.startsWith('data:')) {
-        // Already a data URL
-        const r = await sessionClient.post('/upload', { file, type });
-        const body = r.data;
-        if (!body.success) {
-          return { success: false, message: body.error || 'Failed to upload media' };
+      const formData = new FormData();
+      formData.append('file', fileBuffer, { filename: fileName, contentType });
+      formData.append('type', type);
+      
+      const r = await sessionClient.post('/upload', formData, {
+        headers: {
+          ...formData.getHeaders(),
         }
-        return { success: true, data: body.data ?? body };
-      }
-
-      const r = await sessionClient.post('/upload', { base64, type, mimetype: mime, filename });
+      });
       const body = r.data;
       
       if (!body.success) {
@@ -774,213 +778,7 @@ class WasenderClient {
   }
 }
 
-// Helper functions for simplified usage
-function normalizeEgyptNumber(rawPhone, countryCode = '20') {
-  const phoneAsString = (typeof rawPhone === 'string' ? rawPhone : String(rawPhone || '')).trim();
-  if (!phoneAsString) return null;
-  let cleaned = phoneAsString.replace(/\D/g, '');
-  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-  let cc = String(countryCode || '20').replace(/^0+/, '');
-  let combined = `${cc}${cleaned}`.replace(/\D/g, '');
-  if (!combined.startsWith('2')) combined = `2${combined}`; // ensure leading country indicator for EG
-  return combined;
-}
-
-function toJid(phone, countryCode = '20') {
-  const normalized = normalizeEgyptNumber(phone, countryCode);
-  if (!normalized) return null;
-  return `${normalized}@s.whatsapp.net`;
-}
-
-/**
- * Validates that a session API key is provided and not the placeholder
- * @param {string} sessionApiKey - The session API key to validate
- * @returns {string} - The validated session API key
- * @throws {Error} - If the session API key is invalid or missing
- */
-async function validateSessionApiKey(sessionApiKey) {
-  if (!sessionApiKey || sessionApiKey === 'YOUR_SESSION_API_KEY') {
-    throw new Error('Invalid or missing session API key');
-  }
-  return sessionApiKey;
-}
-
-/**
- * Sends a text message via WhatsApp using the default session API key
- * @param {string} message - The message text to send
- * @param {string} phone - The recipient phone number
- * @param {string} countryCode - The country code (default: '20' for Egypt)
- * @returns {Object} - Success/failure response with message
- */
-async function sendTextMessage(message, phone, countryCode = '20') {
-  try {
-    const phoneAsString = (typeof phone === 'string' ? phone : String(phone || '')).trim();
-    if (!phoneAsString) {
-      return { success: false, message: 'No phone number provided' };
-    }
-    
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    const jid = toJid(phoneAsString, countryCode);
-    if (!jid) return { success: false, message: 'Invalid phone number' };
-    
-    const response = await wasender.sendTextMessage(validApiKey, jid, message);
-    return response;
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-/**
- * Sends an image message via WhatsApp using the default session API key
- * @param {string} imageUrl - The URL of the image to send
- * @param {string} phone - The recipient phone number
- * @param {string} caption - The caption for the image
- * @param {string} countryCode - The country code (default: '20' for Egypt)
- * @returns {Object} - Success/failure response with message
- */
-async function sendImageMessage(imageUrl, phone, caption = '', countryCode = '20') {
-  try {
-    const phoneAsString = (typeof phone === 'string' ? phone : String(phone || '')).trim();
-    if (!phoneAsString) {
-      return { success: false, message: 'No phone number provided' };
-    }
-    
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    const jid = toJid(phoneAsString, countryCode);
-    if (!jid) return { success: false, message: 'Invalid phone number' };
-    
-    const response = await wasender.sendImageMessage(validApiKey, jid, imageUrl, caption);
-    return response;
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-/**
- * Sends a document message via WhatsApp using the default session API key
- * @param {string} documentUrl - The URL of the document to send
- * @param {string} fileName - The name of the file
- * @param {string} phone - The recipient phone number
- * @param {string} countryCode - The country code (default: '20' for Egypt)
- * @returns {Object} - Success/failure response with message
- */
-async function sendDocumentMessage(documentUrl, fileName, phone, countryCode = '20') {
-  try {
-    const phoneAsString = (typeof phone === 'string' ? phone : String(phone || '')).trim();
-    if (!phoneAsString) {
-      return { success: false, message: 'No phone number provided' };
-    }
-    
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    const jid = toJid(phoneAsString, countryCode);
-    if (!jid) return { success: false, message: 'Invalid phone number' };
-    
-    const response = await wasender.sendDocumentMessage(validApiKey, jid, documentUrl, fileName);
-    return response;
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-/**
- * Get session status using the default session API key
- * @returns {Object} - Session info with status
- */
-async function getSessionStatus() {
-  try {
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      return { success: false, message: 'Failed to get sessions', status: 'UNKNOWN' };
-    }
-    
-    const sessions = sessionsResponse.data || [];
-    const session = sessions.find(s => s.api_key === validApiKey);
-    
-    if (!session) {
-      return { success: false, message: 'Session not found for the provided API key', status: 'NOT_FOUND' };
-    }
-    
-    return { 
-      success: true, 
-      data: session,
-      status: session.status || 'DISCONNECTED'
-    };
-  } catch (error) {
-    return { success: false, message: error.message, status: 'ERROR' };
-  }
-}
-
-/**
- * Connect the session using the default session API key
- * @returns {Object} - Success/failure response
- */
-async function connectSession() {
-  try {
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    // For session API key, we need to get the session ID first
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) return sessionsResponse;
-    const sessions = sessionsResponse.data || [];
-    const target = sessions.find(s => s.api_key === validApiKey);
-    if (!target) return { success: false, message: 'Session not found for the provided API key' };
-    return await wasender.connectSession(target.id);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-}
-
-/**
- * Get QR code for the session using the default session API key
- * @returns {Object} - Success/failure response with QR code
- */
-async function getQRCode() {
-  try {
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) return sessionsResponse;
-    const sessions = sessionsResponse.data || [];
-    const target = sessions.find(s => s.api_key === validApiKey);
-    if (!target) return { success: false, message: 'Session not found for the provided API key' };
-    return await wasender.getQRCode(target.id);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-}
-
-/**
- * Regenerate QR code for the session using the default session API key
- * @returns {Object} - Success/failure response with new QR code
- */
-async function regenerateQRCode() {
-  try {
-    const validApiKey = await validateSessionApiKey(SESSION_API_KEY);
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) return sessionsResponse;
-    const sessions = sessionsResponse.data || [];
-    const target = sessions.find(s => s.api_key === validApiKey);
-    if (!target) return { success: false, message: 'Session not found for the provided API key' };
-    return await wasender.regenerateQRCode(target.id);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-}
-
 const wasender = new WasenderClient();
-
-module.exports = {
-  wasender,
-  SESSION_API_KEY,
-  sendTextMessage,
-  sendImageMessage,
-  sendDocumentMessage,
-  toJid,
-  normalizeEgyptNumber,
-  validateSessionApiKey,
-  getSessionStatus,
-  connectSession,
-  getQRCode,
-  regenerateQRCode
-};
+module.exports = wasender;
 
 

@@ -20,27 +20,10 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
       return { success: false, message: 'No phone number provided' };
     }
     
-    // Format the phone number properly
-    let countryCodeWithout0 = countryCode ? String(countryCode).replace(/^0+/, '') : '20'; // Remove leading zeros, default to 20
-    console.log('Country code:', countryCodeWithout0);
-
-    // Clean phone input to digits only
-    let cleanedPhone = phoneAsString.replace(/\D/g, '');
-    // Remove leading zero from national number (e.g., 010... -> 10...)
-    if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.slice(1);
-
-    // Build full international number (without +)
-    let phoneNumber = `${countryCodeWithout0}${cleanedPhone}`.replace(/\D/g, '');
-    // Ensure leading country indicator '2' for Egypt if missing
-    if (!phoneNumber.startsWith('2')) phoneNumber = `2${phoneNumber}`;
+    console.log('Sending message to:', phoneAsString);
     
-    // Format for WhatsApp (add @s.whatsapp.net suffix)
-    const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
-    
-    console.log('Sending message to:', formattedPhone);
-    
-    // Use the simplified sendMessage method with configured session API key
-    const response = await wasender.sendMessage(formattedPhone, message);
+    // Use the simplified sendTextMessage function from wasender
+    const response = await wasender.sendTextMessage(message, phoneAsString, countryCode);
     
     if (!response.success) {
       console.error(`Failed to send message: ${response.message}`);
@@ -1554,7 +1537,8 @@ const whatsapp_get = async (req, res) => {
   }
 };
 
-// WhatsApp Connect page using single session API key
+// WhatsApp Connect page (QR + Status) using single session API key
+
 function normalizeQrCodeForImg(qr) {
   if (!qr) return null;
   const s = String(qr).trim();
@@ -1584,29 +1568,30 @@ function normalizeQrCodeForImg(qr) {
 
 const whatsapp_connect_get = async (req, res) => {
   try {
-    // Get session status using the configured session API key
-    const statusResponse = await wasender.getSessionStatus();
+    // Get session status using the single session API key
+    const sessionResponse = await wasender.getSessionStatus();
+    let session = null;
     let status = 'UNKNOWN';
     let qrcode = null;
-    
-    if (statusResponse.success) {
-      status = statusResponse.data?.status || 'UNKNOWN';
+
+    if (sessionResponse.success) {
+      session = sessionResponse.data;
+      status = sessionResponse.status;
       
-      // If not connected, try to get QR code
-      if (status && status.toLowerCase() !== 'connected') {
-        const qrRes = await wasender.getSessionQRCode();
+      // If session exists but not connected, try to get QR code
+      if (session && session.id && status && status.toLowerCase() !== 'connected') {
+        const qrRes = await wasender.getQRCode();
         if (qrRes.success) {
-          qrcode = normalizeQrCodeForImg(qrRes.data.qrcode);
+          qrcode = normalizeQrCodeForImg(qrRes.data.qrcode || qrRes.data.qrCode);
           status = 'NEED_SCAN';
         }
       }
-    } else {
-      console.error('Failed to get session status:', statusResponse.message);
     }
 
     res.render('teacher/whatsapp-connect', {
       title: 'ربط واتساب',
       path: '/teacher/whatsapp/connect',
+      session,
       status,
       qrcode
     });
@@ -1619,24 +1604,21 @@ const whatsapp_connect_get = async (req, res) => {
 // Poll status endpoint
 const whatsapp_connect_status = async (req, res) => {
   try {
-    // Get session status using the configured session API key
-    const statusResponse = await wasender.getSessionStatus();
-    
-    if (!statusResponse.success) {
-      return res.status(500).json({ success: false, message: statusResponse.message });
+    // Get session status using the single session API key
+    const sessionResponse = await wasender.getSessionStatus();
+    if (!sessionResponse.success) {
+      return res.json({ success: true, status: 'DISCONNECTED', hasSession: false });
     }
 
-    let payload = { 
-      success: true, 
-      status: statusResponse.data?.status || 'UNKNOWN', 
-      hasSession: true 
-    };
+    const session = sessionResponse.data;
+    const status = sessionResponse.status;
+    let payload = { success: true, status: status || 'UNKNOWN', hasSession: true };
     
-    // If not connected, try to get QR code
-    if (payload.status && payload.status.toLowerCase() !== 'connected') {
-      const qrRes = await wasender.getSessionQRCode();
+    // If session exists but not connected, try to get QR code
+    if (session && session.id && status && status.toLowerCase() !== 'connected') {
+      const qrRes = await wasender.getQRCode();
       if (qrRes.success) {
-        payload.qrcode = normalizeQrCodeForImg(qrRes.data.qrcode);
+        payload.qrcode = normalizeQrCodeForImg(qrRes.data.qrcode || qrRes.data.qrCode);
         payload.status = 'NEED_SCAN';
       }
     }
@@ -1651,17 +1633,12 @@ const whatsapp_connect_status = async (req, res) => {
 // Regenerate QR endpoint
 const whatsapp_connect_regenerate_qr = async (req, res) => {
   try {
-    // Regenerate QR code using the configured session API key
-    const regen = await wasender.regenerateSessionQRCode();
-    
+    // Regenerate QR code using the single session API key
+    const regen = await wasender.regenerateQRCode();
     if (!regen.success) {
       return res.status(500).json({ success: false, message: regen.message || 'فشل إعادة توليد QR' });
     }
-    
-    return res.json({ 
-      success: true, 
-      qrcode: normalizeQrCodeForImg(regen.data.qrcode) 
-    });
+    return res.json({ success: true, qrcode: normalizeQrCodeForImg(regen.data.qrcode || regen.data.qrCode) });
   } catch (error) {
     console.error('Error regenerating QR:', error);
     return res.status(500).json({ success: false, message: 'Internal error' });
@@ -2015,32 +1992,10 @@ const sendImageMessages = async (req, res) => {
     let successCount = 0;
     let failCount = 0;
 
-    // Determine admin phone from authenticated teacher (fallback to default)
-    const adminPhone = (req.userData && req.userData.phone) || (req.teacherData && req.teacherData.phone) || '01028772548';
-
-    // Get sessions to find the appropriate one
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'فشل في الاتصال بخدمة الواتساب' 
-      });
-    }
-
-    const sessions = sessionsResponse.data;
-    let targetSession = sessions.find(s => s.status === 'connected');
-    
-    if (!targetSession) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'لا توجد جلسة واتساب متصلة' 
-      });
-    }
-
     // Determine final image URL: use provided Cloudinary URL, otherwise upload
     let finalImageUrl = imageUrlFromBody;
     if (!finalImageUrl) {
-      const uploadResponse = await wasender.uploadMedia(targetSession.api_key, imageFile, 'image');
+      const uploadResponse = await wasender.wasender.uploadMedia(wasender.SESSION_API_KEY, imageFile, 'image');
       if (!uploadResponse.success) {
         return res.status(500).json({ 
           success: false, 
@@ -2063,16 +2018,9 @@ const sendImageMessages = async (req, res) => {
         const phoneAsString = String(target.phone || '').trim();
         if (!phoneAsString) continue;
 
-        let cleanedPhone = phoneAsString.replace(/\D/g, '');
-        if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.slice(1);
-        let phoneNumber = `20${cleanedPhone}`.replace(/\D/g, '');
-        if (!phoneNumber.startsWith('2')) phoneNumber = `2${phoneNumber}`;
-        const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
-
         const result = await wasender.sendImageMessage(
-          targetSession.api_key, 
-          formattedPhone, 
           finalImageUrl, 
+          phoneAsString, 
           customizedMessage
         );
         
