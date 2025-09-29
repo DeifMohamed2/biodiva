@@ -11,8 +11,9 @@ const attendanceSchema = new Schema({
         type: String,
         required: true,
         enum: [
-            'centerBasmala', 'centerDHL', 'centerDarElsa3da', 
-            'centerFutureSoft', 'centerInfinity', 'centerElra3y', 
+            'centerAOne', 'centerArkan', 'centerECL', 'centerKhalifa', 'centerSaintGeorge', 'centerBrightStars',
+            'centerBasmala', 'centerDHL', 'centerDarElsa3da',
+            'centerFutureSoft', 'centerInfinity', 'centerElra3y',
             'centerNewFuture', 'centerHarverd', 'centerA1'
         ]
     },
