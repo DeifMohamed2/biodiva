@@ -18,6 +18,55 @@
   <link rel="stylesheet" href="/css/student-modern.css">
   
   <style>
+    /* Page-specific override: hide sidebar on the video watch page */
+    .main-container {
+      display: block;
+    }
+
+    .sidebar {
+      display: none !important;
+    }
+
+    .main-content {
+      margin-right: 0 !important;
+      width: 100% !important;
+    }
+
+    .topbar-minimal {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: var(--spacing-md) var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: center;
+    }
+
+    .topbar-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--gray-700);
+      background: var(--white);
+    }
+
+    .topbar-link:hover {
+      background: var(--gray-50);
+      border-color: var(--gray-300);
+    }
     .video-container {
       background: var(--gray-900);
       border-radius: var(--radius-lg);
@@ -525,6 +574,22 @@
 
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Minimal Topbar (Back / Home) -->
+      <div class="topbar-minimal">
+        <div class="topbar-actions">
+          <a href="/student/chapters" class="topbar-link" title="رجوع">
+            <i class="material-icons-outlined">arrow_back</i>
+            <span>رجوع</span>
+          </a>
+          <a href="/student/dash" class="topbar-link" title="الصفحة الرئيسية">
+            <i class="material-icons-outlined">home</i>
+            <span>الرئيسية</span>
+          </a>
+        </div>
+        <div style="font-weight: 700; color: var(--gray-900);">
+          <%= video.videoName || 'مشاهدة الفيديو' %>
+        </div>
+      </div>
       <!-- Breadcrumb -->
       <div class="breadcrumb">
         <a href="/student/chapters" class="breadcrumb-link">الأبواب التعليمية</a>
