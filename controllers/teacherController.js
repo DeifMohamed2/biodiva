@@ -196,7 +196,7 @@ const chapters_get = async (req, res) => {
     const { grade, search, page = 1 } = req.query;
     const perPage = 12;
     
-    let query = { isActive: true };
+    let query = { };
     if (grade) query.chapterGrade = grade;
     if (search) {
       query.chapterName = { $regex: search, $options: 'i' };
