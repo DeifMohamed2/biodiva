@@ -467,6 +467,32 @@
       margin-left: 0.5rem;
     }
     
+    /* Scrollable Table Container */
+    .scrollable-table-container {
+      max-height: 600px;
+      overflow-y: auto;
+      border: 1px solid #e3e6f0;
+      border-radius: 0.5rem;
+    }
+    
+    .scrollable-table-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .scrollable-table-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .scrollable-table-container::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+    
+    .scrollable-table-container::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
       .simple-card-body {
@@ -481,6 +507,10 @@
       .simple-btn {
         width: 100%;
         justify-content: center;
+      }
+      
+      .scrollable-table-container {
+        max-height: 400px;
       }
     }
   </style>
@@ -685,7 +715,7 @@
           </div>
           
           <div class="card-body-enhanced">
-            <div class="table-responsive">
+            <div class="table-responsive scrollable-table-container">
               <table class="table table-hover enhanced-table">
                 <thead class="table-dark">
                   <tr>
