@@ -3963,25 +3963,27 @@ const quiz_edit_get = async (req, res) => {
     // Get chapters for dropdown
     const chapters = await Chapter.find({ isActive: true }).select('chapterName chapterGrade');
     
-    // Get videos for the "video will be opened" dropdown
+    // Get videos for the "video will be opened" dropdown - filter by quiz grade and videos that require quiz
     let videos = [];
-    if (chapters.length > 0) {
-      for (const chapter of chapters) {
-        // Collect all videos from this chapter
+    const chaptersForGrade = chapters.filter(chapter => chapter.chapterGrade === quiz.Grade);
+    
+    if (chaptersForGrade.length > 0) {
+      for (const chapter of chaptersForGrade) {
+        // Collect videos that require quiz completion
         const chapterVideos = [
-          ...(chapter.chapterLectures || []).map(v => ({ 
+          ...(chapter.chapterLectures || []).filter(v => v.prerequisites === 'WithExam' || v.prerequisites === 'WithExamaAndHw').map(v => ({ 
             _id: v._id, 
             videoTitle: v.videoTitle || v.lectureName,
             chapterName: chapter.chapterName,
             type: 'lecture'
           })),
-          ...(chapter.chapterSummaries || []).map(v => ({ 
+          ...(chapter.chapterSummaries || []).filter(v => v.prerequisites === 'WithExam' || v.prerequisites === 'WithExamaAndHw').map(v => ({ 
             _id: v._id, 
             videoTitle: v.videoTitle || v.lectureName,
             chapterName: chapter.chapterName,
             type: 'summary'
           })),
-          ...(chapter.chapterSolvings || []).map(v => ({ 
+          ...(chapter.chapterSolvings || []).filter(v => v.prerequisites === 'WithExam' || v.prerequisites === 'WithExamaAndHw').map(v => ({ 
             _id: v._id, 
             videoTitle: v.videoTitle || v.lectureName,
             chapterName: chapter.chapterName,

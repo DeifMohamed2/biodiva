@@ -153,11 +153,12 @@
                   <% if (locals.videos && videos.length > 0) { %>
                     <% videos.forEach(function(video) { %>
                       <option value="<%= video._id %>" <%= quiz.videoWillbeOpen && quiz.videoWillbeOpen.toString() === video._id.toString() ? 'selected' : '' %>>
-                        <%= video.videoTitle || video.lectureName %>
+                        <%= video.videoTitle || video.lectureName %> (<%= video.chapterName %>) - <%= video.type === 'lecture' ? 'محاضرة' : video.type === 'summary' ? 'ملخص' : 'حل تمارين' %>
                       </option>
                     <% }); %>
                   <% } %>
                 </select>
+                <small style="color: var(--text-secondary); font-size: 0.75rem;">سيتم تحديث الفيديوهات عند تغيير الصف الدراسي</small>
               </div>
               
               <div class="form-group">
@@ -342,6 +343,32 @@
       // Initialize with existing quiz data
       let questions = [];
       let currentQuestionIndex = -1;
+      
+      // Dynamic video loading based on grade selection
+      const gradeSelect = document.getElementById('Grade');
+      const videoWillbeOpenSelect = document.getElementById('videoWillbeOpen');
+      
+      if (gradeSelect && videoWillbeOpenSelect) {
+        // Store the current selected video ID before loading new videos
+        const currentVideoId = '<%= quiz.videoWillbeOpen ? quiz.videoWillbeOpen.toString() : "" %>';
+        
+        gradeSelect.addEventListener('change', function() {
+          const selectedGrade = this.value;
+          if (selectedGrade) {
+            // When grade changes, don't preserve the current video selection
+            loadQuizVideosByGrade(selectedGrade, '');
+          } else {
+            // Reset video dropdown
+            videoWillbeOpenSelect.innerHTML = '<option value="">لا يوجد - اختر الصف أولاً</option>';
+          }
+        });
+        
+        // Trigger grade change on page load to load videos for current grade
+        const currentGrade = gradeSelect.value;
+        if (currentGrade) {
+          loadQuizVideosByGrade(currentGrade, currentVideoId);
+        }
+      }
       
       // Load existing questions from server
       <% if (quiz.Questions && quiz.Questions.length > 0) { %>
@@ -671,6 +698,46 @@
           indicator.style.display = 'inline-block';
         }
       });
+      
+      // Function to load videos that require quiz for a specific grade
+      function loadQuizVideosByGrade(grade, currentVideoId = '') {
+        if (!videoWillbeOpenSelect) return;
+        
+        // Show loading state
+        videoWillbeOpenSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+        
+        // Convert grade format (Grade1 -> 1, Grade2 -> 2, Grade3 -> 3)
+        const gradeNumber = grade.replace('Grade', '');
+        
+        // Fetch videos that require quiz for this grade
+        fetch(`/teacher/api/videos/grade/${gradeNumber}?requireQuiz=true`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Quiz API Response:', data);
+                if (data.success && data.videos && data.videos.length > 0) {
+                    videoWillbeOpenSelect.innerHTML = '<option value="">لا يوجد</option>';
+                    data.videos.forEach(video => {
+                        const option = document.createElement('option');
+                        option.value = video._id;
+                        option.textContent = `${video.title} (${video.chapterName}) - ${video.type === 'lecture' ? 'محاضرة' : video.type === 'summary' ? 'ملخص' : 'حل تمارين'}`;
+                        
+                        // Select the current video if it matches
+                        if (currentVideoId && video._id === currentVideoId) {
+                            option.selected = true;
+                        }
+                        
+                        videoWillbeOpenSelect.appendChild(option);
+                    });
+                } else {
+                    console.log('No quiz videos found or API error:', data);
+                    videoWillbeOpenSelect.innerHTML = '<option value="">لا توجد فيديوهات تتطلب اختبار في هذا الصف</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading quiz videos:', error);
+                videoWillbeOpenSelect.innerHTML = '<option value="">حدث خطأ في التحميل</option>';
+            });
+      }
     });
   </script>
 </body>
