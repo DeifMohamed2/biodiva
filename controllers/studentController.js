@@ -330,6 +330,11 @@ const buyChapter = async (req, res) => {
         videoInfo.purchaseDate = new Date();
         videoInfo.purchaseCode = code;
         
+        // Ensure videosPaid is an array
+        if (!req.userData.videosPaid) {
+          req.userData.videosPaid = [];
+        }
+        
         if (!req.userData.videosPaid.includes(video._id)) {
           req.userData.videosPaid.push(video._id);
         }
@@ -1916,7 +1921,9 @@ const PDFs_get = async (req, res) => {
     console.log(PDFdata);
 
     const PaidPDFs = PDFdata.map(PDF => {
-      const isPaid = req.userData.videosPaid.includes(PDF._id);
+      // Ensure PDFsPaid is an array and check against it instead of videosPaid
+      const pdfsPaid = req.userData.PDFsPaid || [];
+      const isPaid = pdfsPaid.includes(PDF._id);
       return { ...PDF.toObject(), isPaid };
     });
     res.render("student/PDFs", { title: "PDFs", path: req.path, PDFs: PaidPDFs, userData: req.userData });
@@ -1933,7 +1940,9 @@ const getPDF = async (req, res) => {
 // Check if pdfsPaid is defined and is an array
   console.log(pdfId);
 // Alternatively, you can use a more explicit check
-const isPaid = req.userData.videosPaid.includes(pdfId);
+// Ensure PDFsPaid is an array and check against it instead of videosPaid
+const pdfsPaid = req.userData.PDFsPaid || [];
+const isPaid = pdfsPaid.includes(pdfId);
 console.log(isPaid);
     if (pdf.pdfStatus == "Paid") {
       if (isPaid) {
@@ -1991,22 +2000,103 @@ const buyVideo = async (req, res) => {
 
     // Find video in chapter
     let video = null;
+    let videoType = '';
+    
+    console.log('Searching for video:', videoId, 'in chapter:', chapterId);
+    console.log('Chapter lectures count:', chapter.chapterLectures ? chapter.chapterLectures.length : 0);
+    console.log('Chapter summaries count:', chapter.chapterSummaries ? chapter.chapterSummaries.length : 0);
+    console.log('Chapter solvings count:', chapter.chapterSolvings ? chapter.chapterSolvings.length : 0);
+    
     if (chapter.chapterLectures) {
       video = chapter.chapterLectures.find(lecture => lecture._id.toString() === videoId);
+      if (video) {
+        videoType = 'lecture';
+        console.log('Found video in lectures:', video.lectureName || video.videoName);
+      }
     }
     if (!video && chapter.chapterSummaries) {
       video = chapter.chapterSummaries.find(summary => summary._id.toString() === videoId);
+      if (video) {
+        videoType = 'summary';
+        console.log('Found video in summaries:', video.lectureName || video.videoName);
+      }
     }
     if (!video && chapter.chapterSolvings) {
       video = chapter.chapterSolvings.find(solving => solving._id.toString() === videoId);
+      if (video) {
+        videoType = 'solving';
+        console.log('Found video in solvings:', video.lectureName || video.videoName);
+      }
     }
 
     if (!video) {
+      console.log('Video not found in any chapter section');
       return res.status(404).json({ 
         success: false, 
         message: 'Video not found',
         redirect: `/student/chapter/${chapterId}?error=video_not_found`
       });
+    }
+    
+    console.log('Video found successfully:', {
+      videoId: video._id,
+      videoName: video.lectureName || video.videoName,
+      videoType: videoType,
+      paymentStatus: video.paymentStatus,
+      prerequisites: video.prerequisites,
+      accessibleAfterViewing: video.AccessibleAfterViewing
+    });
+
+    // Check prerequisites before allowing purchase
+    if (video.prerequisites && video.prerequisites !== 'none') {
+      console.log('Video has prerequisites:', video.prerequisites);
+      
+      if (video.AccessibleAfterViewing) {
+        // Find the prerequisite video info in user's videosInfo
+        const prerequisiteVideoInfo = req.userData.videosInfo.find(v => 
+          v._id.toString() === video.AccessibleAfterViewing.toString()
+        );
+        
+        console.log('Prerequisite video info found:', prerequisiteVideoInfo ? 'Yes' : 'No');
+        
+        if (prerequisiteVideoInfo) {
+          let canPurchase = true;
+          let prerequisiteMessage = '';
+          
+          if (video.prerequisites === 'WithExamaAndHw') {
+            canPurchase = prerequisiteVideoInfo.isUserEnterQuiz && prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+            if (!canPurchase) {
+              prerequisiteMessage = 'يجب إكمال الاختبار وتسليم الواجب أولاً';
+            }
+          } else if (video.prerequisites === 'WithExam') {
+            canPurchase = prerequisiteVideoInfo.isUserEnterQuiz;
+            if (!canPurchase) {
+              prerequisiteMessage = 'يجب إكمال الاختبار أولاً';
+            }
+          } else if (video.prerequisites === 'WithHw') {
+            canPurchase = prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+            if (!canPurchase) {
+              prerequisiteMessage = 'يجب تسليم الواجب أولاً';
+            }
+          }
+          
+          if (!canPurchase) {
+            console.log('Prerequisites not met:', prerequisiteMessage);
+            return res.status(400).json({ 
+              success: false, 
+              message: prerequisiteMessage,
+              redirect: `/student/chapter/${chapterId}?error=prerequisites_not_met&message=${encodeURIComponent(prerequisiteMessage)}`
+            });
+          }
+        } else {
+          console.log('Prerequisite video not found in user videosInfo');
+          return res.status(400).json({ 
+            success: false, 
+            message: 'المتطلبات السابقة غير مكتملة',
+            redirect: `/student/chapter/${chapterId}?error=prerequisites_not_found`
+          });
+        }
+      }
     }
 
     // Check grade compatibility
@@ -2019,7 +2109,15 @@ const buyVideo = async (req, res) => {
     }
 
     // Check if user already has access
-    if (req.userData.hasVideoAccess(videoId)) {
+    console.log('Checking if user already has access to video:', videoId);
+    console.log('User videosPaid array:', req.userData.videosPaid);
+    console.log('User videosInfo count:', req.userData.videosInfo ? req.userData.videosInfo.length : 0);
+    
+    const hasAccess = req.userData.hasVideoAccess(videoId, video);
+    console.log('User has access to video:', hasAccess);
+    
+    if (hasAccess) {
+      console.log('User already has access, redirecting');
       return res.status(200).json({ 
         success: true, 
         message: 'Already have access',
@@ -2028,6 +2126,7 @@ const buyVideo = async (req, res) => {
     }
 
     // Find and validate code (specific video code or general video code)
+    console.log('Searching for code:', code);
     const codeData = await Code.findOne({
       Code: code,
       isUsed: false,
@@ -2038,7 +2137,20 @@ const buyVideo = async (req, res) => {
       isActive: true
     });
 
+    console.log('Code found:', codeData ? 'Yes' : 'No');
+    if (codeData) {
+      console.log('Code details:', {
+        code: codeData.Code,
+        codeType: codeData.codeType,
+        isGeneralCode: codeData.isGeneralCode,
+        contentId: codeData.contentId,
+        isUsed: codeData.isUsed,
+        isActive: codeData.isActive
+      });
+    }
+
     if (!codeData) {
+      console.log('Code not found or invalid');
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid or used code',
@@ -2056,8 +2168,12 @@ const buyVideo = async (req, res) => {
     }
 
     // Validate code can be used by this user (including all grades check)
+    console.log('Validating code for user:', req.userData.Username);
     const codeValidation = codeData.canBeUsedBy(req.userData);
+    console.log('Code validation result:', codeValidation);
+    
     if (!codeValidation.valid) {
+      console.log('Code validation failed:', codeValidation.reason);
       return res.status(400).json({ 
         success: false, 
         message: codeValidation.reason,
@@ -2077,12 +2193,38 @@ const buyVideo = async (req, res) => {
     // Process video purchase
     if (codeData.isGeneralCode && codeData.codeType === 'GeneralVideo') {
       // Grant general video access for user's grade
-      await req.userData.grantGeneralVideoAccess(code);
+      console.log('Granting general video access for user:', req.userData.Username);
+      await req.userData.grantGeneralVideoAccess(code, videoId);
     } else {
       // Grant specific video access
-      await req.userData.addVideoPurchase(videoId, video.videoName || video.lectureName, chapterId, code);
+      console.log('Adding video purchase:', {
+        videoId: videoId,
+        videoName: video.videoName || video.lectureName,
+        chapterId: chapterId,
+        code: code,
+        userId: req.userData._id
+      });
+      
+      try {
+        await req.userData.addVideoPurchase(videoId, video.videoName || video.lectureName, chapterId, code);
+        console.log('Video purchase successful. User videosPaid array length:', req.userData.videosPaid ? req.userData.videosPaid.length : 'undefined');
+      } catch (purchaseError) {
+        console.error('Error in addVideoPurchase:', purchaseError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to process video purchase',
+          redirect: `/student/chapter/${chapterId}?error=purchase_processing_failed`
+        });
+      }
     }
-    await codeData.markAsUsed(req.userData);
+    
+    try {
+      await codeData.markAsUsed(req.userData);
+      console.log('Code marked as used successfully');
+    } catch (codeError) {
+      console.error('Error marking code as used:', codeError);
+      // Don't fail the purchase if code marking fails
+    }
 
     console.log('Video purchase successful');
 
@@ -2274,7 +2416,7 @@ const video_watch_get = async (req, res) => {
     }
 
     const hasChapterAccess = req.userData.chaptersPaid && req.userData.chaptersPaid.includes(chapterId);
-    const hasVideoAccess = req.userData.videosPaid && req.userData.videosPaid.includes(videoId);
+    const hasVideoAccess = req.userData.hasVideoAccess(videoId, video);
     
     // Get user video info
     const userVideoInfo = req.userData.videosInfo && req.userData.videosInfo.find(v => v._id.toString() === videoId.toString()) || null;
@@ -2287,42 +2429,9 @@ const video_watch_get = async (req, res) => {
       console.log('UserVideoInfo attempts:', userVideoInfo.videoAllowedAttemps);
     }
     
-    // Check access permissions
+    // Check access permissions (including prerequisites)
     if (video.paymentStatus === 'Pay' && !hasVideoAccess) {
       return res.redirect(`/student/chapter/${chapterId}`);
-    }
-    
-    // Check prerequisites for this video
-    if (video.prerequisites === 'WithHw' || video.prerequisites === 'WithExamaAndHw' || video.prerequisites === 'WithExam') {
-      if (video.AccessibleAfterViewing) {
-        const prerequisiteVideoInfo = req.userData.videosInfo.find(v => v._id.toString() === video.AccessibleAfterViewing.toString());
-        
-        if (prerequisiteVideoInfo) {
-          let canWatch = true;
-          let prerequisiteMessage = '';
-          
-          if (video.prerequisites === 'WithExamaAndHw') {
-            canWatch = prerequisiteVideoInfo.isUserEnterQuiz && prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
-            if (!canWatch) {
-              prerequisiteMessage = 'يجب إكمال الاختبار وتسليم الواجب أولاً';
-            }
-          } else if (video.prerequisites === 'WithExam') {
-            canWatch = prerequisiteVideoInfo.isUserEnterQuiz;
-            if (!canWatch) {
-              prerequisiteMessage = 'يجب إكمال الاختبار أولاً';
-            }
-          } else if (video.prerequisites === 'WithHw') {
-            canWatch = prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
-            if (!canWatch) {
-              prerequisiteMessage = 'يجب تسليم الواجب أولاً';
-            }
-          }
-          
-          if (!canWatch) {
-            return res.redirect(`/student/chapter/${chapterId}?error=prerequisites_not_met&message=${encodeURIComponent(prerequisiteMessage)}`);
-          }
-        }
-      }
     }
     
     // Check if user has remaining attempts

@@ -389,22 +389,66 @@ userSchema.methods.hasChapterAccess = function(chapterId) {
            this.chaptersPurchased.some(purchase => purchase.chapterId.toString() === chapterId.toString());
 };
 
-userSchema.methods.hasVideoAccess = function(videoId) {
+userSchema.methods.hasVideoAccess = function(videoId, video = null) {
+    console.log('=== hasVideoAccess called ===');
+    console.log('Checking access for videoId:', videoId);
+    console.log('User videosPaid array:', this.videosPaid);
+    console.log('User videosInfo count:', this.videosInfo ? this.videosInfo.length : 0);
+    console.log('User generalAccess:', this.generalAccess);
+    
+    // Check if user has general video access first
+    if (this.generalAccess && this.generalAccess.videos) {
+        console.log('User has general video access');
+        // Still need to check prerequisites even with general access
+        if (video && video.prerequisites && video.prerequisites !== 'none') {
+            return this.hasVideoPrerequisitesMet(video);
+        }
+        return true;
+    }
+    
+    // Ensure videosPaid is an array
+    if (!this.videosPaid || !Array.isArray(this.videosPaid)) {
+        this.videosPaid = [];
+        console.log('Initialized videosPaid as empty array');
+    }
+    
     // Check if user has direct video access
     const hasDirectAccess = this.videosPaid.includes(videoId) || 
                            this.videosPaid.includes(videoId.toString());
     
+    console.log('Direct access check:', {
+        includesVideoId: this.videosPaid.includes(videoId),
+        includesVideoIdString: this.videosPaid.includes(videoId.toString()),
+        hasDirectAccess: hasDirectAccess
+    });
+    
     if (hasDirectAccess) {
+        console.log('User has direct access to video');
+        // Still need to check prerequisites
+        if (video && video.prerequisites && video.prerequisites !== 'none') {
+            return this.hasVideoPrerequisitesMet(video);
+        }
         return true;
     }
     
     // Check if user has access through chapter purchase
     // Find the video info to get the chapter ID
     const videoInfo = this.videosInfo.find(v => v._id.toString() === videoId.toString());
+    console.log('Video info found for chapter access check:', videoInfo ? 'Yes' : 'No');
+    
     if (videoInfo && videoInfo.chapterId) {
-        return this.hasChapterAccess(videoInfo.chapterId);
+        const hasChapterAccess = this.hasChapterAccess(videoInfo.chapterId);
+        console.log('Chapter access check result:', hasChapterAccess);
+        if (hasChapterAccess) {
+            // Still need to check prerequisites
+            if (video && video.prerequisites && video.prerequisites !== 'none') {
+                return this.hasVideoPrerequisitesMet(video);
+            }
+        }
+        return hasChapterAccess;
     }
     
+    console.log('No access found');
     return false;
 };
 
@@ -413,13 +457,68 @@ userSchema.methods.hasVideoAccessThroughChapter = function(videoId, chapterId) {
     return this.hasChapterAccess(chapterId);
 };
 
+// Method to check if video prerequisites are met
+userSchema.methods.hasVideoPrerequisitesMet = function(video) {
+    console.log('=== hasVideoPrerequisitesMet called ===');
+    console.log('Video prerequisites:', video.prerequisites);
+    console.log('Video AccessibleAfterViewing:', video.AccessibleAfterViewing);
+    
+    if (!video.prerequisites || video.prerequisites === 'none') {
+        console.log('No prerequisites required');
+        return true;
+    }
+    
+    if (video.AccessibleAfterViewing) {
+        // Find the prerequisite video info in user's videosInfo
+        const prerequisiteVideoInfo = this.videosInfo.find(v => 
+            v._id.toString() === video.AccessibleAfterViewing.toString()
+        );
+        
+        console.log('Prerequisite video info found:', prerequisiteVideoInfo ? 'Yes' : 'No');
+        
+        if (prerequisiteVideoInfo) {
+            let prerequisitesMet = true;
+            
+            if (video.prerequisites === 'WithExamaAndHw') {
+                prerequisitesMet = prerequisiteVideoInfo.isUserEnterQuiz && prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+                console.log('WithExamaAndHw check:', {
+                    isUserEnterQuiz: prerequisiteVideoInfo.isUserEnterQuiz,
+                    isUserUploadPerviousHWAndApproved: prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved,
+                    result: prerequisitesMet
+                });
+            } else if (video.prerequisites === 'WithExam') {
+                prerequisitesMet = prerequisiteVideoInfo.isUserEnterQuiz;
+                console.log('WithExam check:', {
+                    isUserEnterQuiz: prerequisiteVideoInfo.isUserEnterQuiz,
+                    result: prerequisitesMet
+                });
+            } else if (video.prerequisites === 'WithHw') {
+                prerequisitesMet = prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
+                console.log('WithHw check:', {
+                    isUserUploadPerviousHWAndApproved: prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved,
+                    result: prerequisitesMet
+                });
+            }
+            
+            console.log('Prerequisites met:', prerequisitesMet);
+            return prerequisitesMet;
+        } else {
+            console.log('Prerequisite video not found in user videosInfo');
+            return false;
+        }
+    }
+    
+    console.log('No AccessibleAfterViewing specified');
+    return false;
+};
+
 // General access methods for checking if user has general access to content types
 userSchema.methods.hasGeneralChapterAccess = function() {
     return false;
 };
 
 userSchema.methods.hasGeneralVideoAccess = function() {
-    return false;
+    return this.generalAccess && this.generalAccess.videos === true;
 };
 
 userSchema.methods.hasGeneralQuizAccess = function() {
@@ -427,29 +526,67 @@ userSchema.methods.hasGeneralQuizAccess = function() {
 };
 
 // Methods to grant general access
-// userSchema.methods.grantGeneralChapterAccess = async function(code) {
-//     this.generalAccess = this.generalAccess || {};
-//     this.generalAccess.chapters = true;
-//     this.generalAccess.purchaseDate = new Date();
-//     this.generalAccess.codeUsed = code;
-//     return await this.save();
-// };
+userSchema.methods.grantGeneralChapterAccess = async function(code) {
+    this.generalAccess = this.generalAccess || {};
+    this.generalAccess.chapters = true;
+    this.generalAccess.purchaseDate = new Date();
+    this.generalAccess.codeUsed = code;
+    return await this.save();
+};
 
-// userSchema.methods.grantGeneralVideoAccess = async function(code) {
-//     this.generalAccess = this.generalAccess || {};
-//     this.generalAccess.videos = true;
-//     this.generalAccess.purchaseDate = new Date();
-//     this.generalAccess.codeUsed = code;
-//     return await this.save();
-// };
+userSchema.methods.grantGeneralVideoAccess = async function(code, videoId = null) {
+    console.log('=== grantGeneralVideoAccess called ===');
+    console.log('Parameters:', { code, videoId });
+    console.log('User ID:', this._id);
+    console.log('Current videosPaid length:', this.videosPaid ? this.videosPaid.length : 'undefined');
+    
+    this.generalAccess = this.generalAccess || {};
+    this.generalAccess.videos = true;
+    this.generalAccess.purchaseDate = new Date();
+    this.generalAccess.codeUsed = code;
+    
+    console.log('Set generalAccess.videos to true');
+    
+    // If a specific videoId is provided, also add it to videosPaid for backward compatibility
+    if (videoId) {
+        console.log('Adding specific video to videosPaid for backward compatibility');
+        
+        // Ensure videosPaid is an array
+        if (!this.videosPaid) {
+            this.videosPaid = [];
+            console.log('Initialized videosPaid as empty array');
+        }
+        
+        // Convert videoId to ObjectId for consistent comparison
+        const videoObjectId = new mongoose.Types.ObjectId(videoId);
+        console.log('Converted videoId to ObjectId:', videoObjectId);
+        
+        // Add to videosPaid array if not already present
+        if (!this.videosPaid.includes(videoObjectId)) {
+            this.videosPaid.push(videoObjectId);
+            console.log('Added video to videosPaid array. New length:', this.videosPaid.length);
+        } else {
+            console.log('Video already exists in videosPaid array');
+        }
+    }
+    
+    return await this.save().then(savedUser => {
+        console.log('User saved successfully. Final videosPaid length:', savedUser.videosPaid.length);
+        console.log('Final generalAccess:', savedUser.generalAccess);
+        return savedUser;
+    }).catch(error => {
+        console.error('Error saving user:', error);
+        throw error;
+    });
+};
 
-// userSchema.methods.grantGeneralQuizAccess = async function(code) {
-//     this.generalAccess = this.generalAccess || {};
-//     this.generalAccess.quizzes = true;
-//     this.generalAccess.purchaseDate = new Date();
-//     this.generalAccess.codeUsed = code;
-//     return await this.save();
-// };
+userSchema.methods.grantGeneralQuizAccess = async function(code) {
+    this.generalAccess = this.generalAccess || {};
+    this.generalAccess.quizzes = true;
+    this.generalAccess.purchaseDate = new Date();
+    this.generalAccess.codeUsed = code;
+    return await this.save();
+};
 
 userSchema.methods.hasGradeAccess = function(targetGrade) {
     return this.Grade === targetGrade;
@@ -479,20 +616,49 @@ userSchema.methods.addChapterPurchase = function(chapterData, code) {
 };
 
 userSchema.methods.addVideoPurchase = function(videoId, videoName, chapterId, code) {
+    console.log('=== addVideoPurchase called ===');
+    console.log('Parameters:', { videoId, videoName, chapterId, code });
+    console.log('User ID:', this._id);
+    console.log('Current videosPaid length:', this.videosPaid ? this.videosPaid.length : 'undefined');
+    
     const videoInfo = this.videosInfo.find(v => v._id.toString() === videoId.toString());
+    console.log('Video info found:', videoInfo ? 'Yes' : 'No');
+    
     if (videoInfo) {
         videoInfo.videoPurchaseStatus = true;
         videoInfo.purchaseDate = new Date();
         videoInfo.purchaseCode = code;
+        console.log('Updated video info with purchase status');
     }
     
+    // Ensure videosPaid is an array
+    if (!this.videosPaid) {
+        this.videosPaid = [];
+        console.log('Initialized videosPaid as empty array');
+    }
+    
+    // Convert videoId to ObjectId for consistent comparison
+    const videoObjectId = new mongoose.Types.ObjectId(videoId);
+    console.log('Converted videoId to ObjectId:', videoObjectId);
+    
     // Add to legacy array for backward compatibility
-    if (!this.videosPaid.includes(videoId)) {
-        this.videosPaid.push(videoId);
+    if (!this.videosPaid.includes(videoObjectId)) {
+        this.videosPaid.push(videoObjectId);
+        console.log('Added video to videosPaid array. New length:', this.videosPaid.length);
+    } else {
+        console.log('Video already exists in videosPaid array');
     }
     
     this.totalSubscribed += 1;
-    return this.save();
+    console.log('Incremented totalSubscribed to:', this.totalSubscribed);
+    
+    return this.save().then(savedUser => {
+        console.log('User saved successfully. Final videosPaid length:', savedUser.videosPaid.length);
+        return savedUser;
+    }).catch(error => {
+        console.error('Error saving user:', error);
+        throw error;
+    });
 };
 
 // Method to grant video access to chapter owners
@@ -503,9 +669,17 @@ userSchema.methods.grantVideoAccessToChapterOwners = async function(videoId, cha
         videoInfo.purchaseDate = new Date();
     }
     
+    // Ensure videosPaid is an array
+    if (!this.videosPaid) {
+        this.videosPaid = [];
+    }
+    
+    // Convert videoId to ObjectId for consistent comparison
+    const videoObjectId = new mongoose.Types.ObjectId(videoId);
+    
     // Add to legacy array for backward compatibility
-    if (!this.videosPaid.includes(videoId)) {
-        this.videosPaid.push(videoId);
+    if (!this.videosPaid.includes(videoObjectId)) {
+        this.videosPaid.push(videoObjectId);
     }
     
     return this.save();
