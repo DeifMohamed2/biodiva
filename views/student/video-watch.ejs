@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
   
+  
   <!-- Styles -->
   <link rel="stylesheet" href="/css/student-modern.css">
   
@@ -606,7 +607,12 @@
           <div class="video-container">
             <div class="video-player" dir="ltr" id="videoPlayer">
               <% if (video && video.videoURL) { %>
-                <%- video.videoURL %>
+                <!-- Check if videoURL contains iframe, if so use it directly, otherwise use PlayerJS -->
+                <% if (video.videoURL.includes('<iframe') || video.videoURL.includes('iframe')) { %>
+                  <%- video.videoURL %>
+                <% } else { %>
+                  <div id="playerjs-container" style="width: 100%; height: 100%;"></div>
+                <% } %>
               <% } else { %>
                 <div style="position:relative;padding-top:56.25%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">
                   <p style="position:absolute;color:#666;">الفيديو غير متوفر حالياً</p>
@@ -943,8 +949,78 @@
   <button class="mobile-menu-toggle" onclick="toggleSidebar()" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 1001; background: var(--primary-color); color: white; border: none; padding: 12px; border-radius: var(--radius); box-shadow: var(--shadow-lg);">
     <i class="fas fa-bars"></i>
   </button>
-
+  <!-- PlayerJS Library -->
   <script>
+    // Load PlayerJS with fallback
+    function loadPlayerJS() {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/playerjs@latest/dist/playerjs.min.js';
+      script.onload = function() {
+        console.log('PlayerJS loaded successfully');
+        // Wait a bit for PlayerJS to be fully available
+        setTimeout(function() {
+          console.log('Checking PlayerJS availability:', typeof Playerjs);
+          if (typeof initializePlayerJS === 'function') {
+            initializePlayerJS();
+          }
+        }, 200);
+      };
+      script.onerror = function() {
+        console.error('Failed to load PlayerJS from primary CDN, trying alternative...');
+        // Try alternative CDN
+        const altScript = document.createElement('script');
+        altScript.src = 'https://assets.mediadelivery.net/playerjs/playerjs-latest.min.js';
+        altScript.onload = function() {
+          console.log('PlayerJS loaded from alternative CDN');
+          // Wait a bit for PlayerJS to be fully available
+          setTimeout(function() {
+            console.log('Checking PlayerJS availability (alt):', typeof Playerjs);
+            if (typeof initializePlayerJS === 'function') {
+              initializePlayerJS();
+            }
+          }, 200);
+        };
+        altScript.onerror = function() {
+          console.error('Failed to load PlayerJS from all sources');
+          // Show fallback message
+          const container = document.getElementById('playerjs-container');
+          if (container) {
+            container.innerHTML = '<div style="position:relative;padding-top:56.25%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;"><p style="position:absolute;color:#666;">خطأ في تحميل مشغل الفيديو</p></div>';
+          }
+        };
+        document.head.appendChild(altScript);
+      };
+      document.head.appendChild(script);
+    }
+    
+    // Load PlayerJS when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadPlayerJS);
+    } else {
+      loadPlayerJS();
+    }
+  </script>
+  
+  <script>
+    // Global error handler to catch external script errors
+    window.addEventListener('error', function(e) {
+      // Ignore errors from external RUM scripts
+      if (e.filename && (e.filename.includes('rum.js') || e.filename.includes('analytics') || e.filename.includes('monitoring'))) {
+        console.warn('External monitoring script error (ignored):', e.message);
+        e.preventDefault();
+        return true;
+      }
+    });
+
+    // Handle unhandled promise rejections from external scripts
+    window.addEventListener('unhandledrejection', function(e) {
+      if (e.reason && e.reason.message && e.reason.message.includes('fetch')) {
+        console.warn('External script fetch error (ignored):', e.reason.message);
+        e.preventDefault();
+        return true;
+      }
+    });
+
     let selectedFiles = [];
 
     // Check prerequisites on page load
@@ -956,45 +1032,51 @@
       const videoPrerequisites = '<%= video.prerequisites %>';
       const chapterAccess = <%= hasChapterAccess ? 'true' : 'false' %>;
       
+      console.log('Checking prerequisites:', {
+        videoPrerequisites: videoPrerequisites,
+        chapterAccess: chapterAccess,
+        videoId: '<%= video._id %>'
+      });
+      
       if (videoPrerequisites === 'WithExamaAndHw' || videoPrerequisites === 'WithExam' || videoPrerequisites === 'WithHw') {
         const prerequisiteVideoId = '<%= video.AccessibleAfterViewing %>';
-        if (prerequisiteVideoId && prerequisiteVideoId !== 'null' && prerequisiteVideoId !== 'undefined') {
+        console.log('Prerequisite video ID:', prerequisiteVideoId);
+        
+        if (prerequisiteVideoId && prerequisiteVideoId !== 'null' && prerequisiteVideoId !== 'undefined' && prerequisiteVideoId.trim() !== '') {
           // Find prerequisite video info from user data
           const userVideosInfo = <%- JSON.stringify(userData.videosInfo || []) %>;
           const prerequisiteVideoInfo = userVideosInfo.find(v => v._id === prerequisiteVideoId);
           
+          console.log('Prerequisite video info found:', prerequisiteVideoInfo ? 'Yes' : 'No');
+          
           if (prerequisiteVideoInfo) {
             let canWatch = true;
             let prerequisiteMessage = '';
-            let detailedPrerequisiteInfo = '';
             
             if (videoPrerequisites === 'WithExamaAndHw') {
               canWatch = prerequisiteVideoInfo.isUserEnterQuiz && prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
               if (!canWatch) {
                 if (!prerequisiteVideoInfo.isUserEnterQuiz && !prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved) {
                   prerequisiteMessage = 'يجب اجتياز الاختبار وتسليم الواجب أولاً';
-                  detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار وتسليم واجب فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
                 } else if (!prerequisiteVideoInfo.isUserEnterQuiz) {
                   prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
-                  detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
                 } else if (!prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved) {
                   prerequisiteMessage = 'يجب تسليم الواجب أولاً';
-                  detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
                 }
               }
             } else if (videoPrerequisites === 'WithExam') {
               canWatch = prerequisiteVideoInfo.isUserEnterQuiz;
               if (!canWatch) {
                 prerequisiteMessage = 'يجب اجتياز الاختبار أولاً';
-                detailedPrerequisiteInfo = `مطلوب: اجتياز اختبار فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
               }
             } else if (videoPrerequisites === 'WithHw') {
               canWatch = prerequisiteVideoInfo.isUserUploadPerviousHWAndApproved;
               if (!canWatch) {
                 prerequisiteMessage = 'يجب تسليم الواجب أولاً';
-                detailedPrerequisiteInfo = `مطلوب: تسليم واجب فيديو "${prerequisiteVideoInfo.videoName || 'الفيديو السابق'}"`;
               }
             }
+            
+            console.log('Prerequisites check result:', { canWatch, prerequisiteMessage });
             
             if (!canWatch) {
               // Redirect to chapter page with error message
@@ -1002,9 +1084,58 @@
               window.location.href = chapterUrl;
               return;
             }
+          } else {
+            console.log('Prerequisite video not found in user videosInfo');
+            // If prerequisite video not found, redirect with error
+            const chapterUrl = '/student/chapter/<%= chapterId %>?error=prerequisites_not_met&message=' + encodeURIComponent('فيديو المتطلب غير متوفر');
+            window.location.href = chapterUrl;
+            return;
+          }
+        } else {
+          console.log('No prerequisite video specified - checking current video requirements');
+          // If no specific prerequisite video is set, check if current video requirements are met
+          const currentVideoInfo = <%- JSON.stringify(userVideoInfo || {}) %>;
+          console.log('Current video info:', currentVideoInfo);
+          
+          if (currentVideoInfo && Object.keys(currentVideoInfo).length > 0) {
+            let canWatch = true;
+            let prerequisiteMessage = '';
+            
+            if (videoPrerequisites === 'WithExam') {
+              canWatch = currentVideoInfo.isUserEnterQuiz;
+              if (!canWatch) {
+                prerequisiteMessage = 'يجب اجتياز اختبار هذا الفيديو أولاً';
+              }
+            } else if (videoPrerequisites === 'WithHw') {
+              canWatch = currentVideoInfo.isUserUploadPerviousHWAndApproved;
+              if (!canWatch) {
+                prerequisiteMessage = 'يجب تسليم واجب هذا الفيديو أولاً';
+              }
+            } else if (videoPrerequisites === 'WithExamaAndHw') {
+              canWatch = currentVideoInfo.isUserEnterQuiz && currentVideoInfo.isUserUploadPerviousHWAndApproved;
+              if (!canWatch) {
+                if (!currentVideoInfo.isUserEnterQuiz && !currentVideoInfo.isUserUploadPerviousHWAndApproved) {
+                  prerequisiteMessage = 'يجب اجتياز اختبار وتسليم واجب هذا الفيديو أولاً';
+                } else if (!currentVideoInfo.isUserEnterQuiz) {
+                  prerequisiteMessage = 'يجب اجتياز اختبار هذا الفيديو أولاً';
+                } else if (!currentVideoInfo.isUserUploadPerviousHWAndApproved) {
+                  prerequisiteMessage = 'يجب تسليم واجب هذا الفيديو أولاً';
+                }
+              }
+            }
+            
+            console.log('Current video prerequisites check:', { canWatch, prerequisiteMessage });
+            
+            if (!canWatch) {
+              const chapterUrl = '/student/chapter/<%= chapterId %>?error=prerequisites_not_met&message=' + encodeURIComponent(prerequisiteMessage);
+              window.location.href = chapterUrl;
+              return;
+            }
           }
         }
       }
+      
+      console.log('Prerequisites check passed - video can be watched');
     }
 
     // Toggle homework upload area
@@ -1196,25 +1327,248 @@
       document.getElementById(modalId).style.display = 'none';
     }
 
-    // Video progress tracking (simplified)
-    let videoStartTime = Date.now();
+    // Video progress tracking with PlayerJS
+    let player = null;
+    let videoProgress = 0;
+    let hasWatched10Percent = false;
+    let watchTracked = false;
     let progressInterval;
 
-    function startProgressTracking() {
-      progressInterval = setInterval(() => {
-        const elapsed = (Date.now() - videoStartTime) / 1000; // seconds
-        const videoDuration = <%= (video.duration || video.lectureDuration || 0) %> * 60; // convert to seconds
+    function initializePlayerJS() {
+      console.log('initializePlayerJS called, PlayerJS type:', typeof Playerjs);
+      
+      const videoURL = '<%= video && video.videoURL ? video.videoURL.replace(/'/g, "\\'") : "" %>';
+      
+      // Check if video is already displayed as iframe
+      if (videoURL && (videoURL.includes('<iframe') || videoURL.includes('iframe'))) {
+        console.log('Video is already displayed as iframe, starting progress tracking');
+        // For iframe videos, start a simple progress tracking
+        startSimpleProgressTracking();
+        return;
+      }
+      
+      // Check if PlayerJS is loaded
+      if (typeof Playerjs === 'undefined') {
+        console.error('PlayerJS library not loaded, retrying in 500ms...');
+        // Retry after a longer delay
+        setTimeout(function() {
+          if (typeof Playerjs !== 'undefined') {
+            console.log('PlayerJS now available, retrying initialization');
+            initializePlayerJS();
+          } else {
+            console.error('PlayerJS still not available after retry');
+            // Fallback: show error message
+            const container = document.getElementById('playerjs-container');
+            if (container) {
+              container.innerHTML = 
+                '<div style="position:relative;padding-top:56.25%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">' +
+                '<p style="position:absolute;color:#666;">خطأ في تحميل مشغل الفيديو</p>' +
+                '</div>';
+            }
+          }
+        }, 500);
+        return;
+      }
+      
+      if (videoURL) {
+        console.log('Initializing PlayerJS with URL:', videoURL);
+        console.log('Playerjs constructor:', Playerjs);
         
-        if (videoDuration > 0) {
-          const progress = Math.min((elapsed / videoDuration) * 100, 100);
-          document.querySelector('.video-progress-fill').style.width = progress + '%';
-          
-          // Show rest modal at 50%
-          if (progress >= 50 && progress < 51) {
-            showModal('restModal');
+        // Initialize PlayerJS
+        try {
+          player = new Playerjs({
+            id: "playerjs-container",
+            file: videoURL,
+            poster: "", // Add poster image URL if needed
+            width: "100%",
+            height: "100%",
+            autoplay: false,
+            muted: false,
+            responsive: true,
+            events: {
+              ready: function() {
+                console.log('PlayerJS is ready');
+                startProgressTracking();
+              },
+              play: function() {
+                console.log('Video started playing');
+                startProgressTracking();
+              },
+              pause: function() {
+                console.log('Video paused');
+                stopProgressTracking();
+              },
+              ended: function() {
+                console.log('Video ended');
+                stopProgressTracking();
+                // Track completion
+                trackVideoWatch(100);
+              },
+              error: function(error) {
+                console.error('PlayerJS error:', error);
+              }
+            }
+          });
+        } catch (error) {
+          console.error('Error creating PlayerJS instance:', error);
+          // Show fallback message
+          document.getElementById('playerjs-container').innerHTML = 
+            '<div style="position:relative;padding-top:56.25%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">' +
+            '<p style="position:absolute;color:#666;">خطأ في تحميل مشغل الفيديو</p>' +
+            '</div>';
+        }
+      } else {
+        console.log('No video URL available');
+        // Show fallback message
+        document.getElementById('playerjs-container').innerHTML = 
+          '<div style="position:relative;padding-top:56.25%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;">' +
+          '<p style="position:absolute;color:#666;">الفيديو غير متوفر حالياً</p>' +
+          '</div>';
+      }
+    }
+
+    // Simple progress tracking for iframe videos
+    function startSimpleProgressTracking() {
+      let timeSpent = 0;
+      let hasTracked10Percent = false;
+      let lastTrackedProgress = 0;
+      
+      // Track time spent on page
+      const timeInterval = setInterval(() => {
+        timeSpent += 10; // Increment by 10 seconds
+        
+        // Estimate video duration (you might want to get this from video metadata)
+        const estimatedDuration = <%= (video.duration || video.lectureDuration || 600) %> * 60; // Convert to seconds
+        
+        const progress = (timeSpent / estimatedDuration) * 100;
+        
+        // Update progress bar
+        const progressBar = document.querySelector('.video-progress-fill');
+        if (progressBar) {
+          progressBar.style.width = Math.min(progress, 100) + '%';
+        }
+        
+        // Track 10% watch - this counts as "watched"
+        if (progress >= 10 && !hasTracked10Percent) {
+          hasTracked10Percent = true;
+          console.log('Video 10% reached - counting as watched');
+          trackVideoWatch(progress);
+          lastTrackedProgress = progress;
+        }
+        
+        // Continue tracking progress after 10% - update every 20% progress
+        if (hasTracked10Percent && progress - lastTrackedProgress >= 20) {
+          console.log(`Video progress updated: ${progress.toFixed(1)}%`);
+          trackVideoWatch(progress);
+          lastTrackedProgress = progress;
+        }
+        
+        // Show rest modal at 50%
+        if (progress >= 50 && progress < 51) {
+          showModal('restModal');
+        }
+        
+        // Auto-complete at 90% (not 80% to give more time)
+        if (progress >= 90) {
+          console.log('Video 90% reached - auto-completing');
+          clearInterval(timeInterval);
+          trackVideoWatch(100);
+        }
+
+        
+      }, 10000); // Check every 10 seconds
+      
+      console.log('Simple progress tracking started', timeInterval);
+      
+      // Clear interval when page unloads
+      window.addEventListener('beforeunload', () => {
+        clearInterval(timeInterval);
+      });
+    }
+
+    function startProgressTracking() {
+      if (progressInterval) return; // Already tracking
+      
+      let lastTrackedProgress = 0;
+      
+      progressInterval = setInterval(async () => {
+        if (player) {
+          try {
+            // Get current time and duration from PlayerJS
+            const currentTime = await player.api('currentTime');
+            const duration = await player.api('duration');
+            
+            if (duration && duration > 0) {
+              const progress = (currentTime / duration) * 100;
+              videoProgress = progress;
+              
+              // Update progress bar
+              document.querySelector('.video-progress-fill').style.width = progress + '%';
+              
+              // Track 10% watch - this counts as "watched"
+              if (progress >= 10 && !hasWatched10Percent) {
+                hasWatched10Percent = true;
+                console.log('Video 10% reached - counting as watched');
+                await trackVideoWatch(progress);
+                lastTrackedProgress = progress;
+              }
+              
+              // Continue tracking progress after 10% - update every 20% progress
+              if (hasWatched10Percent && progress - lastTrackedProgress >= 20) {
+                console.log(`Video progress updated: ${progress.toFixed(1)}%`);
+                await trackVideoWatch(progress);
+                lastTrackedProgress = progress;
+              }
+              
+              // Show rest modal at 50%
+              if (progress >= 50 && progress < 51) {
+                showModal('restModal');
+              }
+            }
+          } catch (error) {
+            console.error('Error getting video progress:', error);
           }
         }
       }, 1000);
+    }
+
+    function stopProgressTracking() {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+    }
+
+    async function trackVideoWatch(progress) {
+      try {
+        const response = await fetch('/student/video/track-watch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            videoId: '<%= video._id %>',
+            chapterId: '<%= chapterId %>',
+            progress: progress,
+            watched10Percent: progress >= 10
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          // Only set watchTracked to true when we reach 10% for the first time
+          if (progress >= 10 && !watchTracked) {
+            watchTracked = true;
+            console.log('Video marked as watched (10% threshold reached)');
+          } else {
+            console.log(`Video progress updated: ${progress.toFixed(1)}%`);
+          }
+        } else {
+          console.error('Failed to track video watch:', data.message);
+        }
+      } catch (error) {
+        console.error('Error tracking video watch:', error);
+      }
     }
 
     // Mobile sidebar toggle
@@ -1238,10 +1592,7 @@
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // Start tracking when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-      startProgressTracking();
-    });
+    // PlayerJS initialization is now handled by the loadPlayerJS function above
 
     // Prevent page refresh during video watching
     window.addEventListener('beforeunload', function(e) {

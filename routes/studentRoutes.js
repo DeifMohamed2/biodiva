@@ -78,6 +78,9 @@ router.post("/settings", authenticateUser, studentController.settings_post);
 router.post("/uploadHW", authenticateUser, studentController.uploadHW);
 router.post("/homework/submit", authenticateUser, studentController.submitHomework);
 
+// ================== Video Tracking Routes ====================== //
+router.post("/video/track-watch", authenticateUser, studentController.trackVideoWatch);
+
 // ================== Logout Route ====================== //
 router.get("/logOut", authenticateUser, studentController.logOut);
 

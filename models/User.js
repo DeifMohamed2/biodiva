@@ -37,6 +37,14 @@ const VideoInfoSchema = new Schema({
         type: Number,
         default: 0
     },
+    hasWatched10Percent: {
+        type: Boolean,
+        default: false
+    },
+    watchProgress: {
+        type: Number,
+        default: 0
+    },
     videoPurchaseStatus: {
         type: Boolean,
         default: false
@@ -468,7 +476,7 @@ userSchema.methods.hasVideoPrerequisitesMet = function(video) {
         return true;
     }
     
-    if (video.AccessibleAfterViewing) {
+    if (video.AccessibleAfterViewing && video.AccessibleAfterViewing.toString().trim() !== '') {
         // Find the prerequisite video info in user's videosInfo
         const prerequisiteVideoInfo = this.videosInfo.find(v => 
             v._id.toString() === video.AccessibleAfterViewing.toString()
@@ -506,10 +514,42 @@ userSchema.methods.hasVideoPrerequisitesMet = function(video) {
             console.log('Prerequisite video not found in user videosInfo');
             return false;
         }
+    } else {
+        console.log('No AccessibleAfterViewing specified - checking current video requirements');
+        // If no specific prerequisite video is set, check if current video requirements are met
+        const currentVideoInfo = this.videosInfo.find(v => v._id.toString() === video._id.toString());
+        
+        if (currentVideoInfo) {
+            let prerequisitesMet = true;
+            
+            if (video.prerequisites === 'WithExam') {
+                prerequisitesMet = currentVideoInfo.isUserEnterQuiz;
+                console.log('Current video WithExam check:', {
+                    isUserEnterQuiz: currentVideoInfo.isUserEnterQuiz,
+                    result: prerequisitesMet
+                });
+            } else if (video.prerequisites === 'WithHw') {
+                prerequisitesMet = currentVideoInfo.isUserUploadPerviousHWAndApproved;
+                console.log('Current video WithHw check:', {
+                    isUserUploadPerviousHWAndApproved: currentVideoInfo.isUserUploadPerviousHWAndApproved,
+                    result: prerequisitesMet
+                });
+            } else if (video.prerequisites === 'WithExamaAndHw') {
+                prerequisitesMet = currentVideoInfo.isUserEnterQuiz && currentVideoInfo.isUserUploadPerviousHWAndApproved;
+                console.log('Current video WithExamaAndHw check:', {
+                    isUserEnterQuiz: currentVideoInfo.isUserEnterQuiz,
+                    isUserUploadPerviousHWAndApproved: currentVideoInfo.isUserUploadPerviousHWAndApproved,
+                    result: prerequisitesMet
+                });
+            }
+            
+            console.log('Current video prerequisites met:', prerequisitesMet);
+            return prerequisitesMet;
+        } else {
+            console.log('Current video info not found');
+            return false;
+        }
     }
-    
-    console.log('No AccessibleAfterViewing specified');
-    return false;
 };
 
 // General access methods for checking if user has general access to content types
@@ -683,6 +723,69 @@ userSchema.methods.grantVideoAccessToChapterOwners = async function(videoId, cha
     }
     
     return this.save();
+};
+
+// Method to track video watch progress (only count as watch after 10%)
+userSchema.methods.trackVideoWatch = async function(videoId, progress, hasWatched10Percent) {
+    console.log('=== trackVideoWatch called ===');
+    console.log('Parameters:', { videoId, progress, hasWatched10Percent });
+    
+    const videoInfo = this.videosInfo.find(v => v._id.toString() === videoId.toString());
+    if (!videoInfo) {
+        console.log('Video info not found');
+        return { success: false, message: 'Video info not found' };
+    }
+    
+    console.log('Video info found:', {
+        currentProgress: videoInfo.watchProgress,
+        hasWatched10Percent: videoInfo.hasWatched10Percent,
+        numberOfWatches: videoInfo.numberOfWatches
+    });
+    
+    const updateFields = {
+        'videosInfo.$.lastWatch': Date.now(),
+        'videosInfo.$.watchProgress': Math.max(videoInfo.watchProgress || 0, progress)
+    };
+    
+    // Set first watch if not already set
+    if (!videoInfo.fristWatch) {
+        updateFields['videosInfo.$.fristWatch'] = Date.now();
+    }
+    
+    // Only increment numberOfWatches if user has watched 10% and hasn't been counted yet
+    if (hasWatched10Percent && !videoInfo.hasWatched10Percent) {
+        updateFields['videosInfo.$.hasWatched10Percent'] = true;
+        updateFields['videosInfo.$.numberOfWatches'] = (videoInfo.numberOfWatches || 0) + 1;
+        
+        // Only decrement attempts if user has attempts left and this is the first 10% watch
+        if (videoInfo.videoAllowedAttemps > 0) {
+            updateFields['videosInfo.$.videoAllowedAttemps'] = Math.max(0, videoInfo.videoAllowedAttemps - 1);
+            console.log('Decrementing attempts by 1');
+        }
+        
+        console.log('Tracking 10% watch - incrementing numberOfWatches');
+    } else if (hasWatched10Percent && videoInfo.hasWatched10Percent) {
+        console.log('Already watched 10% - updating progress only');
+    } else {
+        console.log('Not yet 10% - updating progress only');
+    }
+    
+    // Convert videoId to ObjectId for proper matching
+    const videoObjectId = new mongoose.Types.ObjectId(videoId);
+    
+    const updateResult = await User.findOneAndUpdate(
+        { _id: this._id, 'videosInfo._id': videoObjectId },
+        { $set: updateFields },
+        { new: true }
+    );
+    
+    if (updateResult) {
+        console.log('Video watch tracked successfully');
+        return { success: true, message: 'Video watch tracked successfully' };
+    } else {
+        console.log('Failed to track video watch');
+        return { success: false, message: 'Failed to track video watch' };
+    }
 };
 
 const User = mongoose.model('User', userSchema)
