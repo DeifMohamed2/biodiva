@@ -47,6 +47,17 @@ const dash_get = async (req, res) => {
   //   { $set: { "videosInfo.$[].videoAllowedAttemps": 10 } }
   // );
   
+// update codes in the system to be for GenrealVides
+// const updateCodes = await Code.updateMany(
+//     { codeType: 'GeneralChapter' },
+//   { $set: { codeType: 'GeneralVideo'  , isGeneralCode: true } }
+// );
+
+// console.log(`Updated ${updateCodes.modifiedCount} codes`);
+
+
+
+  // update all codes to isUsed to false
   // console.log(`Updated video attempts for ${updateResult.modifiedCount} users`);
   try {
     // Use Promise.all for parallel execution and optimize queries
