@@ -810,7 +810,7 @@
                             const hasAccess = lecture.paymentStatus === 'Free' || hasVideoAccess || hasChapterAccess;
                           %>
                           <% if (!hasAccess && lecture.paymentStatus !== 'Free') { %>
-                          <span class="content-price"><%= lecture.lecturePrice || lecture.price || '25' %> ج</span>
+                          <span class="content-price"><%= lecture.videoPrice || lecture.videoPrice || '25' %> ج</span>
                           <% } %>
                           <% if (hasAccess) { %>
                           <span class="content-price" style="background: #d4f6d4; color: #166534;">مملوك</span>
@@ -859,7 +859,7 @@
                             const hasAccess = summary.paymentStatus === 'Free' || hasVideoAccess || hasChapterAccess;
                           %>
                           <% if (!hasAccess && summary.paymentStatus !== 'Free') { %>
-                          <span class="content-price"><%= summary.lecturePrice || summary.price || '15' %> ج</span>
+                          <span class="content-price"><%= summary.videoPrice || summary.videoPrice || '15' %> ج</span>
                           <% } %>
                           <% if (hasAccess) { %>
                           <span class="content-price" style="background: #d4f6d4; color: #166534;">مملوك</span>
@@ -908,7 +908,7 @@
                             const hasAccess = solving.paymentStatus === 'Free' || hasVideoAccess || hasChapterAccess;
                           %>
                           <% if (!hasAccess && solving.paymentStatus !== 'Free') { %>
-                          <span class="content-price"><%= solving.lecturePrice || solving.price || '20' %> ج</span>
+                          <span class="content-price"><%= solving.videoPrice || solving.videoPrice || '20' %> ج</span>
                           <% } %>
                           <% if (hasAccess) { %>
                           <span class="content-price" style="background: #d4f6d4; color: #166534;">مملوك</span>
