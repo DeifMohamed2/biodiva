@@ -1594,7 +1594,7 @@ const quizFinish = async (req, res) => {
           'quizesInfo.$.answers': finalAnswers,
           'quizesInfo.$.Score': finalScore,
           'quizesInfo.$.inProgress': false,
-          'quizesInfo.$.isEnterd': !canRetake, // Only mark as completed if score >= 60%
+          'quizesInfo.$.isEnterd': percentage >= 60, // Only mark as completed if score >= 60%
           'quizesInfo.$.solvedAt': Date.now(),
           'quizesInfo.$.endTime': 0,
           'quizesInfo.$.canRetake': canRetake, // Track retake eligibility
@@ -1618,8 +1618,8 @@ const quizFinish = async (req, res) => {
           (video) => video._id.toString() === quiz.videoWillbeOpen.toString()
         );
         
-        if (videoInfo && !videoInfo.isUserEnterQuiz) {
-          // Update the video's entry to mark it as entered by the user
+        if (videoInfo && !videoInfo.isUserEnterQuiz && percentage >= 60) {
+          // Update the video's entry to mark it as entered by the user only if passing score
           await User.findOneAndUpdate(
             { _id: req.userData._id, 'videosInfo._id': videoInfo._id },
             { $set: { 'videosInfo.$.isUserEnterQuiz': true } }

@@ -55,7 +55,55 @@ const dash_get = async (req, res) => {
 
 // console.log(`Updated ${updateCodes.modifiedCount} codes`);
 
+  // Function to reopen quiz for students who scored below 60%
+  // const reopenQuizForLowScores = async () => {
+  //   try {
+  //     const quizId = '68e7d0ddd0427b9106aeac47';
+      
+  //     // Find all students who took this quiz and scored below 60%
+  //     const studentsToUpdate = await User.find({
+  //       isTeacher: false,
+  //       'quizesInfo': {
+  //         $elemMatch: {
+  //           '_id': new mongoose.Types.ObjectId(quizId),
+  //           'isEnterd': true,
+  //           'Score': { $lt: 8 }
+  //         }
+  //       }
+  //     });
+      
+  //     console.log(`Found ${studentsToUpdate.length} students with scores below 60%`);
+      
+  //     // Update each student's quiz info to allow retaking
+  //     let updatedCount = 0;
+  //     for (const student of studentsToUpdate) {
+  //       const quizIndex = student.quizesInfo.findIndex(q => 
+  //         q._id.toString() === quizId
+  //       );
+        
+  //       if (quizIndex !== -1) {
+  //         // Reset quiz attempt data
+  //         student.quizesInfo[quizIndex].isUserEntQuiz = false;
+  //         student.quizesInfo[quizIndex].Score = 0;
+  //         student.quizesInfo[quizIndex].answers = [];
+  //         student.quizesInfo[quizIndex].randomQuestionIndices = [];
+  //         student.quizesInfo[quizIndex].startTime = null;
+  //         student.quizesInfo[quizIndex].endTime = null;
+  //         student.quizesInfo[quizIndex].solvedAt = null;
+          
+  //         await student.save();
+  //         updatedCount++;
+  //       }
+  //     }
+      
+  //     console.log(`Quiz reopened for ${updatedCount} students who scored below 60%`);
+  //   } catch (error) {
+  //     console.error('Error reopening quiz:', error);
+  //   }
+  // };
 
+  // // reopen quiz for students who scored below 60%
+  // reopenQuizForLowScores();
 
   // update all codes to isUsed to false
   // console.log(`Updated video attempts for ${updateResult.modifiedCount} users`);
