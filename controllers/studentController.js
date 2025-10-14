@@ -1618,12 +1618,23 @@ const quizFinish = async (req, res) => {
           (video) => video._id.toString() === quiz.videoWillbeOpen.toString()
         );
         
-        if (videoInfo && !videoInfo.isUserEnterQuiz && percentage >= 60) {
-          // Update the video's entry to mark it as entered by the user only if passing score
-          await User.findOneAndUpdate(
-            { _id: req.userData._id, 'videosInfo._id': videoInfo._id },
-            { $set: { 'videosInfo.$.isUserEnterQuiz': true } }
-          );
+        if (videoInfo) {
+          // Only unlock video if student scored 60% or above
+          if (percentage >= 60 && !videoInfo.isUserEnterQuiz) {
+            // Update the video's entry to mark it as entered by the user
+            await User.findOneAndUpdate(
+              { _id: req.userData._id, 'videosInfo._id': videoInfo._id },
+              { $set: { 'videosInfo.$.isUserEnterQuiz': true } }
+            );
+            console.log(`Video unlocked for user after passing quiz with ${percentage}%`);
+          } else if (percentage < 60) {
+            // Ensure video remains locked if score is below 60%
+            await User.findOneAndUpdate(
+              { _id: req.userData._id, 'videosInfo._id': videoInfo._id },
+              { $set: { 'videosInfo.$.isUserEnterQuiz': false } }
+            );
+            console.log(`Video remains locked - student scored ${percentage}% (need 60%+)`);
+          }
         }
       }
 
@@ -1655,7 +1666,8 @@ const quizFinish = async (req, res) => {
         previousScore: isRetake ? userQuizInfo.Score : null,
         scoreImprovement: isRetake ? scoreDifference : 0,
         questionsPool: quiz.Questions.length, // Total questions in the pool
-        maxScore: questionsShown // Maximum possible score for questions shown (1 point each)
+        maxScore: questionsShown, // Maximum possible score for questions shown (1 point each)
+        videoUnlocked: percentage >= 60 && quiz.videoWillbeOpen ? true : false
       });
     } else {
       return res.status(500).json({ success: false, message: 'Failed to save quiz results' });
