@@ -2305,55 +2305,31 @@ const quizzes_get = async (req, res) => {
       .skip((page - 1) * perPage);
     
     const totalQuizzes = await Quiz.countDocuments(query);
+    const activeQuizzesCount = await Quiz.countDocuments({ ...query, isQuizActive: true });
     
     // Get chapters for filter
     const chapters = await Chapter.find({ isActive: true }, 'chapterName chapterGrade');
     
-    // Add statistics to each quiz
-    const quizzesWithStats = await Promise.all(
-      quizzes.map(async (quiz) => {
-        const students = await User.find({
-          isTeacher: false,
-          'quizesInfo._id': quiz._id
-        });
-        
-        const attemptedStudents = students.filter(student => 
-          student.quizesInfo.some(quizInfo => 
-            quizInfo._id.toString() === quiz._id.toString() && quizInfo.isEnterd
-          )
-        );
-        
-        const averageScore = attemptedStudents.length > 0 
-          ? attemptedStudents.reduce((sum, student) => {
-              const quizInfo = student.quizesInfo.find(q => q._id.toString() === quiz._id.toString());
-              return sum + (quizInfo?.Score || 0);
-            }, 0) / attemptedStudents.length 
-          : 0;
-        
-        const questionsShown = quiz.questionsToShow || quiz.questionsCount;
-        return {
-          ...quiz.toObject(),
-          stats: {
-            totalAttempts: attemptedStudents.length,
-            averageScore: Math.round(averageScore * 100) / 100,
-            averageScoreDisplay: `${Math.round(averageScore)}/${questionsShown}`
-          }
-        };
-      })
-    );
+    // Use basic quiz data only (avoid heavy per-quiz student aggregations)
+    const quizzesBasic = quizzes.map((quiz) => ({
+      ...quiz.toObject(),
+      stats: {
+        totalAttempts: null,
+        averageScore: null,
+        averageScoreDisplay: null
+      }
+    }));
     
     res.render('teacher/quizzes', {
       title: 'إدارة الاختبارات',
       path: req.path,
       teacherData: req.userData || req.teacherData,
-      quizzes: quizzesWithStats,
+      quizzes: quizzesBasic,
       chapters,
       totalQuizzes,
-      activeQuizzes: quizzesWithStats.length,
-      totalAttempts: quizzesWithStats.reduce((sum, q) => sum + q.stats.totalAttempts, 0),
-      averageScore: quizzesWithStats.length > 0 
-        ? quizzesWithStats.reduce((sum, q) => sum + q.stats.averageScore, 0) / quizzesWithStats.length 
-        : 0,
+      activeQuizzes: activeQuizzesCount,
+      totalAttempts: null,
+      averageScore: null,
       currentPage: parseInt(page),
       totalPages: Math.ceil(totalQuizzes / perPage),
       filters: { grade, chapter, search }
@@ -3899,38 +3875,97 @@ const quiz_detail_get = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 100; // Limit to 100 students per page
     const skip = (page - 1) * limit;
-    
+    const search = (req.query.search || '').trim();
+
     const quiz = await Quiz.findById(quizId);
-    
+
     if (!quiz) {
       return res.status(404).send('Quiz not found');
     }
-    
+
     // Get chapter info if quiz is associated with a chapter
     let chapter = null;
     if (quiz.chapterId) {
       chapter = await Chapter.findById(quiz.chapterId).select('chapterName chapterGrade');
     }
-    
-    // Get total count of students who have this quiz in their quizesInfo
-    const totalStudents = await User.countDocuments({
-      isTeacher: false,
-      'quizesInfo._id': quiz._id
-    });
-    
-    // Get students with pagination
-    const students = await User.find({
-      isTeacher: false,
-      'quizesInfo._id': quiz._id
-    }).select('Username Code Grade totalScore quizesInfo phone parentPhone')
-      .skip(skip)
-      .limit(limit);
-    
-    // Process student data
-    const studentsWithQuizInfo = students.map(student => {
-      const quizInfo = student.quizesInfo.find(q => q._id.toString() === quiz._id.toString());
-      const actualScore = quizInfo ? quizInfo.Score : 0;
-      const questionsShown = quiz.questionsToShow || quiz.questionsCount;
+
+    // Build aggregation pipeline to:
+    // - filter to users with this quiz
+    // - compute quizInfo fields
+    // - apply search across ALL students
+    // - sort attempted first, then by endTime desc
+    // - paginate
+    const pipeline = [
+      { $match: { isTeacher: false, 'quizesInfo._id': quiz._id } },
+      {
+        $addFields: {
+          matchedQuizInfo: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$quizesInfo',
+                  as: 'q',
+                  cond: { $eq: ['$$q._id', quiz._id] }
+                }
+              },
+              0
+            ]
+          }
+        }
+      }
+    ];
+
+    if (search) {
+      const searchNumber = parseInt(search);
+      const orConditions = [
+        { Username: { $regex: search, $options: 'i' } }
+      ];
+      if (!isNaN(searchNumber)) {
+        orConditions.push({ Code: searchNumber });
+      }
+      orConditions.push({ phone: { $regex: search, $options: 'i' } });
+      orConditions.push({ parentPhone: { $regex: search, $options: 'i' } });
+      pipeline.push({ $match: { $or: orConditions } });
+    }
+
+    pipeline.push(
+      {
+        $addFields: {
+          attempted: { $cond: [{ $ifNull: ['$matchedQuizInfo.isEnterd', false] }, 1, 0] },
+          inProgress: { $cond: [{ $ifNull: ['$matchedQuizInfo.inProgress', false] }, 1, 0] },
+          endTimeVal: {
+            $cond: [
+              { $ifNull: ['$matchedQuizInfo.endTime', false] },
+              '$matchedQuizInfo.endTime',
+              new Date(0)
+            ]
+          }
+        }
+      },
+      { $sort: { attempted: -1, endTimeVal: -1, _id: 1 } },
+      {
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [{ $skip: skip }, { $limit: limit }]
+        }
+      },
+      {
+        $project: {
+          total: { $ifNull: [{ $arrayElemAt: ['$metadata.total', 0] }, 0] },
+          data: 1
+        }
+      }
+    );
+
+    const aggResult = await User.aggregate(pipeline);
+    const totalStudents = aggResult[0]?.total || 0;
+    const dataUsers = aggResult[0]?.data || [];
+
+    // Map aggregated users to view model
+    const questionsShown = quiz.questionsToShow || quiz.questionsCount;
+    const studentsWithQuizInfo = dataUsers.map(student => {
+      const quizInfo = student.matchedQuizInfo || {};
+      const actualScore = quizInfo.Score || 0;
       return {
         studentId: student._id,
         studentName: student.Username,
@@ -3939,14 +3974,14 @@ const quiz_detail_get = async (req, res) => {
         phoneNumber: student.phone,
         parentPhoneNumber: student.parentPhone,
         totalScore: student.totalScore || 0,
-        quizAttempted: quizInfo ? quizInfo.isEnterd : false,
+        quizAttempted: !!quizInfo.isEnterd,
         quizScore: actualScore,
         quizScoreDisplay: `${actualScore}/${questionsShown}`,
-        quizInProgress: quizInfo ? quizInfo.inProgress : false,
-        quizEndTime: quizInfo ? quizInfo.endTime : null,
-        quizPurchaseStatus: quizInfo ? quizInfo.quizPurchaseStatus : false
+        quizInProgress: !!quizInfo.inProgress,
+        quizEndTime: quizInfo.endTime || null,
+        quizPurchaseStatus: !!quizInfo.quizPurchaseStatus
       };
-    }).filter(result => !result.quizInProgress); // Only show completed quizzes
+    });
     
     // Calculate statistics
     const totalStudentsCount = studentsWithQuizInfo.length;
@@ -3966,13 +4001,30 @@ const quiz_detail_get = async (req, res) => {
       .slice(0, 3);
     
     // Get score distribution based on percentage of questions shown
-    const questionsShown = quiz.questionsToShow || quiz.questionsCount;
+    // reuse questionsShown defined above
     const scoreDistribution = {
       excellent: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.9).length,
       good: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.8 && (s.quizScore / questionsShown) < 0.9).length,
       average: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.7 && (s.quizScore / questionsShown) < 0.8).length,
       belowAverage: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.6 && (s.quizScore / questionsShown) < 0.7).length,
       failed: completedStudents.filter(s => (s.quizScore / questionsShown) < 0.6).length
+    };
+
+    // Precompute bar heights (relative to max) to simplify EJS inline styles
+    const maxBucket = Math.max(
+      scoreDistribution.excellent,
+      scoreDistribution.good,
+      scoreDistribution.average,
+      scoreDistribution.belowAverage,
+      scoreDistribution.failed,
+      0
+    ) || 1;
+    const barHeights = {
+      excellent: scoreDistribution.excellent > 0 ? Math.round((scoreDistribution.excellent / maxBucket) * 80) : 0,
+      good: scoreDistribution.good > 0 ? Math.round((scoreDistribution.good / maxBucket) * 80) : 0,
+      average: scoreDistribution.average > 0 ? Math.round((scoreDistribution.average / maxBucket) * 80) : 0,
+      belowAverage: scoreDistribution.belowAverage > 0 ? Math.round((scoreDistribution.belowAverage / maxBucket) * 80) : 0,
+      failed: scoreDistribution.failed > 0 ? Math.round((scoreDistribution.failed / maxBucket) * 80) : 0
     };
     
     // Pagination info
@@ -3998,9 +4050,11 @@ const quiz_detail_get = async (req, res) => {
       },
       topPerformers,
       scoreDistribution,
+      barHeights,
       currentPage: page,
       totalPages,
       totalStudents,
+      search,
       success: req.query.success,
       error: req.query.error
     });
@@ -4301,6 +4355,7 @@ const quiz_results_get = async (req, res) => {
         questionsShown
       },
       scoreDistribution,
+      barHeights,
       topPerformers,
       questionAnalysis,
       success: req.query.success,
@@ -4309,6 +4364,50 @@ const quiz_results_get = async (req, res) => {
   } catch (error) {
     console.error('Quiz results error:', error);
     res.status(500).send('Internal Server Error');
+  }
+};
+
+// Reopen a quiz for a specific student: reset their quiz state to initial
+const quiz_reopen_for_student = async (req, res) => {
+  try {
+    const { quizId, studentId } = req.params;
+
+    if (!quizId || !studentId) {
+      return res.status(400).json({ success: false, message: 'quizId and studentId are required' });
+    }
+
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: 'Quiz not found' });
+    }
+
+    // Reset the student's quizesInfo entry for this quiz
+    const updated = await User.findOneAndUpdate(
+      { _id: studentId, 'quizesInfo._id': quiz._id },
+      {
+        $set: {
+          'quizesInfo.$.isEnterd': false,
+          'quizesInfo.$.inProgress': false,
+          'quizesInfo.$.Score': 0,
+          'quizesInfo.$.answers': [],
+          'quizesInfo.$.randomQuestionIndices': [],
+          'quizesInfo.$.startTime': null,
+          'quizesInfo.$.endTime': null,
+          'quizesInfo.$.solvedAt': null
+          
+        }
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Student or quiz info not found' });
+    }
+
+    return res.json({ success: true, message: 'Quiz reopened for student' });
+  } catch (error) {
+    console.error('Quiz reopen error:', error);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 };
 
@@ -5099,6 +5198,7 @@ module.exports = {
   quiz_export,
   chapter_quiz_create_get,
   chapter_quiz_create_post,
+  quiz_reopen_for_student,
   
   // PDF Management
   pdfs_get,

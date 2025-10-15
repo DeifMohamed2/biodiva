@@ -50,6 +50,7 @@ router.post("/quizzes/:quizId/edit", authenticateTeacherRoute, teacherController
 router.delete("/quizzes/:quizId", authenticateTeacherRoute, teacherController.quiz_delete);
 router.get("/quizzes/:quizId/results", authenticateTeacherRoute, teacherController.quiz_results_get);
 router.get("/quizzes/:quizId/export", authenticateTeacherRoute, teacherController.quiz_export);
+router.post("/quizzes/:quizId/reopen/:studentId", authenticateTeacherRoute, teacherController.quiz_reopen_for_student);
 
 // Chapter-specific quiz routes
 router.get("/chapters/:chapterId/quizzes/create", authenticateTeacherRoute, teacherController.chapter_quiz_create_get);

@@ -81,6 +81,7 @@
       border-radius: 5px 5px 0 0;
       position: relative;
       min-height: 20px;
+      height: calc(var(--h, 0) * 1%);
     }
     
     .distribution-label {
@@ -141,7 +142,7 @@
     
     .student-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+      grid-template-columns: 1.3fr 1fr 0.8fr 1fr 1fr 1fr 0.8fr 1.2fr 1fr;
       padding: 15px 20px;
       border-bottom: 1px solid #eee;
       align-items: center;
@@ -278,19 +279,19 @@
           <div class="score-distribution">
             <h3>توزيع الدرجات</h3>
             <div class="distribution-bars">
-              <div class="distribution-bar" style="height: <%= scoreDistribution.excellent > 0 ? (scoreDistribution.excellent / Math.max(...Object.values(scoreDistribution))) * 80 : 0 %>%">
+              <div class="distribution-bar" style="--h:<%= barHeights.excellent %>">
                 <div class="distribution-label">ممتاز (90+)</div>
               </div>
-              <div class="distribution-bar" style="height: <%= scoreDistribution.good > 0 ? (scoreDistribution.good / Math.max(...Object.values(scoreDistribution))) * 80 : 0 %>%">
+              <div class="distribution-bar" style="--h:<%= barHeights.good %>">
                 <div class="distribution-label">جيد (80-89)</div>
               </div>
-              <div class="distribution-bar" style="height: <%= scoreDistribution.average > 0 ? (scoreDistribution.average / Math.max(...Object.values(scoreDistribution))) * 80 : 0 %>%">
+              <div class="distribution-bar" style="--h:<%= barHeights.average %>">
                 <div class="distribution-label">متوسط (70-79)</div>
               </div>
-              <div class="distribution-bar" style="height: <%= scoreDistribution.belowAverage > 0 ? (scoreDistribution.belowAverage / Math.max(...Object.values(scoreDistribution))) * 80 : 0 %>%">
+              <div class="distribution-bar" style="--h:<%= barHeights.belowAverage %>">
                 <div class="distribution-label">ضعيف (60-69)</div>
               </div>
-              <div class="distribution-bar" style="height: <%= scoreDistribution.failed > 0 ? (scoreDistribution.failed / Math.max(...Object.values(scoreDistribution))) * 80 : 0 %>%">
+              <div class="distribution-bar" style="--h:<%= barHeights.failed %>">
                 <div class="distribution-label">راسب (<60)</div>
               </div>
             </div>
@@ -331,12 +332,17 @@
             <div class="table-header">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span>قائمة الطلاب</span>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                  <input type="text" id="studentSearch" placeholder="البحث بالكود أو رقم الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
-                  <button id="clearSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    <i class="fas fa-times"></i>
+                <form method="get" style="display: flex; gap: 10px; align-items: center;">
+                  <input type="hidden" name="page" value="1">
+                  <input type="text" name="search" value="<%= typeof search !== 'undefined' ? search : '' %>" placeholder="البحث بالاسم/الكود/الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 280px;">
+                  <button type="submit" class="btn btn-outline">
+                    <i class="fas fa-search"></i>
+                    بحث
                   </button>
-                </div>
+                  <% if (search && search.trim() !== '') { %>
+                  <a href="?" class="btn btn-outline"><i class="fas fa-times"></i></a>
+                  <% } %>
+                </form>
               </div>
             </div>
             <div class="student-row" style="background: #f8f9fa; font-weight: bold;">
@@ -348,6 +354,7 @@
               <div>الحالة</div>
               <div>الدرجة</div>
               <div>وقت الانتهاء</div>
+              <div style="text-align:center;">إعادة فتح</div>
             </div>
             <% students.forEach(function(student) { %>
               <div class="student-row">
@@ -379,6 +386,15 @@
                     -
                   <% } %>
                 </div>
+                <div style="text-align:center;">
+                  <% if (student.quizAttempted || student.quizInProgress) { %>
+                    <button class="btn btn-outline" data-reopen data-student-id="<%= student.studentId %>" style="padding:6px 10px;">
+                      <i class="fas fa-redo"></i>
+                    </button>
+                  <% } else { %>
+                    -
+                  <% } %>
+                </div>
               </div>
             <% }); %>
             
@@ -394,8 +410,9 @@
           <!-- Pagination -->
           <% if (totalPages > 1) { %>
             <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 20px;">
+              <% const qs = (search && search.trim() !== '') ? `&search=${encodeURIComponent(search)}` : ''; %>
               <% if (currentPage > 1) { %>
-                <a href="?page=<%= currentPage - 1 %>" class="btn btn-outline">
+                <a href="?page=<%= currentPage - 1 %><%- qs %>" class="btn btn-outline">
                   <i class="fas fa-chevron-right"></i>
                   السابق
                 </a>
@@ -406,7 +423,7 @@
               </span>
               
               <% if (currentPage < totalPages) { %>
-                <a href="?page=<%= currentPage + 1 %>" class="btn btn-outline">
+                <a href="?page=<%= currentPage + 1 %><%- qs %>" class="btn btn-outline">
                   التالي
                   <i class="fas fa-chevron-left"></i>
                 </a>
@@ -425,37 +442,32 @@
       setInterval(() => {
         // You can add auto-refresh logic here if needed
       }, 30000);
-      
-      // Student search functionality
-      const studentSearchInput = document.getElementById('studentSearch');
-      const clearSearchBtn = document.getElementById('clearSearch');
-      const studentRows = document.querySelectorAll('.student-row:not([style*="background: #f8f9fa"])');
-      
-      function filterStudents() {
-        const searchTerm = studentSearchInput.value.toLowerCase().trim();
-        
-        studentRows.forEach(row => {
-          const studentCode = row.children[1].textContent.toLowerCase();
-          const phoneNumber = row.children[3].textContent.toLowerCase();
-          const parentPhone = row.children[4].textContent.toLowerCase();
-          
-          if (searchTerm === '' || 
-              studentCode.includes(searchTerm) || 
-              phoneNumber.includes(searchTerm) || 
-              parentPhone.includes(searchTerm)) {
-            row.style.display = 'grid';
-          } else {
-            row.style.display = 'none';
+
+      // Reopen quiz for a student
+      const reopenButtons = document.querySelectorAll('[data-reopen]');
+      reopenButtons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('هل تريد إعادة فتح الاختبار لهذا الطالب؟')) return;
+          const studentId = btn.getAttribute('data-student-id');
+          btn.disabled = true;
+          try {
+            const res = await fetch(`/teacher/quizzes/<%= quiz._id %>/reopen/${studentId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              // Reload to reflect fresh state
+              location.reload();
+            } else {
+              alert(data && data.message ? data.message : 'فشل في إعادة فتح الاختبار');
+              btn.disabled = false;
+            }
+          } catch (e) {
+            alert('حدث خطأ أثناء إعادة فتح الاختبار');
+            btn.disabled = false;
           }
         });
-      }
-      
-      studentSearchInput.addEventListener('input', filterStudents);
-      
-      clearSearchBtn.addEventListener('click', function() {
-        studentSearchInput.value = '';
-        filterStudents();
-        studentSearchInput.focus();
       });
     });
   </script>
