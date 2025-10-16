@@ -746,7 +746,9 @@ const video_detail_get = async (req, res) => {
     let chapter = null;
     let videoType = '';
     
-    const chapters = await Chapter.find({ isActive: true });
+    // Search across all chapters (including inactive) to avoid false 404s when
+    // accessing videos from chapters that are currently not active
+    const chapters = await Chapter.find({});
     
     for (const chapterData of chapters) {
       // Check lectures
