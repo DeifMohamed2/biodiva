@@ -120,7 +120,7 @@ const dash_get = async (req, res) => {
     const userChapters = await Chapter.find({
       chapterGrade: userGrade,
       ARorEN: req.userData.ARorEN,
-      isActive: true
+
     }).select('chapterName _id');
 
     // Get user's quizzes
@@ -217,7 +217,7 @@ const chapters_get = async (req, res) => {
     const chapters = await Chapter.find({
       chapterGrade: req.userData.Grade,
       ARorEN: req.userData.ARorEN,
-      isActive: true
+
     }).sort({ createdAt: 1 });
     
     const paidChapters = chapters.map((chapter) => {

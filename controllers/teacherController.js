@@ -474,7 +474,7 @@ const chapter_delete = async (req, res) => {
     
     // Soft delete - just set isActive to false
     await Chapter.findByIdAndUpdate(chapterId, { 
-      isActive: false,
+   
       updatedAt: new Date()
     });
     
@@ -493,7 +493,7 @@ const videos_get = async (req, res) => {
     const perPage = 12;
     
     // Get all chapters for filter
-    const chapters = await Chapter.find({ isActive: true }, 'chapterName chapterGrade');
+    const chapters = await Chapter.find({  }, 'chapterName chapterGrade');
     
     let allVideos = [];
     
@@ -512,7 +512,7 @@ const videos_get = async (req, res) => {
       }
     } else {
       // Get videos from all chapters
-      const allChapters = await Chapter.find({ isActive: true });
+      const allChapters = await Chapter.find({  });
       allChapters.forEach(chapterData => {
         if (!type || type === 'lectures') {
           allVideos.push(...(chapterData.chapterLectures || []).map(v => ({ ...v, type: 'lecture', chapterName: chapterData.chapterName, chapterId: chapterData._id })));
@@ -882,7 +882,7 @@ const video_edit_get = async (req, res) => {
     let chapter = null;
     let videoType = '';
     
-    const chapters = await Chapter.find({ isActive: true });
+    const chapters = await Chapter.find({  });
     
     for (const chapterData of chapters) {
       // Check lectures
@@ -1038,7 +1038,7 @@ const video_delete = async (req, res) => {
     let videoType = '';
     let videoIndex = -1;
     
-    const chapters = await Chapter.find({ isActive: true });
+    const chapters = await Chapter.find({});
     
     for (const chapterData of chapters) {
       // Check lectures
@@ -1106,7 +1106,7 @@ const chapter_pdf_create_post = (req, res) => res.send('Feature coming soon');
 
 const attendance_get = async (req, res) => {
     try {
-        const attendances = await Attendance.find({ isActive: true })
+        const attendances = await Attendance.find({ })
             .populate('Students', 'Username Code phone parentPhone Grade')
             .populate('createdBy', 'Username phone')
             .sort({ createdAt: -1 })
@@ -1146,7 +1146,7 @@ const attendance_review_post = async (req, res) => {
         const { Grade, CenterName, GroupTime, Date } = req.body;
         
         // Build search criteria
-        const searchCriteria = { isActive: true };
+        const searchCriteria = {};
         
         if (Grade) searchCriteria.Grade = Grade;
         if (CenterName) searchCriteria.CenterName = CenterName;
@@ -1496,7 +1496,7 @@ const get_attendance_dates = async (req, res) => {
             Grade: CardGrade,
             CenterName: centerName,
             GroupTime: GroupTime,
-            isActive: true
+          
         }).select('Date').sort({ Date: -1 });
 
         const dates = attendances.map(att => att.Date);
@@ -1546,7 +1546,7 @@ const add_card_to_student = async (req, res) => {
         }
 
         // Check if card already exists
-        const existingCard = await Card.findOne({ cardId: assignedCard, isActive: true });
+        const existingCard = await Card.findOne({ cardId: assignedCard});
         if (existingCard) {
             return res.status(400).json({ message: 'هذا الكارت مستخدم بالفعل' });
         }
@@ -2310,7 +2310,7 @@ const quizzes_get = async (req, res) => {
     const activeQuizzesCount = await Quiz.countDocuments({ ...query, isQuizActive: true });
     
     // Get chapters for filter
-    const chapters = await Chapter.find({ isActive: true }, 'chapterName chapterGrade');
+    const chapters = await Chapter.find({  }, 'chapterName chapterGrade');
     
     // Use basic quiz data only (avoid heavy per-quiz student aggregations)
     const quizzesBasic = quizzes.map((quiz) => ({
@@ -2344,7 +2344,7 @@ const quizzes_get = async (req, res) => {
 
 const quiz_create_get = async (req, res) => {
   try {
-    const chapters = await Chapter.find({ isActive: true }, 'chapterName chapterGrade');
+    const chapters = await Chapter.find({  }, 'chapterName chapterGrade');
     
     // Get videos for the "video will be opened" dropdown
     let videos = [];
@@ -2900,7 +2900,7 @@ const codes_get = async (req, res) => {
     ]);
     
     // Get chapters for code generation
-    const chapters = await Chapter.find({ isActive: true }).select('chapterName chapterGrade');
+    const chapters = await Chapter.find({  }).select('chapterName chapterGrade');
     
     // Get quizzes for code generation
     const quizzes = await Quiz.find({ isQuizActive: true }).select('quizName Grade');
@@ -2963,7 +2963,7 @@ const codes_get = async (req, res) => {
 const codes_create_get = async (req, res) => {
   try {
     // Get chapters for code generation
-    const chapters = await Chapter.find({ isActive: true }).select('chapterName chapterGrade');
+    const chapters = await Chapter.find({  }).select('chapterName chapterGrade');
     
     // Get quizzes for code generation
     const quizzes = await Quiz.find({ isQuizActive: true }).select('quizName Grade');
@@ -4076,7 +4076,7 @@ const quiz_edit_get = async (req, res) => {
     }
     
     // Get chapters for dropdown
-    const chapters = await Chapter.find({ isActive: true }).select('chapterName chapterGrade');
+    const chapters = await Chapter.find({ }).select('chapterName chapterGrade');
     
     // Get videos for the "video will be opened" dropdown - filter by quiz grade and videos that require quiz
     let videos = [];
@@ -4581,7 +4581,6 @@ const api_videos_by_grade = async (req, res) => {
     // Get all chapters for the specified grade (handle both formats: "1" and "Grade1")
     const gradeFormats = [grade, `Grade${grade}`];
     const chapters = await Chapter.find({ 
-      isActive: true, 
       chapterGrade: { $in: gradeFormats }
     }).select('_id chapterName chapterGrade chapterLectures chapterSummaries chapterSolvings');
     
