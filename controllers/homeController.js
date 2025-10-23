@@ -113,7 +113,7 @@ const public_Register_post = async (req, res) => {
     gender,
     phone,
     parentPhone,
-  
+    place,
 
   } = req.body;
 
@@ -168,6 +168,9 @@ const public_Register_post = async (req, res) => {
   if (!schoolName) {
     errors.schoolName = '- يجب ادخال اسم المدرسة';
 
+  }
+  if (!place) {
+    errors.place = '- يجب اختيار مكان الحضور';
   }
   console.log('req.body', req.body);
 
@@ -274,7 +277,7 @@ const public_Register_post = async (req, res) => {
       gender: 'male',
       phone: phone,
       parentPhone: parentPhone,
-      place: 'online',
+      place: place || 'online',
       Code: Code,
       subscribe: false,
       quizesInfo: quizesInfo,

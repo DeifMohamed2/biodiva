@@ -784,7 +784,7 @@ const video_detail_get = async (req, res) => {
     }
     
     // Get all students in the chapter's grade
-    const allStudents = await User.find({
+const allStudents = await User.find({
       isTeacher: false,
       Grade: chapter.chapterGrade
     }, {
@@ -793,6 +793,7 @@ const video_detail_get = async (req, res) => {
       Grade: 1,
       phone: 1,
       parentPhone: 1,
+      place: 1,
       videosInfo: { $elemMatch: { _id: new mongoose.Types.ObjectId(videoId) } }
     });
     
@@ -807,6 +808,7 @@ const video_detail_get = async (req, res) => {
         grade: student.Grade,
         phone: student.phone || 'غير متوفر',
         parentPhone: student.parentPhone || 'غير متوفر',
+        place: student.place || 'online',
         numberOfWatches: videoInfo ? videoInfo.numberOfWatches || 0 : 0,
         videoAllowedAttemps: videoInfo ? videoInfo.videoAllowedAttemps || 3 : 3,
         fristWatch: videoInfo ? videoInfo.fristWatch : null,
@@ -5104,6 +5106,69 @@ const unlockDependentVideos = async (studentId, approvedVideoId) => {
 };
 
 // Helper function to check and unlock videos based on any homework submission
+// ==================  Student Status Management  ====================== //
+
+const updateStudentStatuses = async (req, res) => {
+  try {
+    const { StudentStatusManager } = require('../utils/studentStatusScript');
+    const manager = new StudentStatusManager();
+    
+    const options = {
+      batchSize: parseInt(req.body.batchSize) || 100,
+      dryRun: req.body.dryRun === 'true' || false,
+      gradeFilter: req.body.gradeFilter || null,
+      statusFilter: req.body.statusFilter || null
+    };
+    
+    console.log('Starting student status update via API:', options);
+    
+    const result = await manager.processAllStudents(options);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Student status update completed successfully',
+        stats: result.stats,
+        processed: result.processed
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Student status update failed',
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in updateStudentStatuses API:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+const getStudentStatusStats = async (req, res) => {
+  try {
+    const { StudentStatusManager } = require('../utils/studentStatusScript');
+    const manager = new StudentStatusManager();
+    
+    const stats = await manager.getStudentStatusStats();
+    
+    res.json({
+      success: true,
+      stats: stats
+    });
+  } catch (error) {
+    console.error('Error getting student status stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting statistics',
+      error: error.message
+    });
+  }
+};
+
 const checkAndUnlockVideosForHomework = async (studentId, videoId) => {
   try {
     // Find all videos that depend on this video
@@ -5298,5 +5363,9 @@ module.exports = {
   updateReviewNotes,
   viewHomeworkDetails,
   unlockDependentVideos,
-  checkAndUnlockVideosForHomework
+  checkAndUnlockVideosForHomework,
+  
+  // Student Status Management
+  updateStudentStatuses,
+  getStudentStatusStats
 };

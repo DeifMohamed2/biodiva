@@ -312,11 +312,19 @@
           <!-- Tab Content -->
           <div class="tab-content active" id="watched-tab">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <div style="display: flex; gap: 10px; align-items: center;">
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="watchedSearch" placeholder="البحث بالكود أو رقم الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+                <select id="watchedPlaceFilter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; background: white;">
+                  <option value="">جميع الأماكن</option>
+                  <option value="center">المركز</option>
+                  <option value="online">أونلاين</option>
+                </select>
                 <button id="clearWatchedSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
                   <i class="fas fa-times"></i>
                 </button>
+                <div id="watchedFilterStatus" style="padding: 8px 12px; background: #e9ecef; border-radius: 5px; font-size: 0.875rem; color: #495057;">
+                  عرض <span id="watchedVisibleCount">0</span> من <span id="watchedTotalCount">0</span> طالب
+                </div>
               </div>
               <button type="button" class="btn btn-outline" id="exportWatchedBtn">
                 <i class="fas fa-file-excel"></i>
@@ -338,6 +346,7 @@
                       <th style="width: 8%;">المشاهدات</th>
                       <th style="width: 8%;">المتبقي</th>
                       <th style="width: 10%;">آخر مشاهدة</th>
+                      <th style="width: 8%;">المكان</th>
                       <th style="width: 8%;">حالة الدفع</th>
                       <th style="width: 10%;">الإجراءات</th>
                     </tr>
@@ -355,6 +364,11 @@
                         <td><%= student.numberOfWatches %></td>
                         <td><%= student.videoAllowedAttemps - student.numberOfWatches %></td>
                         <td><%= student.lastWatch ? new Date(student.lastWatch).toLocaleString('ar-EG') : 'غير متوفر' %></td>
+                        <td data-place="<%= student.place %>">
+                          <span class="status-badge <%= student.place === 'center' ? 'active' : 'pending' %>">
+                            <%= student.place === 'center' ? 'المركز' : 'أونلاين' %>
+                          </span>
+                        </td>
                         <td>
                           <span class="status-badge <%= student.purchaseStatus ? 'active' : 'pending' %>">
                             <%= student.purchaseStatus ? 'مدفوع' : 'غير مدفوع' %>
@@ -385,11 +399,19 @@
           
           <div class="tab-content" id="unwatched-tab">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <div style="display: flex; gap: 10px; align-items: center;">
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="unwatchedSearch" placeholder="البحث بالكود أو رقم الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+                <select id="unwatchedPlaceFilter" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; background: white;">
+                  <option value="">جميع الأماكن</option>
+                  <option value="center">المركز</option>
+                  <option value="online">أونلاين</option>
+                </select>
                 <button id="clearUnwatchedSearch" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">
                   <i class="fas fa-times"></i>
                 </button>
+                <div id="unwatchedFilterStatus" style="padding: 8px 12px; background: #e9ecef; border-radius: 5px; font-size: 0.875rem; color: #495057;">
+                  عرض <span id="unwatchedVisibleCount">0</span> من <span id="unwatchedTotalCount">0</span> طالب
+                </div>
               </div>
               <button type="button" class="btn btn-outline" id="exportUnwatchedBtn">
                 <i class="fas fa-file-excel"></i>
@@ -409,7 +431,8 @@
                       <th style="width: 12%;">رقم الهاتف</th>
                       <th style="width: 12%;">هاتف ولي الأمر</th>
                       <th style="width: 10%;">المشاهدات المتاحة</th>
-                      <th style="width: 10%;">حالة الدفع</th>
+                      <th style="width: 8%;">المكان</th>
+                      <th style="width: 8%;">حالة الدفع</th>
                       <th style="width: 20%;">الإجراءات</th>
                     </tr>
                   </thead>
@@ -424,6 +447,11 @@
                         <td><%= student.phone %></td>
                         <td><%= student.parentPhone %></td>
                         <td><%= student.videoAllowedAttemps %></td>
+                        <td data-place="<%= student.place %>">
+                          <span class="status-badge <%= student.place === 'center' ? 'active' : 'pending' %>">
+                            <%= student.place === 'center' ? 'المركز' : 'أونلاين' %>
+                          </span>
+                        </td>
                         <td>
                           <span class="status-badge <%= student.purchaseStatus ? 'active' : 'pending' %>">
                             <%= student.purchaseStatus ? 'مدفوع' : 'غير مدفوع' %>
@@ -711,6 +739,22 @@
     const unwatchedCount = document.getElementById('unwatchedCount');
     unwatchedCount.textContent = '<%= unwatchedCount %>';
     
+    // Initialize filter counters
+    function initializeFilterCounters() {
+      const watchedRows = document.querySelectorAll('#watched-table tbody tr');
+      const unwatchedRows = document.querySelectorAll('#unwatched-table tbody tr');
+      
+      document.getElementById('watchedVisibleCount').textContent = watchedRows.length;
+      document.getElementById('watchedTotalCount').textContent = watchedRows.length;
+      document.getElementById('unwatchedVisibleCount').textContent = unwatchedRows.length;
+      document.getElementById('unwatchedTotalCount').textContent = unwatchedRows.length;
+    }
+    
+    // Initialize counters when page loads
+    document.addEventListener('DOMContentLoaded', initializeFilterCounters);
+    // Also initialize immediately in case DOMContentLoaded already fired
+    initializeFilterCounters();
+    
     // Export to Excel functions
     function exportTableToExcel(tableId, fileName) {
       const table = document.getElementById(tableId);
@@ -719,24 +763,67 @@
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
       
-      // Convert table to worksheet
-      const ws = XLSX.utils.table_to_sheet(table, {raw: true});
+      // Convert table to worksheet with better formatting
+      const ws = XLSX.utils.table_to_sheet(table, {
+        raw: true,
+        dateNF: 'dd/mm/yyyy hh:mm:ss'
+      });
+      
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 5 },   // #
+        { wch: 20 },  // الطالب
+        { wch: 10 },  // الكود
+        { wch: 8 },   // الصف
+        { wch: 15 },  // رقم الهاتف
+        { wch: 15 },  // هاتف ولي الأمر
+        { wch: 10 },  // المشاهدات/المشاهدات المتاحة
+        { wch: 8 },   // المتبقي (for watched)
+        { wch: 20 },  // آخر مشاهدة (for watched)
+        { wch: 10 },  // المكان
+        { wch: 12 },  // حالة الدفع
+        { wch: 15 }   // الإجراءات
+      ];
+      ws['!cols'] = colWidths;
       
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+      XLSX.utils.book_append_sheet(wb, ws, 'الطلاب');
       
       // Generate Excel file and trigger download
-      XLSX.writeFile(wb, `${fileName}.xlsx`);
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      XLSX.writeFile(wb, `${fileName}_${timestamp}.xlsx`);
     }
     
     // Export watched students
     document.getElementById('exportWatchedBtn').addEventListener('click', function() {
-      exportTableToExcel('watched-table', 'students_watched_video_<%= video._id %>');
+      const placeFilter = document.getElementById('watchedPlaceFilter').value;
+      const searchTerm = document.getElementById('watchedSearch').value;
+      let fileName = 'students_watched_video_<%= video._id %>';
+      
+      if (placeFilter) {
+        fileName += `_${placeFilter}`;
+      }
+      if (searchTerm) {
+        fileName += `_search_${searchTerm.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      }
+      
+      exportTableToExcel('watched-table', fileName);
     });
     
     // Export unwatched students
     document.getElementById('exportUnwatchedBtn').addEventListener('click', function() {
-      exportTableToExcel('unwatched-table', 'students_unwatched_video_<%= video._id %>');
+      const placeFilter = document.getElementById('unwatchedPlaceFilter').value;
+      const searchTerm = document.getElementById('unwatchedSearch').value;
+      let fileName = 'students_unwatched_video_<%= video._id %>';
+      
+      if (placeFilter) {
+        fileName += `_${placeFilter}`;
+      }
+      if (searchTerm) {
+        fileName += `_search_${searchTerm.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      }
+      
+      exportTableToExcel('unwatched-table', fileName);
     });
     
     // Send reminder functionality
@@ -896,64 +983,178 @@
     
     // Search functionality for watched students
     const watchedSearchInput = document.getElementById('watchedSearch');
+    const watchedPlaceFilter = document.getElementById('watchedPlaceFilter');
     const clearWatchedSearchBtn = document.getElementById('clearWatchedSearch');
     
     function filterWatchedStudents() {
       const searchTerm = watchedSearchInput.value.toLowerCase().trim();
+      const placeFilter = watchedPlaceFilter.value;
       const watchedRows = document.querySelectorAll('#watched-table tbody tr');
       
-      watchedRows.forEach(row => {
-        const studentCode = row.children[2].textContent.toLowerCase(); // Column index 2 for student code
-        const phoneNumber = row.children[4].textContent.toLowerCase(); // Column index 4 for phone
-        const parentPhone = row.children[5].textContent.toLowerCase(); // Column index 5 for parent phone
+      console.log('=== FILTERING WATCHED STUDENTS ===');
+      console.log('Search term:', searchTerm);
+      console.log('Place filter:', placeFilter);
+      console.log('Total rows found:', watchedRows.length);
+      
+      let visibleCount = 0;
+      
+      watchedRows.forEach((row, index) => {
+        // Get all cell data
+        const cells = Array.from(row.children);
+        const studentCode = cells[2] ? cells[2].textContent.toLowerCase().trim() : '';
+        const phoneNumber = cells[4] ? cells[4].textContent.toLowerCase().trim() : '';
+        const parentPhone = cells[5] ? cells[5].textContent.toLowerCase().trim() : '';
+        const placeCell = cells[9];
+        const placeText = placeCell ? placeCell.textContent.toLowerCase().trim() : '';
+        const placeValue = placeCell ? placeCell.getAttribute('data-place') : '';
         
-        if (searchTerm === '' || 
+        // Debug first few rows
+        if (index < 5) {
+          console.log(`Row ${index}:`, {
+            studentCode: `"${studentCode}"`,
+            phoneNumber: `"${phoneNumber}"`,
+            parentPhone: `"${parentPhone}"`,
+            placeText: `"${placeText}"`,
+            placeValue: `"${placeValue}"`,
+            cellCount: cells.length
+          });
+        }
+        
+        // Check search match
+        const matchesSearch = searchTerm === '' || 
             studentCode.includes(searchTerm) || 
             phoneNumber.includes(searchTerm) || 
-            parentPhone.includes(searchTerm)) {
+            parentPhone.includes(searchTerm);
+            
+        // Check place match - use both text and data attribute for reliability
+        const matchesPlace = placeFilter === '' || 
+            (placeFilter === 'center' && (placeText.includes('المركز') || placeValue === 'center')) ||
+            (placeFilter === 'online' && (placeText.includes('أونلاين') || placeValue === 'online'));
+        
+        const shouldShow = matchesSearch && matchesPlace;
+        
+        if (shouldShow) {
           row.style.display = '';
+          visibleCount++;
         } else {
           row.style.display = 'none';
         }
+        
+        // Debug first few rows
+        if (index < 5) {
+          console.log(`Row ${index} result:`, {
+            matchesSearch,
+            matchesPlace,
+            shouldShow,
+            searchTerm: `"${searchTerm}"`,
+            placeFilter: `"${placeFilter}"`
+          });
+        }
       });
+      
+      console.log(`Visible rows after filtering: ${visibleCount}/${watchedRows.length}`);
+      console.log('=== END FILTERING WATCHED STUDENTS ===');
+      
+      // Update counter display
+      document.getElementById('watchedVisibleCount').textContent = visibleCount;
+      document.getElementById('watchedTotalCount').textContent = watchedRows.length;
     }
     
     watchedSearchInput.addEventListener('input', filterWatchedStudents);
+    watchedPlaceFilter.addEventListener('change', filterWatchedStudents);
     
     clearWatchedSearchBtn.addEventListener('click', function() {
       watchedSearchInput.value = '';
+      watchedPlaceFilter.value = '';
       filterWatchedStudents();
       watchedSearchInput.focus();
     });
     
     // Search functionality for unwatched students
     const unwatchedSearchInput = document.getElementById('unwatchedSearch');
+    const unwatchedPlaceFilter = document.getElementById('unwatchedPlaceFilter');
     const clearUnwatchedSearchBtn = document.getElementById('clearUnwatchedSearch');
     
     function filterUnwatchedStudents() {
       const searchTerm = unwatchedSearchInput.value.toLowerCase().trim();
+      const placeFilter = unwatchedPlaceFilter.value;
       const unwatchedRows = document.querySelectorAll('#unwatched-table tbody tr');
       
-      unwatchedRows.forEach(row => {
-        const studentCode = row.children[2].textContent.toLowerCase(); // Column index 2 for student code
-        const phoneNumber = row.children[4].textContent.toLowerCase(); // Column index 4 for phone
-        const parentPhone = row.children[5].textContent.toLowerCase(); // Column index 5 for parent phone
+      console.log('=== FILTERING UNWATCHED STUDENTS ===');
+      console.log('Search term:', searchTerm);
+      console.log('Place filter:', placeFilter);
+      console.log('Total rows found:', unwatchedRows.length);
+      
+      let visibleCount = 0;
+      
+      unwatchedRows.forEach((row, index) => {
+        // Get all cell data
+        const cells = Array.from(row.children);
+        const studentCode = cells[2] ? cells[2].textContent.toLowerCase().trim() : '';
+        const phoneNumber = cells[4] ? cells[4].textContent.toLowerCase().trim() : '';
+        const parentPhone = cells[5] ? cells[5].textContent.toLowerCase().trim() : '';
+        const placeCell = cells[7];
+        const placeText = placeCell ? placeCell.textContent.toLowerCase().trim() : '';
+        const placeValue = placeCell ? placeCell.getAttribute('data-place') : '';
         
-        if (searchTerm === '' || 
+        // Debug first few rows
+        if (index < 5) {
+          console.log(`Unwatched Row ${index}:`, {
+            studentCode: `"${studentCode}"`,
+            phoneNumber: `"${phoneNumber}"`,
+            parentPhone: `"${parentPhone}"`,
+            placeText: `"${placeText}"`,
+            placeValue: `"${placeValue}"`,
+            cellCount: cells.length
+          });
+        }
+        
+        // Check search match
+        const matchesSearch = searchTerm === '' || 
             studentCode.includes(searchTerm) || 
             phoneNumber.includes(searchTerm) || 
-            parentPhone.includes(searchTerm)) {
+            parentPhone.includes(searchTerm);
+            
+        // Check place match - use both text and data attribute for reliability
+        const matchesPlace = placeFilter === '' || 
+            (placeFilter === 'center' && (placeText.includes('المركز') || placeValue === 'center')) ||
+            (placeFilter === 'online' && (placeText.includes('أونلاين') || placeValue === 'online'));
+        
+        const shouldShow = matchesSearch && matchesPlace;
+        
+        if (shouldShow) {
           row.style.display = '';
+          visibleCount++;
         } else {
           row.style.display = 'none';
         }
+        
+        // Debug first few rows
+        if (index < 5) {
+          console.log(`Unwatched Row ${index} result:`, {
+            matchesSearch,
+            matchesPlace,
+            shouldShow,
+            searchTerm: `"${searchTerm}"`,
+            placeFilter: `"${placeFilter}"`
+          });
+        }
       });
+      
+      console.log(`Visible unwatched rows after filtering: ${visibleCount}/${unwatchedRows.length}`);
+      console.log('=== END FILTERING UNWATCHED STUDENTS ===');
+      
+      // Update counter display
+      document.getElementById('unwatchedVisibleCount').textContent = visibleCount;
+      document.getElementById('unwatchedTotalCount').textContent = unwatchedRows.length;
     }
     
     unwatchedSearchInput.addEventListener('input', filterUnwatchedStudents);
+    unwatchedPlaceFilter.addEventListener('change', filterUnwatchedStudents);
     
     clearUnwatchedSearchBtn.addEventListener('click', function() {
       unwatchedSearchInput.value = '';
+      unwatchedPlaceFilter.value = '';
       filterUnwatchedStudents();
       unwatchedSearchInput.focus();
     });
@@ -995,7 +1196,14 @@
     // Export homework to Excel
     if (document.getElementById('exportHomeworkBtn')) {
       document.getElementById('exportHomeworkBtn').addEventListener('click', function() {
-        exportTableToExcel('homework-table', 'homework_submissions_<%= video._id %>');
+        const searchTerm = document.getElementById('homeworkSearch').value;
+        let fileName = 'homework_submissions_<%= video._id %>';
+        
+        if (searchTerm) {
+          fileName += `_search_${searchTerm.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        }
+        
+        exportTableToExcel('homework-table', fileName);
       });
     }
     

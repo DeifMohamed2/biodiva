@@ -157,6 +157,10 @@ router.post("/homework/reject/:submissionId", authenticateTeacherRoute, teacherC
 router.post("/homework/review-notes/:submissionId", authenticateTeacherRoute, teacherController.updateReviewNotes);
 router.get("/homework/details/:submissionId", authenticateTeacherRoute, teacherController.viewHomeworkDetails);
 
+// ================== Student Status Management Routes ====================== //
+router.post("/students/update-status", authenticateTeacherRoute, teacherController.updateStudentStatuses);
+router.get("/students/status-stats", authenticateTeacherRoute, teacherController.getStudentStatusStats);
+
 // ================== Auth Routes ====================== //
 router.get("/logout", teacherController.logout);
 

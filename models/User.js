@@ -302,6 +302,8 @@ const userSchema = new Schema({
     place: {
         type: String,
         required: true,
+        enum: ['online', 'center'],
+        default: 'online'
     },
     Code: {
         type: Number,

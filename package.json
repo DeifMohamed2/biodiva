@@ -8,7 +8,9 @@
     "seed-teacher": "node teacherSeedData.js",
     "seed-data": "node seedData.js",
     "seed-quizzes": "node quizSeedData.js",
-    "seed-codes": "node codesSeedData.js"
+    "seed-codes": "node codesSeedData.js",
+    "update-student-status": "node scripts/updateStudentStatus.js",
+    "test-student-status": "node scripts/testStudentStatus.js"
   },
   "author": "",
   "license": "ISC",
