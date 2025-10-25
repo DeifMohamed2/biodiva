@@ -1076,15 +1076,10 @@ const quiz_get = async (req, res) => {
       (q) => q._id.toString() === quiz._id.toString()
     );
     
-    // Allow retake if student scored below 60%
+    // If quiz is completed (isEnterd = true), don't allow retake
     if (quizUser && quizUser.isEnterd && !quizUser.inProgress) {
-      if (quizUser.canRetake === true) {
-        console.log('Quiz completed with low score - allowing retake');
-        // Allow the student to retake, don't redirect
-      } else {
-        console.log('Quiz already completed with passing score');
-        return res.redirect('/student/exams');
-      }
+      console.log('Quiz already completed');
+      return res.redirect('/student/exams');
     }
 
     console.log('Rendering quiz preparation page');
@@ -1125,14 +1120,9 @@ const quizWillStart = async (req, res) => {
       (q) => q._id.toString() === quiz._id.toString()
     );
 
-    // Allow retake if student scored below 60%
+    // If quiz is completed, don't allow retake
     if (quizUser && quizUser.isEnterd && !quizUser.inProgress) {
-      if (quizUser.canRetake === true) {
-        console.log('Quiz completed with low score - allowing retake');
-        // Allow the student to retake, don't return error
-      } else {
-        return res.status(400).json({ success: false, message: 'Quiz already completed with passing score' });
-      }
+      return res.status(400).json({ success: false, message: 'Quiz already completed' });
     }
 
     const durationInMinutes = quiz.timeOfQuiz;
@@ -1158,11 +1148,7 @@ const quizWillStart = async (req, res) => {
         randomQuestionIndices: [],
         startTime: startTime,
         endTime: endTime,
-        quizPurchaseStatus: !quiz.prepaidStatus || isFreeQuiz || hasGeneralQuizAccess || hasSpecificQuizAccess,
-        canRetake: false,
-        percentage: 0,
-        isRetake: false,
-        previousScore: null
+        quizPurchaseStatus: !quiz.prepaidStatus || isFreeQuiz || hasGeneralQuizAccess || hasSpecificQuizAccess
       };
 
       await User.findByIdAndUpdate(
@@ -1172,11 +1158,10 @@ const quizWillStart = async (req, res) => {
         }
       );
       
-      return res.json({ success: true, message: 'Quiz started successfully', isRetake: false });
-    } else if (!quizUser.endTime || !quizUser.inProgress || (quizUser.canRetake && quizUser.isEnterd)) {
-      // Update existing quiz info with start time (including retakes)
-      const isRetake = quizUser.canRetake && quizUser.isEnterd;
-      console.log('Updating existing quiz info with start time. Is retake:', isRetake);
+      return res.json({ success: true, message: 'Quiz started successfully' });
+    } else if (!quizUser.endTime || !quizUser.inProgress) {
+      // Update existing quiz info with start time
+      console.log('Updating existing quiz info with start time');
       
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
@@ -1188,19 +1173,14 @@ const quizWillStart = async (req, res) => {
             'quizesInfo.$.isEnterd': false,
             'quizesInfo.$.answers': [], // Clear previous answers
             'quizesInfo.$.Score': 0, // Reset score
-            'quizesInfo.$.randomQuestionIndices': [], // Clear previous random indices
-            'quizesInfo.$.canRetake': false, // Reset retake flag
-            'quizesInfo.$.percentage': 0, // Reset percentage
-            'quizesInfo.$.isRetake': isRetake, // Mark as retake if applicable
-            'quizesInfo.$.previousScore': isRetake ? quizUser.Score : null // Store previous score for retakes
+            'quizesInfo.$.randomQuestionIndices': [] // Clear previous random indices
           },
         }
       );
       
       return res.json({ 
         success: true, 
-        message: isRetake ? 'Quiz retake started successfully' : 'Quiz timer updated successfully',
-        isRetake: isRetake
+        message: 'Quiz timer updated successfully'
       });
     } else {
       // Check if existing quiz time is still valid
@@ -1278,15 +1258,10 @@ const quiz_start = async (req, res) => {
       return res.redirect('/student/exams');
     }
 
-    // Allow retake if student scored below 60%
+    // If quiz is completed, don't allow retake
     if (userQuizInfo && userQuizInfo.isEnterd && !userQuizInfo.inProgress) {
-      if (userQuizInfo.canRetake === true) {
-        console.log('Quiz completed with low score - allowing retake');
-        // Allow the student to retake, don't redirect
-      } else {
-        console.log('Quiz already completed with passing score');
-        return res.redirect('/student/exams');
-      }
+      console.log('Quiz already completed');
+      return res.redirect('/student/exams');
     }
 
     // Redirect if quiz is not yet started
@@ -1300,15 +1275,19 @@ const quiz_start = async (req, res) => {
     
     if (currentTime >= endTime) {
       console.log('Quiz time expired, auto-finishing quiz');
-      // Auto-finish the quiz if time is up
+      // Auto-finish the quiz if time is up - reset for retake since no answers were submitted
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
         {
           $set: {
             'quizesInfo.$.inProgress': false,
-            'quizesInfo.$.isEnterd': true,
-            'quizesInfo.$.solvedAt': new Date(),
-            'quizesInfo.$.endTime': 0,
+            'quizesInfo.$.isEnterd': false,
+            'quizesInfo.$.solvedAt': null,
+            'quizesInfo.$.endTime': null,
+            'quizesInfo.$.startTime': null,
+            'quizesInfo.$.answers': [],
+            'quizesInfo.$.Score': 0,
+            'quizesInfo.$.randomQuestionIndices': []
           }
         }
       );
@@ -1571,45 +1550,53 @@ const quizFinish = async (req, res) => {
 
     // Calculate percentage to determine if student can retake
     const percentage = questionsShown > 0 ? Math.round((finalScore / questionsShown) * 100) : 0;
-    const canRetake = percentage < 60; // Allow retake if score is below 60%
     
-    console.log(`Quiz completion: Score ${finalScore}/${questionsShown} (${percentage}%), Can retake: ${canRetake}`);
-
-    // Check if this is a retake (previous attempt existed)
-    const isRetake = userQuizInfo.isEnterd && userQuizInfo.canRetake;
-    
-    // Calculate score difference for retakes
-    let scoreDifference = 0;
-    if (isRetake) {
-      const previousScore = userQuizInfo.Score || 0;
-      scoreDifference = finalScore - previousScore;
-      console.log(`Retake: Previous score ${previousScore}, New score ${finalScore}, Difference: ${scoreDifference}`);
-    }
+    console.log(`Quiz completion: Score ${finalScore}/${questionsShown} (${percentage}%)`);
 
     // Update user's quiz info
-    const updateResult = await User.findOneAndUpdate(
-      { _id: req.userData._id, 'quizesInfo._id': quizObjId },
-      {
-        $set: {
-          'quizesInfo.$.answers': finalAnswers,
-          'quizesInfo.$.Score': finalScore,
-          'quizesInfo.$.inProgress': false,
-          'quizesInfo.$.isEnterd': percentage >= 60, // Only mark as completed if score >= 60%
-          'quizesInfo.$.solvedAt': Date.now(),
-          'quizesInfo.$.endTime': 0,
-          'quizesInfo.$.canRetake': canRetake, // Track retake eligibility
-          'quizesInfo.$.percentage': percentage, // Store percentage for easy access
-          'quizesInfo.$.isRetake': isRetake, // Track if this was a retake
-          'quizesInfo.$.previousScore': isRetake ? userQuizInfo.Score : null, // Store previous score for retakes
+    let updateResult;
+    
+    if (percentage >= 60) {
+      // Student passed - mark as completed
+      updateResult = await User.findOneAndUpdate(
+        { _id: req.userData._id, 'quizesInfo._id': quizObjId },
+        {
+          $set: {
+            'quizesInfo.$.answers': finalAnswers,
+            'quizesInfo.$.Score': finalScore,
+            'quizesInfo.$.inProgress': false,
+            'quizesInfo.$.isEnterd': true,
+            'quizesInfo.$.solvedAt': Date.now(),
+            'quizesInfo.$.endTime': null,
+            'quizesInfo.$.startTime': null
+          },
+          $inc: { 
+            totalScore: finalScore,
+            totalQuestions: questionsShown,
+            examsEnterd: 1
+          },
         },
-        $inc: { 
-          totalScore: isRetake ? scoreDifference : finalScore, // Only add the difference for retakes, full score for first attempt
-          totalQuestions: isRetake ? 0 : questionsShown, // Don't increment total questions for retakes
-          examsEnterd: canRetake ? 0 : (isRetake ? 0 : 1) // Only increment for first-time completion with passing score
+        { new: true }
+      );
+    } else {
+      // Student failed - reset quiz for retake
+      updateResult = await User.findOneAndUpdate(
+        { _id: req.userData._id, 'quizesInfo._id': quizObjId },
+        {
+          $set: {
+            'quizesInfo.$.answers': [],
+            'quizesInfo.$.Score': 0,
+            'quizesInfo.$.inProgress': false,
+            'quizesInfo.$.isEnterd': false,
+            'quizesInfo.$.solvedAt': null,
+            'quizesInfo.$.endTime': null,
+            'quizesInfo.$.startTime': null,
+            'quizesInfo.$.randomQuestionIndices': []
+          }
         },
-      },
-      { new: true }
-    );
+        { new: true }
+      );
+    }
 
     if (updateResult) {
       // Check if there's a corresponding video for the quiz in user's videosInfo
@@ -1655,16 +1642,11 @@ const quizFinish = async (req, res) => {
       
       return res.json({ 
         success: true, 
-        message: isRetake ? 
-          (canRetake ? 'Retake completed - You can retake again for better score' : 'Retake completed successfully!') :
-          (canRetake ? 'Quiz completed - You can retake for better score' : 'Quiz completed successfully'),
+        message: percentage >= 60 ? 'Quiz completed successfully!' : 'Quiz failed - You can retake for better score',
         score: finalScore,
         totalQuestions: questionsShown,
         percentage: percentage,
-        canRetake: canRetake,
-        isRetake: isRetake,
-        previousScore: isRetake ? userQuizInfo.Score : null,
-        scoreImprovement: isRetake ? scoreDifference : 0,
+        canRetake: percentage < 60,
         questionsPool: quiz.Questions.length, // Total questions in the pool
         maxScore: questionsShown, // Maximum possible score for questions shown (1 point each)
         videoUnlocked: percentage >= 60 && quiz.videoWillbeOpen ? true : false
