@@ -79,7 +79,7 @@ router.post("/uploadHW", authenticateUser, studentController.uploadHW);
 router.post("/homework/submit", authenticateUser, studentController.submitHomework);
 
 // ================== Video Tracking Routes ====================== //
-router.post("/video/track-watch", authenticateUser, studentController.trackVideoWatch);
+// Video tracking removed - tracking is now immediate on page entry
 
 // ================== Logout Route ====================== //
 router.get("/logOut", authenticateUser, studentController.logOut);

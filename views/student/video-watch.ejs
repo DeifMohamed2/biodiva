@@ -1427,148 +1427,22 @@
       }
     }
 
-    // Simple progress tracking for iframe videos
+    // Simple progress tracking for iframe videos (removed - no tracking needed)
     function startSimpleProgressTracking() {
-      let timeSpent = 0;
-      let hasTracked10Percent = false;
-      let lastTrackedProgress = 0;
-      
-      // Track time spent on page
-      const timeInterval = setInterval(() => {
-        timeSpent += 10; // Increment by 10 seconds
-        
-        // Estimate video duration (you might want to get this from video metadata)
-        const estimatedDuration = <%= (video.duration || video.lectureDuration || 600) %> * 60; // Convert to seconds
-        
-        const progress = (timeSpent / estimatedDuration) * 100;
-        
-        // Update progress bar
-        const progressBar = document.querySelector('.video-progress-fill');
-        if (progressBar) {
-          progressBar.style.width = Math.min(progress, 100) + '%';
-        }
-        
-        // Track 10% watch - this counts as "watched"
-        if (progress >= 10 && !hasTracked10Percent) {
-          hasTracked10Percent = true;
-          console.log('Video 10% reached - counting as watched');
-          trackVideoWatch(progress);
-          lastTrackedProgress = progress;
-        }
-        
-        // Continue tracking progress after 10% - update every 20% progress
-        if (hasTracked10Percent && progress - lastTrackedProgress >= 20) {
-          console.log(`Video progress updated: ${progress.toFixed(1)}%`);
-          trackVideoWatch(progress);
-          lastTrackedProgress = progress;
-        }
-        
-        // Show rest modal at 50%
-        if (progress >= 50 && progress < 51) {
-          showModal('restModal');
-        }
-        
-        // Auto-complete at 90% (not 80% to give more time)
-        if (progress >= 90) {
-          console.log('Video 90% reached - auto-completing');
-          clearInterval(timeInterval);
-          trackVideoWatch(100);
-        }
-
-        
-      }, 10000); // Check every 10 seconds
-      
-      console.log('Simple progress tracking started', timeInterval);
-      
-      // Clear interval when page unloads
-      window.addEventListener('beforeunload', () => {
-        clearInterval(timeInterval);
-      });
+      console.log('Video tracking disabled - no progress tracking needed');
     }
 
     function startProgressTracking() {
-      if (progressInterval) return; // Already tracking
-      
-      let lastTrackedProgress = 0;
-      
-      progressInterval = setInterval(async () => {
-        if (player) {
-          try {
-            // Get current time and duration from PlayerJS
-            const currentTime = await player.api('currentTime');
-            const duration = await player.api('duration');
-            
-            if (duration && duration > 0) {
-              const progress = (currentTime / duration) * 100;
-              videoProgress = progress;
-              
-              // Update progress bar
-              document.querySelector('.video-progress-fill').style.width = progress + '%';
-              
-              // Track 10% watch - this counts as "watched"
-              if (progress >= 10 && !hasWatched10Percent) {
-                hasWatched10Percent = true;
-                console.log('Video 10% reached - counting as watched');
-                await trackVideoWatch(progress);
-                lastTrackedProgress = progress;
-              }
-              
-              // Continue tracking progress after 10% - update every 20% progress
-              if (hasWatched10Percent && progress - lastTrackedProgress >= 20) {
-                console.log(`Video progress updated: ${progress.toFixed(1)}%`);
-                await trackVideoWatch(progress);
-                lastTrackedProgress = progress;
-              }
-              
-              // Show rest modal at 50%
-              if (progress >= 50 && progress < 51) {
-                showModal('restModal');
-              }
-            }
-          } catch (error) {
-            console.error('Error getting video progress:', error);
-          }
-        }
-      }, 1000);
+      console.log('Video tracking disabled - no progress tracking needed');
     }
 
     function stopProgressTracking() {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-      }
+      console.log('Video tracking disabled - no cleanup needed');
     }
 
-    async function trackVideoWatch(progress) {
-      try {
-        const response = await fetch('/student/video/track-watch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            videoId: '<%= video._id %>',
-            chapterId: '<%= chapterId %>',
-            progress: progress,
-            watched10Percent: progress >= 10
-          })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-          // Only set watchTracked to true when we reach 10% for the first time
-          if (progress >= 10 && !watchTracked) {
-            watchTracked = true;
-            console.log('Video marked as watched (10% threshold reached)');
-          } else {
-            console.log(`Video progress updated: ${progress.toFixed(1)}%`);
-          }
-        } else {
-          console.error('Failed to track video watch:', data.message);
-        }
-      } catch (error) {
-        console.error('Error tracking video watch:', error);
-      }
+    // Video tracking disabled - no progress tracking needed
+    async function trackVideoWatch(progress, forceUpdate = false) {
+      console.log('Video tracking disabled - no progress tracking needed');
     }
 
     // Mobile sidebar toggle
@@ -1594,11 +1468,9 @@
 
     // PlayerJS initialization is now handled by the loadPlayerJS function above
 
-    // Prevent page refresh during video watching
+    // Video tracking disabled - no cleanup needed
     window.addEventListener('beforeunload', function(e) {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
+      console.log('Page unloading - no tracking cleanup needed');
     });
 
     // Update watermark position periodically

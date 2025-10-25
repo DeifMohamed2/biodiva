@@ -727,68 +727,7 @@ userSchema.methods.grantVideoAccessToChapterOwners = async function(videoId, cha
     return this.save();
 };
 
-// Method to track video watch progress (only count as watch after 10%)
-userSchema.methods.trackVideoWatch = async function(videoId, progress, hasWatched10Percent) {
-    console.log('=== trackVideoWatch called ===');
-    console.log('Parameters:', { videoId, progress, hasWatched10Percent });
-    
-    const videoInfo = this.videosInfo.find(v => v._id.toString() === videoId.toString());
-    if (!videoInfo) {
-        console.log('Video info not found');
-        return { success: false, message: 'Video info not found' };
-    }
-    
-    console.log('Video info found:', {
-        currentProgress: videoInfo.watchProgress,
-        hasWatched10Percent: videoInfo.hasWatched10Percent,
-        numberOfWatches: videoInfo.numberOfWatches
-    });
-    
-    const updateFields = {
-        'videosInfo.$.lastWatch': Date.now(),
-        'videosInfo.$.watchProgress': Math.max(videoInfo.watchProgress || 0, progress)
-    };
-    
-    // Set first watch if not already set
-    if (!videoInfo.fristWatch) {
-        updateFields['videosInfo.$.fristWatch'] = Date.now();
-    }
-    
-    // Only increment numberOfWatches if user has watched 10% and hasn't been counted yet
-    if (hasWatched10Percent && !videoInfo.hasWatched10Percent) {
-        updateFields['videosInfo.$.hasWatched10Percent'] = true;
-        updateFields['videosInfo.$.numberOfWatches'] = (videoInfo.numberOfWatches || 0) + 1;
-        
-        // Only decrement attempts if user has attempts left and this is the first 10% watch
-        if (videoInfo.videoAllowedAttemps > 0) {
-            updateFields['videosInfo.$.videoAllowedAttemps'] = Math.max(0, videoInfo.videoAllowedAttemps - 1);
-            console.log('Decrementing attempts by 1');
-        }
-        
-        console.log('Tracking 10% watch - incrementing numberOfWatches');
-    } else if (hasWatched10Percent && videoInfo.hasWatched10Percent) {
-        console.log('Already watched 10% - updating progress only');
-    } else {
-        console.log('Not yet 10% - updating progress only');
-    }
-    
-    // Convert videoId to ObjectId for proper matching
-    const videoObjectId = new mongoose.Types.ObjectId(videoId);
-    
-    const updateResult = await User.findOneAndUpdate(
-        { _id: this._id, 'videosInfo._id': videoObjectId },
-        { $set: updateFields },
-        { new: true }
-    );
-    
-    if (updateResult) {
-        console.log('Video watch tracked successfully');
-        return { success: true, message: 'Video watch tracked successfully' };
-    } else {
-        console.log('Failed to track video watch');
-        return { success: false, message: 'Failed to track video watch' };
-    }
-};
+// Video tracking method removed - tracking is now immediate on page entry
 
 const User = mongoose.model('User', userSchema)
 

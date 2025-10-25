@@ -2451,12 +2451,34 @@ const video_watch_get = async (req, res) => {
       return res.redirect(`/student/chapter/${chapterId}?error=no_attempts`);
     }
     
-    // Note: Video watch tracking is now handled via AJAX call when user reaches 10% progress
-    // This prevents automatic tracking on page load/refresh
+    // Track video watch immediately when user enters the page
+    if (userVideoInfo && userVideoInfo.videoAllowedAttemps > 0) {
+      // Update user's video watch info immediately
+      await User.findOneAndUpdate(
+        { _id: req.userData._id, 'videosInfo._id': videoId },
+        {
+          $set: {
+            'videosInfo.$.lastWatch': Date.now(),
+            'videosInfo.$.hasWatched10Percent': true
+          },
+          $inc: {
+            'videosInfo.$.numberOfWatches': 1,
+            'videosInfo.$.videoAllowedAttemps': -1
+          }
+        }
+      );
+      
+      // Set first watch if not already set
+      if (!userVideoInfo.fristWatch) {
+        await User.findOneAndUpdate(
+          { _id: req.userData._id, 'videosInfo._id': videoId },
+          { $set: { 'videosInfo.$.fristWatch': Date.now() } }
+        );
+      }
+    }
     
-    // Calculate watch progress based on actual viewing progress
-    const watchProgress = userVideoInfo ? 
-      (userVideoInfo.watchProgress || 0) : 0;
+    // Calculate watch progress (always 100% since we count immediately)
+    const watchProgress = 100;
     
     // Get related videos from the same chapter (using legacy structure)
     const relatedVideos = [];
@@ -2495,44 +2517,7 @@ const video_watch_get = async (req, res) => {
   }
 };
 
-// Track video watch progress (only count as watch after 10%)
-const trackVideoWatch = async (req, res) => {
-  try {
-    const { videoId, chapterId, progress, watched10Percent } = req.body;
-    
-    console.log('=== trackVideoWatch endpoint called ===');
-    console.log('Request body:', { videoId, chapterId, progress, watched10Percent });
-    
-    if (!videoId || !chapterId) {
-      return res.status(400).json({ success: false, message: 'Missing required parameters' });
-    }
-    
-    // Find the user
-    const user = await User.findById(req.userData._id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-    
-    // Check if user has access to the video
-    const hasVideoAccess = user.hasVideoAccess(videoId);
-    if (!hasVideoAccess) {
-      return res.status(403).json({ success: false, message: 'No access to this video' });
-    }
-    
-    // Track the video watch using the new method
-    const result = await user.trackVideoWatch(videoId, progress, watched10Percent);
-    
-    if (result.success) {
-      res.json({ success: true, message: result.message });
-    } else {
-      res.status(400).json({ success: false, message: result.message });
-    }
-    
-  } catch (error) {
-    console.error('Error in trackVideoWatch:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
+// Video tracking endpoint removed - tracking is now immediate on page entry
 
 // ==================  Chapter Quizzes  ====================== //
 
@@ -2615,7 +2600,6 @@ module.exports = {
   chapter_quizzes_get,
   chapter_pdfs_get,
   video_watch_get,
-  trackVideoWatch,
   
   // Legacy functions (to be phased out)
   lecture_get,
