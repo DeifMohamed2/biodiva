@@ -12,7 +12,7 @@ const CodeSchema = new Schema({
     codeType: {
         type: String,
         required: true,
-        enum: ['Chapter', 'Video', 'Quiz', 'PDF', 'Exam', 'GeneralChapter', 'GeneralVideo', 'GeneralQuiz'],
+        enum: ['Chapter', 'Video', 'Quiz', 'PDF', 'Exam', 'GeneralChapter', 'GeneralVideo', 'GeneralQuiz', 'GeneralPDF'],
         default: 'Chapter'
     },
     // For general codes - allows access to any content of specified type within the grade
@@ -144,6 +144,10 @@ CodeSchema.methods.canBeUsedBy = function(user) {
         
         if (this.codeType === 'Quiz' && user.examsPaid && user.examsPaid.includes(this.contentId.toString())) {
             return { valid: false, reason: 'You already have access to this quiz' };
+        }
+        
+        if (this.codeType === 'PDF' && user.PDFsPaid && user.PDFsPaid.some(pdf => pdf.toString() === this.contentId.toString())) {
+            return { valid: false, reason: 'You already have access to this PDF' };
         }
     }
     

@@ -468,6 +468,7 @@
                     <option value="GeneralChapter">فصل عام</option>
                     <option value="GeneralVideo">فيديو عام</option>
                     <option value="GeneralQuiz">اختبار عام</option>
+                    <option value="GeneralPDF">PDF عام</option>
                   </select>
                 </div>
                 
@@ -549,6 +550,7 @@
                   <option value="GeneralChapter">فصل عام</option>
                   <option value="GeneralVideo">فيديو عام</option>
                   <option value="GeneralQuiz">اختبار عام</option>
+                  <option value="GeneralPDF">PDF عام</option>
                 </select>
               </div>
               
@@ -670,6 +672,8 @@
                           <span class="code-badge success">فيديو عام</span>
                               <% } else if (code.codeType === 'GeneralQuiz') { %>
                           <span class="code-badge warning">اختبار عام</span>
+                              <% } else if (code.codeType === 'GeneralPDF') { %>
+                          <span class="code-badge info">PDF عام</span>
                         <% } else { %>
                           <span class="code-badge info"><%= code.codeType %></span>
                               <% } %>
@@ -928,7 +932,8 @@
         'PDF': 'PDF',
         'GeneralChapter': 'فصل عام',
         'GeneralVideo': 'فيديو عام',
-        'GeneralQuiz': 'اختبار عام'
+        'GeneralQuiz': 'اختبار عام',
+        'GeneralPDF': 'PDF عام'
       };
       return typeNames[codeType] || codeType;
     }

@@ -22,66 +22,8 @@
 </head>
 <body>
   <div class="main-container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/student/dash" class="sidebar-logo">
-          <i class="fas fa-graduation-cap"></i>
-          منصة Biodiva
-        </a>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <div class="nav-item">
-          <a href="/student/dash" class="nav-link active">
-            <i class="material-icons-outlined nav-icon">dashboard</i>
-            <span>لوحة التحكم</span>
-          </a>
-        </div>
-        
-                 <div class="nav-item">
-           <a href="/student/chapters" class="nav-link">
-             <i class="material-icons-outlined nav-icon">library_books</i>
-             <span>الأبواب التعليمية</span>
-           </a>
-         </div>
-        
-        <div class="nav-item">
-          <a href="/student/exams" class="nav-link">
-            <i class="material-icons-outlined nav-icon">quiz</i>
-            <span>الامتحانات</span>
-          </a>
-        </div>
-        
-        <div class="nav-item">
-          <a href="/student/PDFs" class="nav-link">
-            <i class="material-icons-outlined nav-icon">description</i>
-            <span>المواد التعليمية</span>
-          </a>
-        </div>
-        
-        <div class="nav-item">
-          <a href="/student/ranking" class="nav-link">
-            <i class="material-icons-outlined nav-icon">leaderboard</i>
-            <span>التصنيف</span>
-          </a>
-        </div>
-        
-        <div class="nav-item">
-          <a href="/student/settings" class="nav-link">
-            <i class="material-icons-outlined nav-icon">settings</i>
-            <span>الإعدادات</span>
-          </a>
-        </div>
-        
-        <div class="nav-item">
-          <a href="/student/logOut" class="nav-link">
-            <i class="material-icons-outlined nav-icon">logout</i>
-            <span>تسجيل الخروج</span>
-          </a>
-        </div>
-      </nav>
-    </aside>
+    <!-- Include Sidebar -->
+    <%- include('partials/aside', { path: '/dash' }) %>
 
     <!-- Main Content -->
     <main class="main-content">

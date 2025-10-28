@@ -48,6 +48,18 @@ router.get("/quizzes/:quizId", authenticateTeacherRoute, teacherController.quiz_
 router.get("/quizzes/:quizId/edit", authenticateTeacherRoute, teacherController.quiz_edit_get);
 router.post("/quizzes/:quizId/edit", authenticateTeacherRoute, teacherController.quiz_edit_post);
 router.delete("/quizzes/:quizId", authenticateTeacherRoute, teacherController.quiz_delete);
+
+// ================== PDF Management Routes ====================== //
+router.get("/pdfs", authenticateTeacherRoute, teacherController.pdfs_get);
+router.get("/pdf/create", authenticateTeacherRoute,teacherController.pdf_create_get);
+router.post("/pdf/create", teacherController.pdf_create_post);
+router.get("/pdf/:pdfId/edit", authenticateTeacherRoute, teacherController.pdf_edit_get);
+router.post("/pdf/:pdfId/edit", authenticateTeacherRoute, teacherController.pdf_edit_post);
+router.delete("/pdf/:pdfId/delete", authenticateTeacherRoute, teacherController.pdf_delete);
+router.get("/pdf/:pdfId/analytics", authenticateTeacherRoute, teacherController.pdf_analytics);
+router.post("/pdf/bulk-operations", authenticateTeacherRoute, teacherController.pdf_bulk_operations);
+router.get("/chapters/:chapterId/pdf/create", authenticateTeacherRoute, teacherController.chapter_pdf_create_get);
+router.post("/chapters/:chapterId/pdf/create", authenticateTeacherRoute, teacherController.chapter_pdf_create_post);
 router.get("/quizzes/:quizId/results", authenticateTeacherRoute, teacherController.quiz_results_get);
 router.get("/quizzes/:quizId/export", authenticateTeacherRoute, teacherController.quiz_export);
 router.post("/quizzes/:quizId/reopen/:studentId", authenticateTeacherRoute, teacherController.quiz_reopen_for_student);

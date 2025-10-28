@@ -1096,14 +1096,607 @@ const video_delete = async (req, res) => {
 };
 
 const video_analytics = (req, res) => res.send('Feature coming soon');
-const pdfs_get = (req, res) => res.send('Feature coming soon');
-const pdf_create_get = (req, res) => res.send('Feature coming soon');
-const pdf_create_post = (req, res) => res.send('Feature coming soon');
-const pdf_edit_get = (req, res) => res.send('Feature coming soon');
-const pdf_edit_post = (req, res) => res.send('Feature coming soon');
-const pdf_delete = (req, res) => res.send('Feature coming soon');
-const chapter_pdf_create_get = (req, res) => res.send('Feature coming soon');
-const chapter_pdf_create_post = (req, res) => res.send('Feature coming soon');
+// ================== PDF Management ====================== //
+
+const pdfs_get = async (req, res) => {
+  try {
+    const pdfs = await PDFs.find({}).sort({ createdAt: -1 });
+    
+    // Get statistics
+    const totalPDFs = pdfs.length;
+    const paidPDFs = pdfs.filter(pdf => pdf.pdfStatus === 'Paid').length;
+    const freePDFs = totalPDFs - paidPDFs;
+    const googleDrivePDFs = pdfs.filter(pdf => pdf.googleDriveFileId).length;
+    
+    res.render('teacher/pdfs', {
+      title: 'إدارة الملفات PDF',
+      path: req.path,
+      pdfs: pdfs,
+      stats: {
+        totalPDFs,
+        paidPDFs,
+        freePDFs,
+        googleDrivePDFs
+      }
+    });
+  } catch (error) {
+    console.error('PDFs get error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+const pdf_create_get = async (req, res) => {
+  try {
+    // Get all chapters for dropdown
+    const chapters = await Chapter.find({ isActive: true }).select('chapterName _id chapterGrade');
+    
+    res.render('teacher/pdf-create', {
+      title: 'إضافة ملف PDF جديد',
+      path: req.path,
+      chapters: chapters
+    });
+  } catch (error) {
+    console.error('PDF create get error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+const pdf_create_post = async (req, res) => {
+  try {
+    const {
+      pdfName,
+      pdfLink,
+      googleDriveFileId,
+      pdfPhoto,
+      pdfStatus,
+      pdfPrice,
+      pdfGrade,
+      chapterId,
+      allowDownload,
+      allowPrint,
+      allowCopy,
+      maxViews,
+      viewTimeLimit
+    } = req.body;
+
+    // Validate required fields
+    if (!pdfName || !pdfGrade) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'اسم الملف والصف مطلوبان' 
+      });
+    }
+
+    // Validate that either pdfLink or googleDriveFileId is provided
+    if (!pdfLink && !googleDriveFileId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب توفير رابط الملف أو معرف ملف Google Drive' 
+      });
+    }
+
+    // Extract Google Drive file ID from URL if provided
+    let extractedFileId = googleDriveFileId;
+    if (pdfLink && pdfLink.includes('drive.google.com')) {
+      const match = pdfLink.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) {
+        extractedFileId = match[1];
+      }
+    }
+
+    // Create PDF document
+    const pdfData = {
+      pdfName: pdfName.trim(),
+      pdfGrade: pdfGrade,
+      pdfStatus: pdfStatus || 'Free',
+      pdfPhoto: pdfPhoto || '',
+      allowDownload: allowDownload === 'on',
+      allowPrint: allowPrint === 'on',
+      allowCopy: allowCopy === 'on',
+      maxViews: parseInt(maxViews) || -1,
+      viewTimeLimit: parseInt(viewTimeLimit) || -1
+    };
+
+    // Add optional fields
+    if (pdfLink && !extractedFileId) {
+      pdfData.pdfLink = pdfLink;
+    }
+    
+    if (extractedFileId) {
+      pdfData.googleDriveFileId = extractedFileId;
+      pdfData.googleDriveEmbedUrl = `https://drive.google.com/file/d/${extractedFileId}/preview`;
+    }
+    
+    if (pdfPrice) {
+      pdfData.pdfPrice = pdfPrice;
+    }
+    
+    if (chapterId) {
+      pdfData.chapterId = chapterId;
+    }
+
+    const newPDF = new PDFs(pdfData);
+    await newPDF.save();
+
+    console.log('PDF created successfully:', newPDF._id);
+    
+    res.json({ 
+      success: true, 
+      message: 'تم إنشاء الملف بنجاح',
+      pdfId: newPDF._id
+    });
+
+  } catch (error) {
+    console.error('PDF create post error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في إنشاء الملف' 
+    });
+  }
+};
+
+const pdf_edit_get = async (req, res) => {
+  try {
+    const pdfId = req.params.pdfId;
+    const pdf = await PDFs.findById(pdfId);
+    
+    if (!pdf) {
+      return res.status(404).send('PDF not found');
+    }
+
+    // Get all chapters for dropdown
+    const chapters = await Chapter.find({ isActive: true }).select('chapterName _id chapterGrade');
+    
+    res.render('teacher/pdf-edit', {
+      title: 'تعديل ملف PDF',
+      path: req.path,
+      pdf: pdf,
+      chapters: chapters
+    });
+  } catch (error) {
+    console.error('PDF edit get error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+const pdf_edit_post = async (req, res) => {
+  try {
+    const pdfId = req.params.pdfId;
+    const {
+      pdfName,
+      pdfLink,
+      googleDriveFileId,
+      pdfPhoto,
+      pdfStatus,
+      pdfPrice,
+      pdfGrade,
+      chapterId,
+      allowDownload,
+      allowPrint,
+      allowCopy,
+      maxViews,
+      viewTimeLimit
+    } = req.body;
+
+    const pdf = await PDFs.findById(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'الملف غير موجود' 
+      });
+    }
+
+    // Validate required fields
+    if (!pdfName || !pdfGrade) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'اسم الملف والصف مطلوبان' 
+      });
+    }
+
+    // Extract Google Drive file ID from URL if provided
+    let extractedFileId = googleDriveFileId;
+    if (pdfLink && pdfLink.includes('drive.google.com')) {
+      const match = pdfLink.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) {
+        extractedFileId = match[1];
+      }
+    }
+
+    // Update PDF data
+    const updateData = {
+      pdfName: pdfName.trim(),
+      pdfGrade: pdfGrade,
+      pdfStatus: pdfStatus || 'Free',
+      pdfPhoto: pdfPhoto || '',
+      allowDownload: allowDownload === 'on',
+      allowPrint: allowPrint === 'on',
+      allowCopy: allowCopy === 'on',
+      maxViews: parseInt(maxViews) || -1,
+      viewTimeLimit: parseInt(viewTimeLimit) || -1
+    };
+
+    // Update optional fields
+    if (pdfLink && !extractedFileId) {
+      updateData.pdfLink = pdfLink;
+      updateData.googleDriveFileId = undefined;
+      updateData.googleDriveEmbedUrl = undefined;
+    }
+    
+    if (extractedFileId) {
+      updateData.googleDriveFileId = extractedFileId;
+      updateData.googleDriveEmbedUrl = `https://drive.google.com/file/d/${extractedFileId}/preview`;
+      updateData.pdfLink = undefined;
+    }
+    
+    if (pdfPrice) {
+      updateData.pdfPrice = pdfPrice;
+    } else {
+      updateData.pdfPrice = undefined;
+    }
+    
+    if (chapterId) {
+      updateData.chapterId = chapterId;
+    } else {
+      updateData.chapterId = undefined;
+    }
+
+    await PDFs.findByIdAndUpdate(pdfId, updateData);
+
+    console.log('PDF updated successfully:', pdfId);
+    
+    res.json({ 
+      success: true, 
+      message: 'تم تحديث الملف بنجاح'
+    });
+
+  } catch (error) {
+    console.error('PDF edit post error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في تحديث الملف' 
+    });
+  }
+};
+
+const pdf_delete = async (req, res) => {
+  try {
+    const pdfId = req.params.pdfId;
+    
+    const pdf = await PDFs.findById(pdfId);
+    if (!pdf) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'الملف غير موجود' 
+      });
+    }
+
+    // Remove PDF from all users who have purchased it
+    await User.updateMany(
+      { PDFsPaid: pdfId },
+      { $pull: { PDFsPaid: pdfId } }
+    );
+
+    // Delete the PDF
+    await PDFs.findByIdAndDelete(pdfId);
+
+    console.log('PDF deleted successfully:', pdfId);
+    
+    res.json({ 
+      success: true, 
+      message: 'تم حذف الملف بنجاح'
+    });
+
+  } catch (error) {
+    console.error('PDF delete error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في حذف الملف' 
+    });
+  }
+};
+
+const chapter_pdf_create_get = async (req, res) => {
+  try {
+    const chapterId = req.params.chapterId;
+    const chapter = await Chapter.findById(chapterId);
+    
+    if (!chapter) {
+      return res.status(404).send('Chapter not found');
+    }
+    
+    res.render('teacher/chapter-pdf-create', {
+      title: `إضافة ملف PDF للفصل - ${chapter.chapterName}`,
+      path: req.path,
+      chapter: chapter
+    });
+  } catch (error) {
+    console.error('Chapter PDF create get error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+const chapter_pdf_create_post = async (req, res) => {
+  try {
+    const chapterId = req.params.chapterId;
+    const {
+      pdfName,
+      pdfLink,
+      googleDriveFileId,
+      pdfPhoto,
+      pdfStatus,
+      pdfPrice,
+      allowDownload,
+      allowPrint,
+      allowCopy,
+      maxViews,
+      viewTimeLimit
+    } = req.body;
+
+    const chapter = await Chapter.findById(chapterId);
+    if (!chapter) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'الفصل غير موجود' 
+      });
+    }
+
+    // Validate required fields
+    if (!pdfName) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'اسم الملف مطلوب' 
+      });
+    }
+
+    // Extract Google Drive file ID from URL if provided
+    let extractedFileId = googleDriveFileId;
+    if (pdfLink && pdfLink.includes('drive.google.com')) {
+      const match = pdfLink.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) {
+        extractedFileId = match[1];
+      }
+    }
+
+    // Create PDF document
+    const pdfData = {
+      pdfName: pdfName.trim(),
+      pdfGrade: chapter.chapterGrade,
+      pdfStatus: pdfStatus || 'Free',
+      pdfPhoto: pdfPhoto || '',
+      chapterId: chapterId,
+      allowDownload: allowDownload === 'on',
+      allowPrint: allowPrint === 'on',
+      allowCopy: allowCopy === 'on',
+      maxViews: parseInt(maxViews) || -1,
+      viewTimeLimit: parseInt(viewTimeLimit) || -1
+    };
+
+    // Add optional fields
+    if (pdfLink && !extractedFileId) {
+      pdfData.pdfLink = pdfLink;
+    }
+    
+    if (extractedFileId) {
+      pdfData.googleDriveFileId = extractedFileId;
+      pdfData.googleDriveEmbedUrl = `https://drive.google.com/file/d/${extractedFileId}/preview`;
+    }
+    
+    if (pdfPrice) {
+      pdfData.pdfPrice = pdfPrice;
+    }
+
+    const newPDF = new PDFs(pdfData);
+    await newPDF.save();
+
+    console.log('Chapter PDF created successfully:', newPDF._id);
+    
+    res.json({ 
+      success: true, 
+      message: 'تم إنشاء ملف PDF للفصل بنجاح',
+      pdfId: newPDF._id
+    });
+
+  } catch (error) {
+    console.error('Chapter PDF create post error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في إنشاء ملف PDF للفصل' 
+    });
+  }
+};
+
+// PDF Analytics endpoint
+const pdf_analytics = async (req, res) => {
+  try {
+    const pdfId = req.params.pdfId;
+    const pdf = await PDFs.findById(pdfId);
+    
+    if (!pdf) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'الملف غير موجود' 
+      });
+    }
+
+    // Get users who have accessed this PDF
+    const usersWithAccess = await User.find({
+      'pdfAccess.pdfId': pdfId
+    }).select('Username Code pdfAccess');
+
+    // Calculate analytics
+    const analytics = {
+      pdfInfo: {
+        name: pdf.pdfName,
+        grade: pdf.pdfGrade,
+        status: pdf.pdfStatus,
+        totalViews: pdf.totalViews,
+        createdAt: pdf.createdAt
+      },
+      accessStats: {
+        totalUsers: usersWithAccess.length,
+        totalAccesses: 0,
+        averageViewsPerUser: 0,
+        mostActiveUsers: []
+      },
+      recentActivity: [],
+      gradeDistribution: {},
+      timeDistribution: {
+        today: 0,
+        thisWeek: 0,
+        thisMonth: 0
+      }
+    };
+
+    // Process user access data
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    usersWithAccess.forEach(user => {
+      const pdfAccess = user.pdfAccess.find(access => access.pdfId.toString() === pdfId);
+      if (pdfAccess) {
+        analytics.accessStats.totalAccesses += pdfAccess.viewCount;
+        
+        // Track grade distribution
+        const grade = user.Grade || 'غير محدد';
+        analytics.gradeDistribution[grade] = (analytics.gradeDistribution[grade] || 0) + 1;
+        
+        // Track time distribution
+        if (pdfAccess.lastAccess >= today) {
+          analytics.timeDistribution.today++;
+        }
+        if (pdfAccess.lastAccess >= weekAgo) {
+          analytics.timeDistribution.thisWeek++;
+        }
+        if (pdfAccess.lastAccess >= monthAgo) {
+          analytics.timeDistribution.thisMonth++;
+        }
+        
+        // Add to recent activity
+        analytics.recentActivity.push({
+          userName: user.Username,
+          userCode: user.Code,
+          lastAccess: pdfAccess.lastAccess,
+          viewCount: pdfAccess.viewCount,
+          firstAccess: pdfAccess.firstAccess
+        });
+      }
+    });
+
+    // Calculate average views per user
+    if (analytics.accessStats.totalUsers > 0) {
+      analytics.accessStats.averageViewsPerUser = 
+        Math.round((analytics.accessStats.totalAccesses / analytics.accessStats.totalUsers) * 100) / 100;
+    }
+
+    // Sort recent activity by last access
+    analytics.recentActivity.sort((a, b) => new Date(b.lastAccess) - new Date(a.lastAccess));
+
+    // Get most active users (top 10)
+    analytics.accessStats.mostActiveUsers = analytics.recentActivity
+      .sort((a, b) => b.viewCount - a.viewCount)
+      .slice(0, 10);
+
+    res.json({
+      success: true,
+      analytics: analytics
+    });
+
+  } catch (error) {
+    console.error('PDF analytics error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في تحليل البيانات' 
+    });
+  }
+};
+
+// PDF bulk operations
+const pdf_bulk_operations = async (req, res) => {
+  try {
+    const { action, pdfIds } = req.body;
+
+    if (!action || !pdfIds || !Array.isArray(pdfIds)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'عملية غير صحيحة' 
+      });
+    }
+
+    let result = { success: true, message: '', affected: 0 };
+
+    switch (action) {
+      case 'delete':
+        // Delete multiple PDFs
+        await PDFs.deleteMany({ _id: { $in: pdfIds } });
+        await User.updateMany(
+          { PDFsPaid: { $in: pdfIds } },
+          { $pull: { PDFsPaid: { $in: pdfIds } } }
+        );
+        result.message = `تم حذف ${pdfIds.length} ملف بنجاح`;
+        result.affected = pdfIds.length;
+        break;
+
+      case 'activate':
+        // Activate multiple PDFs (set status to Free)
+        await PDFs.updateMany(
+          { _id: { $in: pdfIds } },
+          { $set: { pdfStatus: 'Free' } }
+        );
+        result.message = `تم تفعيل ${pdfIds.length} ملف بنجاح`;
+        result.affected = pdfIds.length;
+        break;
+
+      case 'deactivate':
+        // Deactivate multiple PDFs (set status to Paid)
+        await PDFs.updateMany(
+          { _id: { $in: pdfIds } },
+          { $set: { pdfStatus: 'Paid' } }
+        );
+        result.message = `تم إلغاء تفعيل ${pdfIds.length} ملف بنجاح`;
+        result.affected = pdfIds.length;
+        break;
+
+      case 'enable_download':
+        // Enable download for multiple PDFs
+        await PDFs.updateMany(
+          { _id: { $in: pdfIds } },
+          { $set: { allowDownload: true } }
+        );
+        result.message = `تم تفعيل التحميل لـ ${pdfIds.length} ملف بنجاح`;
+        result.affected = pdfIds.length;
+        break;
+
+      case 'disable_download':
+        // Disable download for multiple PDFs
+        await PDFs.updateMany(
+          { _id: { $in: pdfIds } },
+          { $set: { allowDownload: false } }
+        );
+        result.message = `تم إلغاء تفعيل التحميل لـ ${pdfIds.length} ملف بنجاح`;
+        result.affected = pdfIds.length;
+        break;
+
+      default:
+        return res.status(400).json({ 
+          success: false, 
+          message: 'عملية غير مدعومة' 
+        });
+    }
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('PDF bulk operations error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في تنفيذ العملية' 
+    });
+  }
+};
+
 // ==================  Attendance Management  ====================== //
 
 const attendance_get = async (req, res) => {
@@ -3064,7 +3657,7 @@ const codes_create_post = async (req, res) => {
         Code: code,
         codeType: codeType,
         codeGrade: grade,
-        isGeneral: isGeneral === 'true',
+        isGeneralCode: isGeneral === 'true',
         isAllGrades: grade === 'AllGrades', // Add flag for all grades
         chapterId: chapterId || null,
         contentId: contentId || null,
@@ -3237,7 +3830,7 @@ const codes_upload_excel = async (req, res) => {
       Code: code,
       codeType: codeType,
       codeGrade: grade,
-      isGeneral: isGeneral === 'true',
+      isGeneralCode: isGeneral === 'true',
       isAllGrades: grade === 'AllGrades',
       chapterId: chapterId || null,
       contentId: contentId || null,
@@ -3610,7 +4203,7 @@ const generate_general_codes = async (req, res) => {
   try {
     const { codeType, grade, codesCount = 10 } = req.body;
     
-    if (!codeType || !grade || !['GeneralChapter', 'GeneralVideo', 'GeneralQuiz'].includes(codeType)) {
+    if (!codeType || !grade || !['GeneralChapter', 'GeneralVideo', 'GeneralQuiz', 'GeneralPDF'].includes(codeType)) {
       return res.status(400).json({ success: false, message: 'Invalid parameters' });
     }
     
@@ -3877,7 +4470,7 @@ const quiz_detail_get = async (req, res) => {
   try {
     const quizId = req.params.quizId;
     const page = parseInt(req.query.page) || 1;
-    const limit = 100; // Limit to 100 students per page
+    const limit = 30; // Limit to 100 students per page
     const skip = (page - 1) * limit;
     const search = (req.query.search || '').trim();
 
@@ -3932,6 +4525,11 @@ const quiz_detail_get = async (req, res) => {
       pipeline.push({ $match: { $or: orConditions } });
     }
 
+    // Drop the large quizesInfo array to lower sort memory footprint
+    pipeline.push(
+      { $unset: 'quizesInfo' }
+    );
+
     pipeline.push(
       {
         $addFields: {
@@ -3944,6 +4542,21 @@ const quiz_detail_get = async (req, res) => {
               new Date(0)
             ]
           }
+        }
+      },
+      // Minimize document size before sorting
+      {
+        $project: {
+          Username: 1,
+          Code: 1,
+          Grade: 1,
+          phone: 1,
+          parentPhone: 1,
+          totalScore: 1,
+          matchedQuizInfo: 1,
+          attempted: 1,
+          inProgress: 1,
+          endTimeVal: 1
         }
       },
       { $sort: { attempted: -1, endTimeVal: -1, _id: 1 } },
@@ -3961,7 +4574,7 @@ const quiz_detail_get = async (req, res) => {
       }
     );
 
-    const aggResult = await User.aggregate(pipeline);
+    const aggResult = await User.aggregate(pipeline).allowDiskUse(true);
     const totalStudents = aggResult[0]?.total || 0;
     const dataUsers = aggResult[0]?.data || [];
 
@@ -5275,6 +5888,8 @@ module.exports = {
   pdf_delete,
   chapter_pdf_create_get,
   chapter_pdf_create_post,
+  pdf_analytics,
+  pdf_bulk_operations,
   
   // Student Management
   students_get,
