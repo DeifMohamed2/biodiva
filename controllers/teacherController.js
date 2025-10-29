@@ -2387,7 +2387,17 @@ const sendTextMessages = async (req, res) => {
 
       try {
         const XLSX = require('xlsx');
-        const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
+        const fs = require('fs');
+        // Support both in-memory and temp-file uploads
+        const excelBuffer = (excelFile && excelFile.data && Buffer.isBuffer(excelFile.data))
+          ? excelFile.data
+          : (excelFile && excelFile.tempFilePath ? fs.readFileSync(excelFile.tempFilePath) : null);
+
+        if (!excelBuffer) {
+          return res.status(400).json({ success: false, message: 'لم يتم استلام محتوى ملف Excel' });
+        }
+
+        const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
@@ -2602,7 +2612,16 @@ const sendImageMessages = async (req, res) => {
 
       try {
         const XLSX = require('xlsx');
-        const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
+        const fs = require('fs');
+        const excelBuffer = (excelFile && excelFile.data && Buffer.isBuffer(excelFile.data))
+          ? excelFile.data
+          : (excelFile && excelFile.tempFilePath ? fs.readFileSync(excelFile.tempFilePath) : null);
+
+        if (!excelBuffer) {
+          return res.status(400).json({ success: false, message: 'لم يتم استلام محتوى ملف Excel' });
+        }
+
+        const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });

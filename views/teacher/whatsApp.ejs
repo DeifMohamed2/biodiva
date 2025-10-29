@@ -1092,8 +1092,9 @@
         // Update grade column requirements based on recipient type
         function updateGradeColumnRequirements(recipientType) {
             const phoneColumnLabel = document.querySelector('label[for="gradeParentPhoneColumn"]');
+            if (!phoneColumnLabel) return; // Guard if element not on current tab
             
-            // Reset all labels
+            // Reset label
             phoneColumnLabel.innerHTML = 'اسم عمود هاتف ولي الأمر <span class="text-danger">*</span>';
             
             // Update based on recipient type
