@@ -2366,93 +2366,97 @@ const sendTextMessages = async (req, res) => {
       }
 
     } else if (targetType === 'excel') {
-      // Handle Excel file upload
+      // Support two modes: (1) client-parsed JSON (same as grades), (2) file upload fallback
       const excelFileField = req.files && (req.files.excelFile || req.files.textExcelFile);
       const excelFile = Array.isArray(excelFileField) ? excelFileField[0] : excelFileField;
-      const { phoneColumn, studentNameColumn, parentPhoneColumn } = req.body;
+      const { phoneColumn, studentNameColumn, parentPhoneColumn, dataToSend } = req.body;
       
-      if (!excelFile) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'يرجى رفع ملف Excel' 
-        });
-      }
-
       if (!phoneColumn) {
         return res.status(400).json({ 
           success: false, 
           message: 'يرجى إدخال اسم عمود رقم الهاتف' 
         });
       }
+      
+      // Path A: Client sent JSON array (preferred, consistent with grades)
+      if (dataToSend) {
+        try {
+          const rows = Array.isArray(dataToSend) ? dataToSend : JSON.parse(dataToSend);
+          const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
+          const pCol = normalize(phoneColumn);
+          const sCol = studentNameColumn ? normalize(studentNameColumn) : null;
+          const ppCol = parentPhoneColumn ? normalize(parentPhoneColumn) : null;
 
-      try {
-        const XLSX = require('xlsx');
-        const fs = require('fs');
-        // Support both in-memory and temp-file uploads
-        const excelBuffer = (excelFile && excelFile.data && Buffer.isBuffer(excelFile.data))
-          ? excelFile.data
-          : (excelFile && excelFile.tempFilePath ? fs.readFileSync(excelFile.tempFilePath) : null);
+          for (const row of rows) {
+            const normalizedRow = Object.keys(row).reduce((acc, key) => {
+              acc[normalize(key)] = row[key];
+              return acc;
+            }, {});
 
-        if (!excelBuffer) {
-          return res.status(400).json({ success: false, message: 'لم يتم استلام محتوى ملف Excel' });
-        }
+            const phone = normalizedRow[pCol];
+            const studentName = sCol ? normalizedRow[sCol] : null;
+            const parentPhone = ppCol ? normalizedRow[ppCol] : null;
 
-        const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
-
-        const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
-        const normalizedPhoneCol = normalize(phoneColumn);
-        const normalizedStudentNameCol = studentNameColumn ? normalize(studentNameColumn) : null;
-        const normalizedParentPhoneCol = parentPhoneColumn ? normalize(parentPhoneColumn) : null;
-
-        for (const row of data) {
-          // Normalize row keys (trim + lowercase) to avoid header whitespace/case issues
-          const normalizedRow = Object.keys(row).reduce((acc, key) => {
-            acc[normalize(key)] = row[key];
-            return acc;
-          }, {});
-
-          const phone = normalizedRow[normalizedPhoneCol];
-          const studentName = normalizedStudentNameCol ? normalizedRow[normalizedStudentNameCol] : null;
-          const parentPhone = normalizedParentPhoneCol ? normalizedRow[normalizedParentPhoneCol] : null;
-
-          if (recipientType === 'students' && phone) {
-            targets.push({
-              phone: phone.toString(),
-              name: studentName || 'الطالب',
-              type: 'student'
-            });
-          } else if (recipientType === 'parents' && parentPhone) {
-            targets.push({
-              phone: parentPhone.toString(),
-              name: studentName || 'ولي الأمر',
-              type: 'parent'
-            });
-          } else if (recipientType === 'both') {
-            if (phone) {
-              targets.push({
-                phone: phone.toString(),
-                name: studentName || 'الطالب',
-                type: 'student'
-              });
-            }
-            if (parentPhone) {
-              targets.push({
-                phone: parentPhone.toString(),
-                name: studentName || 'ولي الأمر',
-                type: 'parent'
-              });
+            if (recipientType === 'students' && phone) {
+              targets.push({ phone: String(phone), name: studentName || 'الطالب', type: 'student' });
+            } else if (recipientType === 'parents' && parentPhone) {
+              targets.push({ phone: String(parentPhone), name: studentName || 'ولي الأمر', type: 'parent' });
+            } else if (recipientType === 'both') {
+              if (phone) targets.push({ phone: String(phone), name: studentName || 'الطالب', type: 'student' });
+              if (parentPhone) targets.push({ phone: String(parentPhone), name: studentName || 'ولي الأمر', type: 'parent' });
             }
           }
+        } catch (e) {
+          console.error('Client JSON parsing error:', e);
+          return res.status(400).json({ success: false, message: 'بيانات Excel غير صالحة' });
         }
-      } catch (excelError) {
-        console.error('Excel parsing error:', excelError);
-        return res.status(400).json({ 
-          success: false, 
-          message: 'خطأ في قراءة ملف Excel. تحقق من تنسيق الملف وأسماء الأعمدة.' 
-        });
+      } else {
+        // Path B: Fallback to server-side file parsing
+        if (!excelFile) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'يرجى رفع ملف Excel' 
+          });
+        }
+
+        try {
+          const XLSX = require('xlsx');
+          const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+
+          const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
+          const pCol = normalize(phoneColumn);
+          const sCol = studentNameColumn ? normalize(studentNameColumn) : null;
+          const ppCol = parentPhoneColumn ? normalize(parentPhoneColumn) : null;
+
+          for (const row of data) {
+            const normalizedRow = Object.keys(row).reduce((acc, key) => {
+              acc[normalize(key)] = row[key];
+              return acc;
+            }, {});
+
+            const phone = normalizedRow[pCol];
+            const studentName = sCol ? normalizedRow[sCol] : null;
+            const parentPhone = ppCol ? normalizedRow[ppCol] : null;
+
+            if (recipientType === 'students' && phone) {
+              targets.push({ phone: String(phone), name: studentName || 'الطالب', type: 'student' });
+            } else if (recipientType === 'parents' && parentPhone) {
+              targets.push({ phone: String(parentPhone), name: studentName || 'ولي الأمر', type: 'parent' });
+            } else if (recipientType === 'both') {
+              if (phone) targets.push({ phone: String(phone), name: studentName || 'الطالب', type: 'student' });
+              if (parentPhone) targets.push({ phone: String(parentPhone), name: studentName || 'ولي الأمر', type: 'parent' });
+            }
+          }
+        } catch (excelError) {
+          console.error('Excel parsing error:', excelError);
+          return res.status(400).json({ 
+            success: false, 
+            message: 'خطأ في قراءة ملف Excel. تحقق من تنسيق الملف وأسماء الأعمدة.' 
+          });
+        }
       }
     }
 
@@ -2612,16 +2616,7 @@ const sendImageMessages = async (req, res) => {
 
       try {
         const XLSX = require('xlsx');
-        const fs = require('fs');
-        const excelBuffer = (excelFile && excelFile.data && Buffer.isBuffer(excelFile.data))
-          ? excelFile.data
-          : (excelFile && excelFile.tempFilePath ? fs.readFileSync(excelFile.tempFilePath) : null);
-
-        if (!excelBuffer) {
-          return res.status(400).json({ success: false, message: 'لم يتم استلام محتوى ملف Excel' });
-        }
-
-        const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
+        const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });

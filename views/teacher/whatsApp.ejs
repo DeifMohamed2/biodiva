@@ -414,18 +414,7 @@
                         </div>
 
                         <!-- Excel Upload Section (for text messages) -->
-                        <div id="textExcelSection" class="form-group hidden">
-                            <label class="form-label">رفع ملف Excel</label>
-                            <div class="upload-container" id="textUploadContainer">
-                                <div class="file-input-wrapper">
-                                    <label for="textExcelFile" class="file-label" id="textFileLabel">
-                                        <i class="fas fa-file-excel"></i>
-                                        <span id="textFileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
-                                    </label>
-                                    <input type="file" id="textExcelFile" name="textExcelFile" accept=".xlsx,.xls" onchange="updateTextFileName()">
-                                </div>
-                            </div>
-                            
+                        <div id="textExcelSection" class="hidden">
                             <!-- Column Names Input -->
                             <div class="row">
                                 <div class="col-md-4">
@@ -447,10 +436,16 @@
                                     </div>
                                 </div>
                             </div>
-                            
-                            <small class="form-text text-muted">
-                                يجب أن يحتوي الملف على أعمدة: رقم الهاتف، اسم الطالب (اختياري)، رقم هاتف ولي الأمر (اختياري)
-                            </small>
+
+                            <div class="upload-container" id="textUploadContainer">
+                                <div class="file-input-wrapper">
+                                    <label for="textExcelFile" class="file-label" id="textFileLabel">
+                                        <i class="fas fa-file-excel"></i>
+                                        <span id="textFileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
+                                    </label>
+                                    <input type="file" id="textExcelFile" name="textExcelFile" accept=".xlsx,.xls" required onchange="updateTextFileName()">
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Message Content -->
@@ -538,18 +533,7 @@
                             </div>
 
                         <!-- Excel Upload Section (for image messages) -->
-                        <div id="imageExcelSection" class="form-group hidden">
-                            <label class="form-label">رفع ملف Excel</label>
-                            <div class="upload-container" id="imageUploadContainer">
-                                <div class="file-input-wrapper">
-                                    <label for="imageExcelFile" class="file-label" id="imageFileLabel">
-                                        <i class="fas fa-file-excel"></i>
-                                        <span id="imageFileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
-                                    </label>
-                                    <input type="file" id="imageExcelFile" name="imageExcelFile" accept=".xlsx,.xls" onchange="updateImageFileName()">
-                                </div>
-                            </div>
-                            
+                        <div id="imageExcelSection" class="hidden">
                             <!-- Column Names Input -->
                             <div class="row">
                                 <div class="col-md-4">
@@ -571,10 +555,16 @@
                                     </div>
                                 </div>
                             </div>
-                            
-                            <small class="form-text text-muted">
-                                يجب أن يحتوي الملف على أعمدة: رقم الهاتف، اسم الطالب (اختياري)، رقم هاتف ولي الأمر (اختياري)
-                            </small>
+
+                            <div class="upload-container" id="imageUploadContainer">
+                                <div class="file-input-wrapper">
+                                    <label for="imageExcelFile" class="file-label" id="imageFileLabel">
+                                        <i class="fas fa-file-excel"></i>
+                                        <span id="imageFileLabelText">اسحب ملف Excel هنا أو انقر للاختيار</span>
+                                    </label>
+                                    <input type="file" id="imageExcelFile" name="imageExcelFile" accept=".xlsx,.xls" required onchange="updateImageFileName()">
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Message Content -->
@@ -785,26 +775,74 @@
             }
         }
 
-        // Drag and drop functionality
+        // Drag and drop functionality for grades
         const uploadContainer = document.getElementById('uploadContainer');
-        uploadContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadContainer.classList.add('dragover');
-        });
+        if (uploadContainer) {
+            uploadContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadContainer.classList.add('dragover');
+            });
 
-        uploadContainer.addEventListener('dragleave', () => {
-            uploadContainer.classList.remove('dragover');
-        });
+            uploadContainer.addEventListener('dragleave', () => {
+                uploadContainer.classList.remove('dragover');
+            });
 
-        uploadContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadContainer.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                document.getElementById('file').files = files;
-                updateFileName();
-            }
-        });
+            uploadContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadContainer.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('file').files = files;
+                    updateFileName();
+                }
+            });
+        }
+
+        // Drag and drop functionality for text messages Excel
+        const textUploadContainer = document.getElementById('textUploadContainer');
+        if (textUploadContainer) {
+            textUploadContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                textUploadContainer.classList.add('dragover');
+            });
+
+            textUploadContainer.addEventListener('dragleave', () => {
+                textUploadContainer.classList.remove('dragover');
+            });
+
+            textUploadContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                textUploadContainer.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('textExcelFile').files = files;
+                    updateTextFileName();
+                }
+            });
+        }
+
+        // Drag and drop functionality for image messages Excel
+        const imageUploadContainer = document.getElementById('imageUploadContainer');
+        if (imageUploadContainer) {
+            imageUploadContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                imageUploadContainer.classList.add('dragover');
+            });
+
+            imageUploadContainer.addEventListener('dragleave', () => {
+                imageUploadContainer.classList.remove('dragover');
+            });
+
+            imageUploadContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imageUploadContainer.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('imageExcelFile').files = files;
+                    updateImageFileName();
+                }
+            });
+        }
 
         // Send text messages function
         async function sendTextMessages() {
@@ -854,15 +892,15 @@
                     const studentNameColumn = document.getElementById('textStudentNameColumn').value.trim();
                     const parentPhoneColumn = document.getElementById('textParentPhoneColumn').value.trim();
 
-                    // Estimate time based on row count (6-9 seconds per message)
+                    // Read Excel on client and send rows as JSON (same as grades)
+                    const buffer = await excelFile.arrayBuffer();
+                    const wb = XLSX.read(buffer, { type: 'array' });
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet);
+
+                    // Estimate time
                     try {
-                        const rowsCount = await (async function countRows(file) {
-                            const buffer = await file.arrayBuffer();
-                            const wb = XLSX.read(buffer, { type: 'array' });
-                            const sheet = wb.Sheets[wb.SheetNames[0]];
-                            const json = XLSX.utils.sheet_to_json(sheet);
-                            return json.length;
-                        })(excelFile);
+                        const rowsCount = json.length;
                         const minSec = rowsCount * 6;
                         const maxSec = rowsCount * 9;
                         const estimateText = `الوقت المتوقع للإرسال: ${formatDuration(minSec)} - ${formatDuration(maxSec)} (${rowsCount} رسالة)`;
@@ -874,19 +912,21 @@
                             <p class="progress-note"><i class="fas fa-info-circle"></i> يرجى عدم إغلاق هذه الصفحة حتى يكتمل الإرسال.</p>
                         `;
                     } catch (_) {}
-                    
-                    const formData = new FormData();
-                    formData.append('message', messageText);
-                    formData.append('targetType', targetType);
-                    formData.append('recipientType', recipientType);
-                    formData.append('excelFile', excelFile);
-                    formData.append('phoneColumn', phoneColumn);
-                    formData.append('studentNameColumn', studentNameColumn);
-                    formData.append('parentPhoneColumn', parentPhoneColumn);
 
                     const response = await fetch('/teacher/sendTextMessages', {
                         method: 'POST',
-                        body: formData
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: messageText,
+                            targetType,
+                            recipientType,
+                            phoneColumn,
+                            studentNameColumn,
+                            parentPhoneColumn,
+                            dataToSend: json
+                        })
                     });
 
                     const result = await response.json();
@@ -1092,9 +1132,8 @@
         // Update grade column requirements based on recipient type
         function updateGradeColumnRequirements(recipientType) {
             const phoneColumnLabel = document.querySelector('label[for="gradeParentPhoneColumn"]');
-            if (!phoneColumnLabel) return; // Guard if element not on current tab
             
-            // Reset label
+            // Reset all labels
             phoneColumnLabel.innerHTML = 'اسم عمود هاتف ولي الأمر <span class="text-danger">*</span>';
             
             // Update based on recipient type
