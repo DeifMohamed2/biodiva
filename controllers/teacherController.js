@@ -2387,15 +2387,26 @@ const sendTextMessages = async (req, res) => {
 
       try {
         const XLSX = require('xlsx');
-        const workbook = XLSX.read(excelFile.data);
+        const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const data = XLSX.utils.sheet_to_json(worksheet);
+        const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+
+        const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
+        const normalizedPhoneCol = normalize(phoneColumn);
+        const normalizedStudentNameCol = studentNameColumn ? normalize(studentNameColumn) : null;
+        const normalizedParentPhoneCol = parentPhoneColumn ? normalize(parentPhoneColumn) : null;
 
         for (const row of data) {
-          const phone = row[phoneColumn];
-          const studentName = studentNameColumn ? row[studentNameColumn] : null;
-          const parentPhone = parentPhoneColumn ? row[parentPhoneColumn] : null;
+          // Normalize row keys (trim + lowercase) to avoid header whitespace/case issues
+          const normalizedRow = Object.keys(row).reduce((acc, key) => {
+            acc[normalize(key)] = row[key];
+            return acc;
+          }, {});
+
+          const phone = normalizedRow[normalizedPhoneCol];
+          const studentName = normalizedStudentNameCol ? normalizedRow[normalizedStudentNameCol] : null;
+          const parentPhone = normalizedParentPhoneCol ? normalizedRow[normalizedParentPhoneCol] : null;
 
           if (recipientType === 'students' && phone) {
             targets.push({
@@ -2430,7 +2441,7 @@ const sendTextMessages = async (req, res) => {
         console.error('Excel parsing error:', excelError);
         return res.status(400).json({ 
           success: false, 
-          message: 'خطأ في قراءة ملف Excel' 
+          message: 'خطأ في قراءة ملف Excel. تحقق من تنسيق الملف وأسماء الأعمدة.' 
         });
       }
     }
@@ -2591,15 +2602,25 @@ const sendImageMessages = async (req, res) => {
 
       try {
         const XLSX = require('xlsx');
-        const workbook = XLSX.read(excelFile.data);
+        const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const data = XLSX.utils.sheet_to_json(worksheet);
+        const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+
+        const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
+        const normalizedPhoneCol = normalize(phoneColumn);
+        const normalizedStudentNameCol = studentNameColumn ? normalize(studentNameColumn) : null;
+        const normalizedParentPhoneCol = parentPhoneColumn ? normalize(parentPhoneColumn) : null;
 
         for (const row of data) {
-          const phone = row[phoneColumn];
-          const studentName = studentNameColumn ? row[studentNameColumn] : null;
-          const parentPhone = parentPhoneColumn ? row[parentPhoneColumn] : null;
+          const normalizedRow = Object.keys(row).reduce((acc, key) => {
+            acc[normalize(key)] = row[key];
+            return acc;
+          }, {});
+
+        const phone = normalizedRow[normalizedPhoneCol];
+        const studentName = normalizedStudentNameCol ? normalizedRow[normalizedStudentNameCol] : null;
+        const parentPhone = normalizedParentPhoneCol ? normalizedRow[normalizedParentPhoneCol] : null;
 
           if (recipientType === 'students' && phone) {
             targets.push({
@@ -2634,7 +2655,7 @@ const sendImageMessages = async (req, res) => {
         console.error('Excel parsing error:', excelError);
         return res.status(400).json({ 
           success: false, 
-          message: 'خطأ في قراءة ملف Excel' 
+          message: 'خطأ في قراءة ملف Excel. تحقق من تنسيق الملف وأسماء الأعمدة.' 
         });
       }
     }
