@@ -4,6 +4,7 @@ const Chapter = require('../models/Chapter');
 const Code = require('../models/Code');
 const PDFs = require('../models/PDFs');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 // Import WhatsApp functionality
 const wasender = require('../utils/wasender');
@@ -354,8 +355,8 @@ const buyChapter = async (req, res) => {
 
     // Process purchase
     if (codeData.isGeneralCode && codeData.codeType === 'GeneralChapter') {
-      // Grant general chapter access for user's grade
-      await req.userData.grantGeneralChapterAccess(code);
+      // Treat general chapter code as purchasing this specific chapter
+      await req.userData.addChapterPurchase(chapterData, code);
     } else {
       // Grant specific chapter access
       await req.userData.addChapterPurchase(chapterData, code);
@@ -991,11 +992,11 @@ const buyQuiz = async (req, res) => {
     }
 
     // Check if user already has access
-    const hasGeneralAccess = req.userData.hasGeneralQuizAccess();
-    const hasSpecificAccess =
-      req.userData.examsPaid && req.userData.examsPaid.includes(quizId);
+    const hasSpecificAccess = Array.isArray(req.userData.examsPaid)
+      ? req.userData.examsPaid.some((id) => id.toString() === quizId.toString())
+      : false;
 
-    if (hasGeneralAccess || hasSpecificAccess) {
+    if (hasSpecificAccess) {
       const targetUrl = chapterId
         ? `/student/chapter/${chapterId}/quiz/${quizId}`
         : `/student/quiz/${quizId}`;
@@ -1058,14 +1059,32 @@ const buyQuiz = async (req, res) => {
 
     // Process quiz purchase
     if (codeData.isGeneralCode && codeData.codeType === 'GeneralQuiz') {
-      // Grant general quiz access for user's grade
-      await req.userData.grantGeneralQuizAccess(code);
+      // Treat general quiz code as purchase for this specific quiz
+      if (!req.userData.examsPaid) {
+        req.userData.examsPaid = [];
+      }
+      const quizObjectId = new mongoose.Types.ObjectId(quizId);
+      if (!req.userData.examsPaid.some((id) => id.toString() === quizObjectId.toString())) {
+        req.userData.examsPaid.push(quizObjectId);
+      }
+
+      const quizInfo = req.userData.quizesInfo.find(
+        (q) => q._id.toString() === quizId
+      );
+      if (quizInfo) {
+        quizInfo.quizPurchaseStatus = true;
+      }
+
+      await req.userData.save();
     } else {
       // Grant specific quiz access
       if (!req.userData.examsPaid) {
         req.userData.examsPaid = [];
       }
-      req.userData.examsPaid.push(quizId);
+      const quizObjectId = new mongoose.Types.ObjectId(quizId);
+      if (!req.userData.examsPaid.some((id) => id.toString() === quizObjectId.toString())) {
+        req.userData.examsPaid.push(quizObjectId);
+      }
 
       // Update quiz info if exists
       const quizInfo = req.userData.quizesInfo.find(
@@ -1119,22 +1138,21 @@ const quiz_get = async (req, res) => {
       return res.redirect('/student/exams');
     }
 
-    // Check quiz access (free, paid, or general access)
-    const hasGeneralQuizAccess = req.userData.hasGeneralQuizAccess();
-    const hasSpecificQuizAccess =
-      req.userData.examsPaid && req.userData.examsPaid.includes(quizId);
+    // Check quiz access (free or specific purchase)
+    const hasSpecificQuizAccess = Array.isArray(req.userData.examsPaid)
+      ? req.userData.examsPaid.some((id) => id.toString() === quizId.toString())
+      : false;
     const isFreeQuiz = !quiz.prepaidStatus || quiz.quizPrice === 0;
 
     console.log('Quiz access check:', {
       isFreeQuiz,
-      hasGeneralQuizAccess,
       hasSpecificQuizAccess,
       prepaidStatus: quiz.prepaidStatus,
       quizPrice: quiz.quizPrice,
     });
 
-    // Allow access if: free quiz, general access, or specific access
-    if (!isFreeQuiz && !hasGeneralQuizAccess && !hasSpecificQuizAccess) {
+    // Allow access if: free quiz or specific access
+    if (!isFreeQuiz && !hasSpecificQuizAccess) {
       console.log('No access to paid quiz');
       return res.redirect('/student/exams');
     }
@@ -1177,14 +1195,14 @@ const quizWillStart = async (req, res) => {
         .json({ success: false, message: 'Quiz not found' });
     }
 
-    // Check quiz access (free, paid, or general access)
-    const hasGeneralQuizAccess = req.userData.hasGeneralQuizAccess();
-    const hasSpecificQuizAccess =
-      req.userData.examsPaid && req.userData.examsPaid.includes(quizId);
+    // Check quiz access (free or specific purchase)
+    const hasSpecificQuizAccess = Array.isArray(req.userData.examsPaid)
+      ? req.userData.examsPaid.some((id) => id.toString() === quizId.toString())
+      : false;
     const isFreeQuiz = !quiz.prepaidStatus || quiz.quizPrice === 0;
 
-    // Allow access if: free quiz, general access, or specific access
-    if (!isFreeQuiz && !hasGeneralQuizAccess && !hasSpecificQuizAccess) {
+    // Allow access if: free quiz or specific access
+    if (!isFreeQuiz && !hasSpecificQuizAccess) {
       return res
         .status(403)
         .json({ success: false, message: 'No access to this quiz' });
@@ -1213,6 +1231,30 @@ const quizWillStart = async (req, res) => {
     console.log('Start time:', startTime);
     console.log('End time:', endTime);
 
+    // Generate random question indices for this user
+    const questionsToShow = quiz.questionsToShow || quiz.questionsCount;
+    let randomQuestionIndices = [];
+
+    // Always randomize order; then take the first questionsToShow
+    const allIndices = Array.from(
+      { length: quiz.Questions.length },
+      (_, i) => i
+    );
+
+    for (let i = allIndices.length - 1; i > 0; i--) {
+      const j = crypto.randomInt(0, i + 1);
+      [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
+    }
+
+    randomQuestionIndices = allIndices.slice(0, questionsToShow);
+    console.log('Generated random question indices at quiz start:', {
+      userId: req.userData._id,
+      quizId: quiz._id,
+      totalQuestions: quiz.Questions.length,
+      questionsToShow: questionsToShow,
+      randomIndices: randomQuestionIndices
+    });
+
     if (!quizUser) {
       // Create new quiz info for user
       console.log('Creating new quiz info for user');
@@ -1224,24 +1266,21 @@ const quizWillStart = async (req, res) => {
         inProgress: true,
         Score: 0,
         answers: [],
-        randomQuestionIndices: [],
+        randomQuestionIndices: randomQuestionIndices, // Set random indices immediately
         startTime: startTime,
         endTime: endTime,
-        quizPurchaseStatus:
-          !quiz.prepaidStatus ||
-          isFreeQuiz ||
-          hasGeneralQuizAccess ||
-          hasSpecificQuizAccess,
+        quizPurchaseStatus: !quiz.prepaidStatus || isFreeQuiz || hasSpecificQuizAccess,
       };
 
       await User.findByIdAndUpdate(req.userData._id, {
         $push: { quizesInfo: newQuizInfo },
       });
 
+      console.log('Quiz started with random indices:', randomQuestionIndices);
       return res.json({ success: true, message: 'Quiz started successfully' });
     } else if (!quizUser.endTime || !quizUser.inProgress) {
-      // Update existing quiz info with start time
-      console.log('Updating existing quiz info with start time');
+      // Update existing quiz info with start time and new random indices
+      console.log('Updating existing quiz info with start time and new random indices');
 
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
@@ -1253,11 +1292,12 @@ const quizWillStart = async (req, res) => {
             'quizesInfo.$.isEnterd': false,
             'quizesInfo.$.answers': [], // Clear previous answers
             'quizesInfo.$.Score': 0, // Reset score
-            'quizesInfo.$.randomQuestionIndices': [], // Clear previous random indices
+            'quizesInfo.$.randomQuestionIndices': randomQuestionIndices, // Set new random indices
           },
         }
       );
 
+      console.log('Quiz timer updated with new random indices:', randomQuestionIndices);
       return res.json({
         success: true,
         message: 'Quiz timer updated successfully',
@@ -1335,14 +1375,14 @@ const quiz_start = async (req, res) => {
       return res.redirect('/student/exams');
     }
 
-    // Check quiz access (free, paid, or general access)
-    const hasGeneralQuizAccess = req.userData.hasGeneralQuizAccess();
-    const hasSpecificQuizAccess =
-      req.userData.examsPaid && req.userData.examsPaid.includes(quizId);
+    // Check quiz access (free or specific purchase)
+    const hasSpecificQuizAccess = Array.isArray(req.userData.examsPaid)
+      ? req.userData.examsPaid.some((id) => id.toString() === quizId.toString())
+      : false;
     const isFreeQuiz = !quiz.prepaidStatus || quiz.quizPrice === 0;
 
-    // Allow access if: free quiz, general access, or specific access
-    if (!isFreeQuiz && !hasGeneralQuizAccess && !hasSpecificQuizAccess) {
+    // Allow access if: free quiz or specific access
+    if (!isFreeQuiz && !hasSpecificQuizAccess) {
       return res.redirect('/student/exams');
     }
 
@@ -1399,75 +1439,106 @@ const quiz_start = async (req, res) => {
         : 'undefined'
     );
 
+    // Always check and generate random indices if needed (regenerate if empty or invalid)
+    const questionsToShow = quiz.questionsToShow || quiz.questionsCount;
+    let needsRandomGeneration = false;
+    
     if (
       !userQuizInfo.randomQuestionIndices ||
-      userQuizInfo.randomQuestionIndices.length === 0
+      !Array.isArray(userQuizInfo.randomQuestionIndices) ||
+      userQuizInfo.randomQuestionIndices.length === 0 ||
+      userQuizInfo.randomQuestionIndices.length !== questionsToShow
     ) {
-      // Determine how many questions to show
-      const questionsToShow = quiz.questionsToShow || quiz.questionsCount;
+      needsRandomGeneration = true;
+      console.log('Random indices need to be generated:', {
+        exists: !!userQuizInfo.randomQuestionIndices,
+        isArray: Array.isArray(userQuizInfo.randomQuestionIndices),
+        length: userQuizInfo.randomQuestionIndices?.length,
+        expectedLength: questionsToShow
+      });
+    }
 
-      // Generate random question indices if needed
-      if (questionsToShow < quiz.Questions.length) {
-        // Create an array of all question indices
-        const allIndices = Array.from(
-          { length: quiz.Questions.length },
-          (_, i) => i
-        );
+    if (needsRandomGeneration) {
+      let randomIndices = [];
 
-        // Shuffle the array using Fisher-Yates algorithm
-        for (let i = allIndices.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
-        }
+      // Always generate randomized indices, then take first questionsToShow
+      // Create an array of all question indices
+      const allIndices = Array.from(
+        { length: quiz.Questions.length },
+        (_, i) => i
+      );
 
-        // Take the first 'questionsToShow' indices
-        const randomIndices = allIndices.slice(0, questionsToShow);
-
-        // Save these indices to the user's quiz info
-        console.log('Saving random indices to database:', randomIndices);
-        const updateResult = await User.findOneAndUpdate(
-          { _id: req.userData._id, 'quizesInfo._id': quiz._id },
-          { $set: { 'quizesInfo.$.randomQuestionIndices': randomIndices } },
-          { new: true }
-        );
-
-        console.log(
-          'Database update result:',
-          updateResult ? 'SUCCESS' : 'FAILED'
-        );
-
-        // Update local userQuizInfo
-        userQuizInfo.randomQuestionIndices = randomIndices;
-        console.log(
-          'Updated local userQuizInfo.randomQuestionIndices:',
-          userQuizInfo.randomQuestionIndices
-        );
-      } else {
-        // If showing all questions, just use sequential indices
-        const sequentialIndices = Array.from(
-          { length: quiz.Questions.length },
-          (_, i) => i
-        );
-
-        console.log('Using sequential indices:', sequentialIndices);
-        const updateResult = await User.findOneAndUpdate(
-          { _id: req.userData._id, 'quizesInfo._id': quiz._id },
-          { $set: { 'quizesInfo.$.randomQuestionIndices': sequentialIndices } },
-          { new: true }
-        );
-
-        console.log(
-          'Database update result (sequential):',
-          updateResult ? 'SUCCESS' : 'FAILED'
-        );
-
-        // Update local userQuizInfo
-        userQuizInfo.randomQuestionIndices = sequentialIndices;
-        console.log(
-          'Updated local userQuizInfo.randomQuestionIndices (sequential):',
-          userQuizInfo.randomQuestionIndices
-        );
+      // Shuffle the array using cryptographically-strong Fisher-Yates
+      for (let i = allIndices.length - 1; i > 0; i--) {
+        const j = crypto.randomInt(0, i + 1);
+        [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
       }
+
+      // Take the first 'questionsToShow' indices (already shuffled)
+      randomIndices = allIndices.slice(0, questionsToShow);
+      
+      console.log('Generated random indices for user:', {
+        userId: req.userData._id,
+        quizId: quiz._id,
+        totalQuestions: quiz.Questions.length,
+        questionsToShow: questionsToShow,
+        randomIndices: randomIndices
+      });
+
+      // Save these indices to the user's quiz info with explicit user ID filter
+      console.log('Saving random indices to database for user:', req.userData._id);
+      const updateResult = await User.findOneAndUpdate(
+        { 
+          _id: req.userData._id, 
+          'quizesInfo._id': quiz._id 
+        },
+        { 
+          $set: { 'quizesInfo.$.randomQuestionIndices': randomIndices } 
+        },
+        { new: true }
+      );
+
+      if (!updateResult) {
+        console.error('Failed to update randomQuestionIndices in database');
+        // Fallback: try to find and update the quiz info manually
+        const user = await User.findById(req.userData._id);
+        if (user && user.quizesInfo) {
+          const quizInfoIndex = user.quizesInfo.findIndex(
+            (q) => q._id.toString() === quiz._id.toString()
+          );
+          if (quizInfoIndex !== -1) {
+            user.quizesInfo[quizInfoIndex].randomQuestionIndices = randomIndices;
+            await user.save();
+            console.log('Fallback: Updated randomQuestionIndices via save()');
+          }
+        }
+      } else {
+        console.log('Successfully saved random indices to database');
+      }
+
+      // Refresh userQuizInfo from database to get the saved indices
+      const refreshedUser = await User.findById(req.userData._id);
+      if (refreshedUser && refreshedUser.quizesInfo) {
+        const refreshedQuizInfo = refreshedUser.quizesInfo.find(
+          (q) => q._id.toString() === quiz._id.toString()
+        );
+        if (refreshedQuizInfo && refreshedQuizInfo.randomQuestionIndices) {
+          userQuizInfo.randomQuestionIndices = refreshedQuizInfo.randomQuestionIndices;
+          console.log('Refreshed userQuizInfo.randomQuestionIndices from database:', 
+            userQuizInfo.randomQuestionIndices
+          );
+        } else {
+          // If refresh failed, use the generated indices
+          userQuizInfo.randomQuestionIndices = randomIndices;
+          console.log('Using locally generated randomIndices:', randomIndices);
+        }
+      } else {
+        // Fallback: use locally generated indices
+        userQuizInfo.randomQuestionIndices = randomIndices;
+        console.log('Fallback: Using locally generated randomIndices:', randomIndices);
+      }
+    } else {
+      console.log('Using existing randomQuestionIndices:', userQuizInfo.randomQuestionIndices);
     }
 
     // Final safety check for randomQuestionIndices
@@ -1813,8 +1884,8 @@ const quizFinish = async (req, res) => {
           quiz,
           finalScore,
           questionsShown,
-          isRetake,
-          isRetake ? userQuizInfo.Score : null
+          false, // isRetake - not tracking retakes currently
+          null   // previousScore
         );
       } catch (notificationError) {
         console.error('Failed to send parent notification:', notificationError);
@@ -2165,8 +2236,7 @@ const PDFs_get = async (req, res) => {
         pdfId: PDF._id,
         pdfName: PDF.pdfName,
         pdfsPaid: pdfsPaid.length,
-        isPaid,
-        generalAccess: req.userData.generalAccess,
+        isPaid
       });
       return { ...PDF.toObject(), isPaid };
     });
@@ -2194,7 +2264,7 @@ const getPDF = async (req, res) => {
 
     // Fetch fresh user snapshot to avoid stale session data after purchase
     const freshUser = await User.findById(req.userData._id).select(
-      'PDFsPaid generalAccess'
+      'PDFsPaid'
     );
 
     // Check if user has access to this PDF (only via explicit purchase)
@@ -2206,9 +2276,7 @@ const getPDF = async (req, res) => {
       pdfStatus: pdf.pdfStatus,
       pdfsPaid: pdfsPaid.length,
       pdfsPaidArray: pdfsPaid.map((p) => p.toString()),
-      pdfId: pdfId,
-      hasGeneralAccess: false,
-      generalAccess: freshUser ? freshUser.generalAccess : undefined,
+      pdfId: pdfId
     });
 
     // Access control logic: treat any non-Free status as paid (handles 'Paid' and legacy 'Pay')
@@ -2357,20 +2425,17 @@ const buyPDF = async (req, res) => {
       return res.redirect('/student/PDFs?error=grade_mismatch');
     }
 
-    // Process PDF purchase
+    // Process PDF purchase (treat GeneralPDF as specific purchase for this pdf)
     if (codeData.isGeneralCode && codeData.codeType === 'GeneralPDF') {
-      // Grant general PDF access
-      console.log('Redeeming GeneralPDF code for general access:', {
+      console.log('Redeeming GeneralPDF code as specific PDF purchase:', {
         user: req.userData.Username,
         code,
+        pdfId
       });
+    }
 
-      // Grant general PDF access using the user method and add this pdfId to PDFsPaid
-      await req.userData.grantGeneralPDFAccess(code, pdfId);
-
-      // grantGeneralPDFAccess will add the specific pdfId to PDFsPaid for backward compatibility
-    } else {
-      // Grant specific PDF access
+    // Grant PDF access (works for both GeneralPDF and specific PDF codes)
+    {
       console.log('Adding PDF purchase:', {
         pdfId: pdfId,
         pdfName: pdf.pdfName,
@@ -2667,16 +2732,17 @@ const buyVideo = async (req, res) => {
       });
     }
 
-    // Process video purchase
+    // Process video purchase (treat GeneralVideo as specific purchase for this video)
     if (codeData.isGeneralCode && codeData.codeType === 'GeneralVideo') {
-      // Grant general video access for user's grade
-      console.log(
-        'Granting general video access for user:',
-        req.userData.Username
-      );
-      await req.userData.grantGeneralVideoAccess(code, videoId);
-    } else {
-      // Grant specific video access
+      console.log('Redeeming GeneralVideo code as specific video purchase:', {
+        user: req.userData.Username,
+        code,
+        videoId
+      });
+    }
+
+    // Grant video access (works for both GeneralVideo and specific Video codes)
+    {
       console.log('Adding video purchase:', {
         videoId: videoId,
         videoName: video.videoName || video.lectureName,

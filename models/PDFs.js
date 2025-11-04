@@ -103,11 +103,9 @@ pdfSchema.methods.generateSecureViewUrl = function () {
 };
 
 pdfSchema.methods.canBeViewedBy = function (user) {
-  // Check if user has access to this PDF
+  // Access only via explicit purchase
   const userPDFsPaid = user.PDFsPaid || [];
-  const hasGeneralAccess =
-    user.hasGeneralPDFAccess && user.hasGeneralPDFAccess();
-  return userPDFsPaid.includes(this._id) || hasGeneralAccess;
+  return userPDFsPaid.includes(this._id);
 };
 
 pdfSchema.methods.incrementViewCount = async function () {

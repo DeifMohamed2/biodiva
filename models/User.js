@@ -379,33 +379,7 @@ const userSchema = new Schema(
       },
     ],
 
-    // General access tracking (for codes that grant access to all content of a type)
-    generalAccess: {
-      chapters: {
-        type: Boolean,
-        default: false,
-      },
-      videos: {
-        type: Boolean,
-        default: false,
-      },
-      quizzes: {
-        type: Boolean,
-        default: false,
-      },
-      pdfs: {
-        type: Boolean,
-        default: false,
-      },
-      purchaseDate: {
-        type: Date,
-        default: null,
-      },
-      codeUsed: {
-        type: String,
-        default: null,
-      },
-    },
+    
 
     isTeacher: {
       type: Boolean,
@@ -467,22 +441,13 @@ userSchema.methods.hasVideoAccess = function (videoId, video = null) {
   console.log('Checking access for videoId:', videoId);
   console.log('User videosPaid array:', this.videosPaid);
   console.log(
-    'User videosInfo count:',
-    this.videosInfo ? this.videosInfo.length : 0
-  );
-  console.log('User generalAccess:', this.generalAccess);
+      'User videosInfo count:',
+      this.videosInfo ? this.videosInfo.length : 0
+    );
 
-  // Check if user has general video access first
-  if (this.generalAccess && this.generalAccess.videos) {
-    console.log('User has general video access');
-    // Still need to check prerequisites even with general access
-    if (video && video.prerequisites && video.prerequisites !== 'none') {
-      return this.hasVideoPrerequisitesMet(video);
-    }
-    return true;
-  }
+    // General access removed; require explicit entitlement
 
-  // Ensure videosPaid is an array
+    // Ensure videosPaid is an array
   if (!this.videosPaid || !Array.isArray(this.videosPaid)) {
     this.videosPaid = [];
     console.log('Initialized videosPaid as empty array');
@@ -544,10 +509,6 @@ userSchema.methods.hasVideoAccessThroughChapter = function (
 
 // Method to check if video prerequisites are met
 userSchema.methods.hasVideoPrerequisitesMet = function (video) {
-  console.log('=== hasVideoPrerequisitesMet called ===');
-  console.log('Video prerequisites:', video.prerequisites);
-  console.log('Video AccessibleAfterViewing:', video.AccessibleAfterViewing);
-
   if (!video.prerequisites || video.prerequisites === 'none') {
     console.log('No prerequisites required');
     return true;
@@ -649,153 +610,10 @@ userSchema.methods.hasVideoPrerequisitesMet = function (video) {
 };
 
 // General access methods for checking if user has general access to content types
-userSchema.methods.hasGeneralChapterAccess = function () {
-  return false;
-};
-
-userSchema.methods.hasGeneralVideoAccess = function () {
-  return !!(this.generalAccess && this.generalAccess.videos === true);
-};
-
-userSchema.methods.hasGeneralQuizAccess = function () {
-  return false;
-};
-
-userSchema.methods.hasGeneralPDFAccess = function () {
-  return !!(this.generalAccess && this.generalAccess.pdfs === true);
-};
+// General access methods removed
 
 // Methods to grant general access
-userSchema.methods.grantGeneralChapterAccess = async function (code) {
-  this.generalAccess = this.generalAccess || {};
-  this.generalAccess.chapters = true;
-  this.generalAccess.purchaseDate = new Date();
-  this.generalAccess.codeUsed = code;
-  return await this.save();
-};
-
-userSchema.methods.grantGeneralVideoAccess = async function (
-  code,
-  videoId = null
-) {
-  console.log('=== grantGeneralVideoAccess called ===');
-  console.log('Parameters:', { code, videoId });
-  console.log('User ID:', this._id);
-  console.log(
-    'Current videosPaid length:',
-    this.videosPaid ? this.videosPaid.length : 'undefined'
-  );
-
-  this.generalAccess = this.generalAccess || {};
-  this.generalAccess.videos = true;
-  this.generalAccess.purchaseDate = new Date();
-  this.generalAccess.codeUsed = code;
-
-  console.log('Set generalAccess.videos to true');
-
-  // If a specific videoId is provided, also add it to videosPaid for backward compatibility
-  if (videoId) {
-    console.log(
-      'Adding specific video to videosPaid for backward compatibility'
-    );
-
-    // Ensure videosPaid is an array
-    if (!this.videosPaid) {
-      this.videosPaid = [];
-      console.log('Initialized videosPaid as empty array');
-    }
-
-    // Convert videoId to ObjectId for consistent comparison
-    const videoObjectId = new mongoose.Types.ObjectId(videoId);
-    console.log('Converted videoId to ObjectId:', videoObjectId);
-
-    // Add to videosPaid array if not already present
-    if (!this.videosPaid.includes(videoObjectId)) {
-      this.videosPaid.push(videoObjectId);
-      console.log(
-        'Added video to videosPaid array. New length:',
-        this.videosPaid.length
-      );
-    } else {
-      console.log('Video already exists in videosPaid array');
-    }
-  }
-
-  return await this.save()
-    .then((savedUser) => {
-      console.log(
-        'User saved successfully. Final videosPaid length:',
-        savedUser.videosPaid.length
-      );
-      console.log('Final generalAccess:', savedUser.generalAccess);
-      return savedUser;
-    })
-    .catch((error) => {
-      console.error('Error saving user:', error);
-      throw error;
-    });
-};
-
-userSchema.methods.grantGeneralQuizAccess = async function (code) {
-  this.generalAccess = this.generalAccess || {};
-  this.generalAccess.quizzes = true;
-  this.generalAccess.purchaseDate = new Date();
-  this.generalAccess.codeUsed = code;
-  return await this.save();
-};
-
-userSchema.methods.grantGeneralPDFAccess = async function (code, pdfId = null) {
-  console.log('=== grantGeneralPDFAccess called ===');
-  console.log('Parameters:', { code, pdfId });
-  console.log('User ID:', this._id);
-  console.log('Current generalAccess:', this.generalAccess);
-
-  this.generalAccess = this.generalAccess || {};
-  this.generalAccess.pdfs = true;
-  this.generalAccess.purchaseDate = new Date();
-  this.generalAccess.codeUsed = code;
-
-  console.log('Set generalAccess.pdfs to true');
-
-  // If a specific pdfId is provided, add it to PDFsPaid for backward compatibility
-  if (pdfId) {
-    console.log('Adding specific PDF to PDFsPaid for backward compatibility');
-
-    if (!this.PDFsPaid) {
-      this.PDFsPaid = [];
-      console.log('Initialized PDFsPaid as empty array');
-    }
-
-    try {
-      const pdfObjectId = new mongoose.Types.ObjectId(pdfId);
-      // Add to PDFsPaid array if not already present
-      if (!this.PDFsPaid.some((p) => p.toString() === pdfObjectId.toString())) {
-        this.PDFsPaid.push(pdfObjectId);
-        console.log(
-          'Added PDF to PDFsPaid array. New length:',
-          this.PDFsPaid.length
-        );
-      } else {
-        console.log('PDF already exists in PDFsPaid array');
-      }
-    } catch (err) {
-      console.error('Invalid pdfId provided to grantGeneralPDFAccess:', pdfId);
-    }
-  }
-
-  return await this.save()
-    .then((savedUser) => {
-      console.log(
-        'User saved successfully. Final generalAccess:',
-        savedUser.generalAccess
-      );
-      return savedUser;
-    })
-    .catch((error) => {
-      console.error('Error saving user:', error);
-      throw error;
-    });
-};
+// General grant methods removed
 
 userSchema.methods.hasGradeAccess = function (targetGrade) {
   return this.Grade === targetGrade;

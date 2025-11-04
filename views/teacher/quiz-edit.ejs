@@ -533,10 +533,19 @@
         document.getElementById('answer4').value = answers[3] || '';
         console.log('Set modal answers:', answers);
         
-        // Set correct answer
-        const correctAnswer = (question.correctAnswer || 0) + 1;
+        // Set correct answer - ranswer is 1-indexed (1, 2, 3, 4), same as select dropdown
+        const correctAnswer = question.ranswer || (question.correctAnswer !== undefined ? question.correctAnswer + 1 : 1);
         document.getElementById('correctAnswer').value = correctAnswer;
-        console.log('Set correct answer:', correctAnswer);
+        console.log('Set correct answer:', correctAnswer, 'from ranswer:', question.ranswer);
+        
+        // Show correct answer indicator
+        document.querySelectorAll('.correct-indicator').forEach(indicator => {
+          indicator.style.display = 'none';
+        });
+        const selectedIndicator = document.querySelector(`[data-option="${correctAnswer}"]`);
+        if (selectedIndicator) {
+          selectedIndicator.style.display = 'inline-block';
+        }
         
         // Set image if exists
         if (question.image || question.questionPhoto) {
@@ -552,7 +561,8 @@
         const answer2 = document.getElementById('answer2').value.trim();
         const answer3 = document.getElementById('answer3').value.trim();
         const answer4 = document.getElementById('answer4').value.trim();
-        const correctAnswer = parseInt(document.getElementById('correctAnswer').value) - 1;
+        const correctAnswerIndex = parseInt(document.getElementById('correctAnswer').value); // 1-indexed from select
+        const correctAnswer = correctAnswerIndex - 1; // Convert to 0-indexed for frontend
         const imageURL = document.getElementById('questionImageURL').value.trim();
         
         if (!questionText || !answer1 || !answer2 || !answer3 || !answer4) {
@@ -560,10 +570,20 @@
           return null;
         }
         
+        // Get existing question if editing to preserve id
+        const existingQuestion = currentQuestionIndex >= 0 ? questions[currentQuestionIndex] : null;
+        
         return {
+          id: existingQuestion ? existingQuestion.id : (Date.now().toString() + Math.random().toString(36).substr(2, 9)),
           question: questionText,
+          title: questionText, // For backward compatibility
           answers: [answer1, answer2, answer3, answer4],
-          correctAnswer: correctAnswer,
+          answer1: answer1,
+          answer2: answer2,
+          answer3: answer3,
+          answer4: answer4,
+          correctAnswer: correctAnswer, // 0-indexed for frontend
+          ranswer: correctAnswerIndex, // 1-indexed for backend (same as select value)
           image: imageURL,
           questionPhoto: imageURL // For backward compatibility
         };
@@ -643,10 +663,11 @@
           optionText.textContent = answerText;
           console.log(`Set option ${optionIndex + 1}:`, answerText);
           
-          // Mark correct answer
-          if (optionIndex === (question.correctAnswer || 0)) {
+          // Mark correct answer - ranswer is 1-indexed, optionIndex is 0-indexed
+          const correctAnswerIndex = question.ranswer || question.correctAnswer || 1;
+          if ((optionIndex + 1) === correctAnswerIndex) {
             option.classList.add('correct');
-            console.log('Marked option as correct:', optionIndex + 1);
+            console.log('Marked option as correct:', optionIndex + 1, 'ranswer:', correctAnswerIndex);
           }
         });
         

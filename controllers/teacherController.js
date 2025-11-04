@@ -3634,10 +3634,10 @@ const codes_create_post = async (req, res) => {
     }
 
     const codesCount = parseInt(count);
-    if (codesCount < 1 || codesCount > 100) {
+    if (codesCount < 1 || codesCount > 1000) {
       return res.status(400).json({
         success: false,
-        message: 'عدد الأكواد يجب أن يكون بين 1 و 100'
+        message: 'عدد الأكواد يجب أن يكون بين 1 و 1000'
       });
     }
 

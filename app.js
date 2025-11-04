@@ -42,6 +42,7 @@ const path = require('path');
 // CONECT to mongodb
 let io
 const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/biodiva2025?retryWrites=true&w=majority&appName=Cluster0';
+// const dbURI = 'mongodb://localhost:27017/biodiva2025';
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then((result) => {
         let server = app.listen(8000);
