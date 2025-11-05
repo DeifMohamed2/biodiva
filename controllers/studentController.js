@@ -1697,33 +1697,40 @@ const quizFinish = async (req, res) => {
     console.log('User stored answers:', userQuizInfo.answers);
 
     // Convert client answers to new format and merge with existing answers
+    // Build finalAnswers array where index corresponds to display order (i)
     const finalAnswers = [];
 
     if (userQuizInfo.randomQuestionIndices) {
       userQuizInfo.randomQuestionIndices.forEach((questionIndex, i) => {
         const question = quiz.Questions[questionIndex];
-        const questionId = question._id
+        const questionActualId = question._id
           ? question._id.toString()
-          : `q_${questionIndex}`;
+          : null;
 
-        // Look for existing answer first
+        // Look for existing answer by display index first (most reliable)
         let existingAnswer = userQuizInfo.answers.find(
-          (a) => a.questionIndex === i || a.questionId === questionId
+          (a) => a.questionIndex === i
         );
+
+        // If not found by display index, try to match by actual question ID
+        if (!existingAnswer && questionActualId) {
+          existingAnswer = userQuizInfo.answers.find(
+            (a) => a.questionId === questionActualId
+          );
+        }
 
         // If no existing answer, check client answers
         if (!existingAnswer && clientAnswers[i]) {
           existingAnswer = {
-            questionId: questionId,
+            questionId: questionActualId || `q_${i}`,
             questionIndex: i,
             selectedAnswer: clientAnswers[i],
             answeredAt: new Date(),
           };
         }
 
-        if (existingAnswer) {
-          finalAnswers.push(existingAnswer);
-        }
+        // Store answer at position i (display index) for direct access
+        finalAnswers[i] = existingAnswer || null;
       });
     }
 
@@ -1743,10 +1750,8 @@ const quizFinish = async (req, res) => {
           ? question._id.toString()
           : `q_${questionIndex}`;
 
-        // Find the answer for this question
-        const userAnswerObj = finalAnswers.find(
-          (a) => a.questionIndex === i || a.questionId === questionId
-        );
+        // Get answer directly by display index (i) - this ensures correct matching
+        const userAnswerObj = finalAnswers[i];
 
         console.log(
           `\n--- Question ${i + 1} (Pool Index ${questionIndex}) ---`
@@ -2159,7 +2164,8 @@ const saveQuizAnswer = async (req, res) => {
       answeredAt: new Date(),
     };
 
-    // Remove existing answer for this question if any
+    // Remove existing answer for this question if any (match by display index first)
+    // This ensures we remove the correct answer even if questionId format changed
     await User.findOneAndUpdate(
       { _id: req.userData._id, 'quizesInfo._id': quiz._id },
       { $pull: { 'quizesInfo.$.answers': { questionIndex: questionIndex } } }
