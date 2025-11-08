@@ -4505,7 +4505,8 @@ const quiz_detail_get = async (req, res) => {
   try {
     const quizId = req.params.quizId;
     const page = parseInt(req.query.page) || 1;
-    const limit = 30; // Limit to 100 students per page
+    const pageSize = req.query.pageSize === 'all' ? 10000 : parseInt(req.query.pageSize) || 100;
+    const limit = pageSize === 10000 ? 10000 : pageSize;
     const skip = (page - 1) * limit;
     const search = (req.query.search || '').trim();
 
@@ -4521,12 +4522,182 @@ const quiz_detail_get = async (req, res) => {
       chapter = await Chapter.findById(quiz.chapterId).select('chapterName chapterGrade');
     }
 
-    // Build aggregation pipeline to:
-    // - filter to users with this quiz
-    // - compute quizInfo fields
-    // - apply search across ALL students
-    // - sort attempted first, then by endTime desc
-    // - paginate
+    const questionsShown = quiz.questionsToShow || quiz.questionsCount;
+
+    // ============ CALCULATE STATISTICS FROM ALL STUDENTS (NOT PAGINATED) ============
+    const statsPipeline = [
+      { $match: { isTeacher: false, 'quizesInfo._id': quiz._id } },
+      {
+        $addFields: {
+          matchedQuizInfo: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$quizesInfo',
+                  as: 'q',
+                  cond: { $eq: ['$$q._id', quiz._id] }
+                }
+              },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          Username: 1,
+          Code: 1,
+          matchedQuizInfo: 1
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalStudents: { $sum: 1 },
+          attemptedStudents: {
+            $sum: { $cond: [{ $ifNull: ['$matchedQuizInfo.isEnterd', false] }, 1, 0] }
+          },
+          inProgressStudents: {
+            $sum: { $cond: [{ $ifNull: ['$matchedQuizInfo.inProgress', false] }, 1, 0] }
+          },
+          completedScores: {
+            $push: {
+              $cond: [
+                {
+                  $and: [
+                    { $ifNull: ['$matchedQuizInfo.isEnterd', false] },
+                    { $not: [{ $ifNull: ['$matchedQuizInfo.inProgress', false] }] }
+                  ]
+                },
+                { $ifNull: ['$matchedQuizInfo.Score', 0] },
+                null
+              ]
+            }
+          },
+          allCompletedScores: {
+            $push: {
+              $cond: [
+                {
+                  $and: [
+                    { $ifNull: ['$matchedQuizInfo.isEnterd', false] },
+                    { $not: [{ $ifNull: ['$matchedQuizInfo.inProgress', false] }] },
+                    { $gt: [{ $ifNull: ['$matchedQuizInfo.Score', -1] }, -1] }
+                  ]
+                },
+                { $ifNull: ['$matchedQuizInfo.Score', 0] },
+                '$$REMOVE'
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          totalStudents: 1,
+          attemptedStudents: 1,
+          inProgressStudents: 1,
+          completedStudents: {
+            $size: {
+              $filter: {
+                input: '$completedScores',
+                cond: { $ne: ['$$this', null] }
+              }
+            }
+          },
+          averageScore: {
+            $cond: [
+              { $gt: [{ $size: { $filter: { input: '$allCompletedScores', cond: { $ne: ['$$this', null] } } } }, 0] },
+              { $avg: { $filter: { input: '$allCompletedScores', cond: { $ne: ['$$this', null] } } } },
+              0
+            ]
+          },
+          allCompletedScores: 1
+        }
+      }
+    ];
+
+    const statsResult = await User.aggregate(statsPipeline).allowDiskUse(true);
+    const stats = statsResult[0] || {
+      totalStudents: 0,
+      attemptedStudents: 0,
+      inProgressStudents: 0,
+      completedStudents: 0,
+      averageScore: 0,
+      allCompletedScores: []
+    };
+
+    // Calculate score distribution from all completed students
+    const completedScores = stats.allCompletedScores || [];
+    const scoreDistribution = {
+      excellent: completedScores.filter(score => (score / questionsShown) >= 0.9).length,
+      good: completedScores.filter(score => (score / questionsShown) >= 0.8 && (score / questionsShown) < 0.9).length,
+      average: completedScores.filter(score => (score / questionsShown) >= 0.7 && (score / questionsShown) < 0.8).length,
+      belowAverage: completedScores.filter(score => (score / questionsShown) >= 0.6 && (score / questionsShown) < 0.7).length,
+      failed: completedScores.filter(score => (score / questionsShown) < 0.6).length
+    };
+
+    // Precompute bar heights
+    const maxBucket = Math.max(
+      scoreDistribution.excellent,
+      scoreDistribution.good,
+      scoreDistribution.average,
+      scoreDistribution.belowAverage,
+      scoreDistribution.failed,
+      0
+    ) || 1;
+    const barHeights = {
+      excellent: scoreDistribution.excellent > 0 ? Math.round((scoreDistribution.excellent / maxBucket) * 80) : 0,
+      good: scoreDistribution.good > 0 ? Math.round((scoreDistribution.good / maxBucket) * 80) : 0,
+      average: scoreDistribution.average > 0 ? Math.round((scoreDistribution.average / maxBucket) * 80) : 0,
+      belowAverage: scoreDistribution.belowAverage > 0 ? Math.round((scoreDistribution.belowAverage / maxBucket) * 80) : 0,
+      failed: scoreDistribution.failed > 0 ? Math.round((scoreDistribution.failed / maxBucket) * 80) : 0
+    };
+
+    // Get top 3 performers from ALL students
+    const topPerformersPipeline = [
+      { $match: { isTeacher: false, 'quizesInfo._id': quiz._id } },
+      {
+        $addFields: {
+          matchedQuizInfo: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$quizesInfo',
+                  as: 'q',
+                  cond: { $eq: ['$$q._id', quiz._id] }
+                }
+              },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $match: {
+          'matchedQuizInfo.isEnterd': true,
+          'matchedQuizInfo.inProgress': false
+        }
+      },
+      {
+        $project: {
+          Username: 1,
+          Code: 1,
+          quizScore: { $ifNull: ['$matchedQuizInfo.Score', 0] }
+        }
+      },
+      { $sort: { quizScore: -1 } },
+      { $limit: 3 }
+    ];
+
+    const topPerformersData = await User.aggregate(topPerformersPipeline).allowDiskUse(true);
+    const topPerformers = topPerformersData.map(student => ({
+      studentName: student.Username,
+      studentCode: student.Code,
+      quizScore: student.quizScore,
+      quizScoreDisplay: `${student.quizScore}/${questionsShown}`
+    }));
+
+    // ============ GET PAGINATED STUDENT LIST FOR DISPLAY ============
     const pipeline = [
       { $match: { isTeacher: false, 'quizesInfo._id': quiz._id } },
       {
@@ -4560,16 +4731,19 @@ const quiz_detail_get = async (req, res) => {
       pipeline.push({ $match: { $or: orConditions } });
     }
 
-    // Drop the large quizesInfo array to lower sort memory footprint
     pipeline.push(
-      { $unset: 'quizesInfo' }
-    );
-
-    pipeline.push(
+      { $unset: 'quizesInfo' },
       {
         $addFields: {
           attempted: { $cond: [{ $ifNull: ['$matchedQuizInfo.isEnterd', false] }, 1, 0] },
           inProgress: { $cond: [{ $ifNull: ['$matchedQuizInfo.inProgress', false] }, 1, 0] },
+          quizScore: { $ifNull: ['$matchedQuizInfo.Score', 0] },
+          isCompleted: {
+            $and: [
+              { $ifNull: ['$matchedQuizInfo.isEnterd', false] },
+              { $not: [{ $ifNull: ['$matchedQuizInfo.inProgress', false] }] }
+            ]
+          },
           endTimeVal: {
             $cond: [
               { $ifNull: ['$matchedQuizInfo.endTime', false] },
@@ -4579,7 +4753,6 @@ const quiz_detail_get = async (req, res) => {
           }
         }
       },
-      // Minimize document size before sorting
       {
         $project: {
           Username: 1,
@@ -4591,10 +4764,22 @@ const quiz_detail_get = async (req, res) => {
           matchedQuizInfo: 1,
           attempted: 1,
           inProgress: 1,
+          quizScore: 1,
+          isCompleted: 1,
           endTimeVal: 1
         }
       },
-      { $sort: { attempted: -1, endTimeVal: -1, _id: 1 } },
+      // Sort: completed first (by score desc), then in progress, then not attempted
+      { 
+        $sort: { 
+          isCompleted: -1,      // Completed quizzes first
+          quizScore: -1,        // Then by score (highest first)
+          endTimeVal: -1,       // Then by completion time (most recent first)
+          attempted: -1,        // Then attempted
+          inProgress: -1,       // Then in progress
+          _id: 1                // Finally by ID for consistency
+        } 
+      },
       {
         $facet: {
           metadata: [{ $count: 'total' }],
@@ -4610,11 +4795,10 @@ const quiz_detail_get = async (req, res) => {
     );
 
     const aggResult = await User.aggregate(pipeline).allowDiskUse(true);
-    const totalStudents = aggResult[0]?.total || 0;
+    const totalStudentsForPagination = aggResult[0]?.total || 0;
     const dataUsers = aggResult[0]?.data || [];
 
     // Map aggregated users to view model
-    const questionsShown = quiz.questionsToShow || quiz.questionsCount;
     const studentsWithQuizInfo = dataUsers.map(student => {
       const quizInfo = student.matchedQuizInfo || {};
       const actualScore = quizInfo.Score || 0;
@@ -4635,52 +4819,8 @@ const quiz_detail_get = async (req, res) => {
       };
     });
     
-    // Calculate statistics
-    const totalStudentsCount = studentsWithQuizInfo.length;
-    const attemptedStudents = studentsWithQuizInfo.filter(s => s.quizAttempted);
-    const completedStudents = attemptedStudents.filter(s => !s.quizInProgress);
-    const inProgressStudents = studentsWithQuizInfo.filter(s => s.quizInProgress);
-    const notAttemptedStudents = studentsWithQuizInfo.filter(s => !s.quizAttempted);
-    
-    // Calculate average score (actual score, not percentage)
-    const averageScore = completedStudents.length > 0 
-      ? completedStudents.reduce((sum, s) => sum + s.quizScore, 0) / completedStudents.length 
-      : 0;
-    
-    // Get top 3 performers
-    const topPerformers = completedStudents
-      .sort((a, b) => b.quizScore - a.quizScore)
-      .slice(0, 3);
-    
-    // Get score distribution based on percentage of questions shown
-    // reuse questionsShown defined above
-    const scoreDistribution = {
-      excellent: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.9).length,
-      good: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.8 && (s.quizScore / questionsShown) < 0.9).length,
-      average: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.7 && (s.quizScore / questionsShown) < 0.8).length,
-      belowAverage: completedStudents.filter(s => (s.quizScore / questionsShown) >= 0.6 && (s.quizScore / questionsShown) < 0.7).length,
-      failed: completedStudents.filter(s => (s.quizScore / questionsShown) < 0.6).length
-    };
-
-    // Precompute bar heights (relative to max) to simplify EJS inline styles
-    const maxBucket = Math.max(
-      scoreDistribution.excellent,
-      scoreDistribution.good,
-      scoreDistribution.average,
-      scoreDistribution.belowAverage,
-      scoreDistribution.failed,
-      0
-    ) || 1;
-    const barHeights = {
-      excellent: scoreDistribution.excellent > 0 ? Math.round((scoreDistribution.excellent / maxBucket) * 80) : 0,
-      good: scoreDistribution.good > 0 ? Math.round((scoreDistribution.good / maxBucket) * 80) : 0,
-      average: scoreDistribution.average > 0 ? Math.round((scoreDistribution.average / maxBucket) * 80) : 0,
-      belowAverage: scoreDistribution.belowAverage > 0 ? Math.round((scoreDistribution.belowAverage / maxBucket) * 80) : 0,
-      failed: scoreDistribution.failed > 0 ? Math.round((scoreDistribution.failed / maxBucket) * 80) : 0
-    };
-    
     // Pagination info
-    const totalPages = Math.ceil(totalStudents / limit);
+    const totalPages = limit === 10000 ? 1 : Math.ceil(totalStudentsForPagination / limit);
     
     res.render('teacher/quiz-detail', {
       title: `${quiz.quizName} - تفاصيل الاختبار`,
@@ -4690,22 +4830,23 @@ const quiz_detail_get = async (req, res) => {
       chapter,
       students: studentsWithQuizInfo,
       stats: {
-        totalStudents: totalStudentsCount,
-        attemptedStudents: attemptedStudents.length,
-        completedStudents: completedStudents.length,
-        inProgressStudents: inProgressStudents.length,
-        notAttemptedStudents: notAttemptedStudents.length,
-        averageScore: Math.round(averageScore * 100) / 100,
-        averageScoreDisplay: `${Math.round(averageScore)}/${quiz.questionsToShow || quiz.questionsCount}`,
-        completionRate: totalStudentsCount > 0 ? Math.round((completedStudents.length / totalStudentsCount) * 100) : 0,
-        questionsShown: quiz.questionsToShow || quiz.questionsCount
+        totalStudents: stats.totalStudents,
+        attemptedStudents: stats.attemptedStudents,
+        completedStudents: stats.completedStudents,
+        inProgressStudents: stats.inProgressStudents,
+        notAttemptedStudents: stats.totalStudents - stats.attemptedStudents,
+        averageScore: Math.round(stats.averageScore * 100) / 100,
+        averageScoreDisplay: `${Math.round(stats.averageScore)}/${questionsShown}`,
+        completionRate: stats.totalStudents > 0 ? Math.round((stats.completedStudents / stats.totalStudents) * 100) : 0,
+        questionsShown: questionsShown
       },
       topPerformers,
       scoreDistribution,
       barHeights,
       currentPage: page,
       totalPages,
-      totalStudents,
+      totalStudents: stats.totalStudents,
+      pageSize: req.query.pageSize || '100',
       search,
       success: req.query.success,
       error: req.query.error
@@ -5072,18 +5213,27 @@ const quiz_export = async (req, res) => {
       return res.status(404).send('Quiz not found');
     }
     
-    // Get all students who have attempted this quiz
+    // Get ALL students who have this quiz in their quizesInfo (regardless of attempt status)
     const students = await User.find({
       isTeacher: false,
-      'quizesInfo._id': quiz._id,
-      'quizesInfo.isEnterd': true
+      'quizesInfo._id': quiz._id
     }).select('Username Code Grade totalScore quizesInfo phone parentPhone');
     
     // Process student results
     const questionsShown = quiz.questionsToShow || quiz.questionsCount;
     const studentResults = students.map(student => {
       const quizInfo = student.quizesInfo.find(q => q._id.toString() === quiz._id.toString());
-      const actualScore = quizInfo ? quizInfo.Score : 0;
+      const actualScore = quizInfo ? (quizInfo.Score || 0) : 0;
+      const isEntered = quizInfo ? (quizInfo.isEnterd || false) : false;
+      const inProgress = quizInfo ? (quizInfo.inProgress || false) : false;
+      
+      let status = 'لم يحاول';
+      if (inProgress) {
+        status = 'قيد التنفيذ';
+      } else if (isEntered) {
+        status = 'مكتمل';
+      }
+      
       return {
         studentName: student.Username,
         studentCode: student.Code,
@@ -5092,50 +5242,97 @@ const quiz_export = async (req, res) => {
         parentPhoneNumber: student.parentPhone || '',
         totalScore: student.totalScore || 0,
         quizScore: actualScore,
-        quizScoreDisplay: `${actualScore}/${questionsShown}`,
-        quizEndTime: quizInfo ? quizInfo.endTime : null,
-        quizInProgress: quizInfo ? quizInfo.inProgress : false
+        quizScoreDisplay: isEntered && !inProgress ? `${actualScore}/${questionsShown}` : '-',
+        quizEndTime: quizInfo && quizInfo.endTime ? quizInfo.endTime : null,
+        quizInProgress: inProgress,
+        quizAttempted: isEntered,
+        status: status
       };
-    }).filter(result => !result.quizInProgress);
+    });
     
-    // Sort by score (highest first)
-    studentResults.sort((a, b) => b.quizScore - a.quizScore);
+    // Sort by: completed first (by score desc), then in progress, then not attempted
+    studentResults.sort((a, b) => {
+      if (a.quizAttempted && !a.quizInProgress && b.quizAttempted && !b.quizInProgress) {
+        return b.quizScore - a.quizScore; // Both completed - sort by score
+      }
+      if (a.quizAttempted && !a.quizInProgress) return -1; // a completed, b not
+      if (b.quizAttempted && !b.quizInProgress) return 1;  // b completed, a not
+      if (a.quizInProgress && !b.quizInProgress) return -1; // a in progress, b not
+      if (b.quizInProgress && !a.quizInProgress) return 1;  // b in progress, a not
+      return 0; // Same status
+    });
     
     // Create Excel workbook
     const workbook = new Excel.Workbook();
-    const worksheet = workbook.addWorksheet('Quiz Results');
+    const worksheet = workbook.addWorksheet('نتائج الاختبار');
     
-    // Add headers
+    // Style for headers
+    const headerStyle = {
+      font: { bold: true, color: { argb: 'FFFFFFFF' } },
+      fill: {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4472C4' }
+      },
+      alignment: { horizontal: 'center', vertical: 'middle' },
+      border: {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+    };
+    
+    // Add headers with Arabic text
     worksheet.columns = [
-      { header: 'الترتيب', key: 'rank', width: 10 },
+      { header: 'الترتيب', key: 'rank', width: 12 },
       { header: 'اسم الطالب', key: 'name', width: 30 },
       { header: 'كود الطالب', key: 'code', width: 15 },
       { header: 'الصف', key: 'grade', width: 15 },
-      { header: 'رقم الهاتف', key: 'phoneNumber', width: 15 },
-      { header: 'هاتف الوالد', key: 'parentPhoneNumber', width: 15 },
-      { header: `درجة الاختبار (من ${questionsShown})`, key: 'quizScore', width: 20 },
-      { header: 'الدرجة الكلية', key: 'totalScore', width: 15 },
-      { header: 'وقت الانتهاء', key: 'endTime', width: 20 }
+      { header: 'رقم الهاتف', key: 'phoneNumber', width: 18 },
+      { header: 'هاتف الوالد', key: 'parentPhoneNumber', width: 18 },
+      { header: 'الحالة', key: 'status', width: 15 },
+      { header: `الدرجة (من ${questionsShown})`, key: 'quizScore', width: 20 },
+      { header: 'وقت الانتهاء', key: 'endTime', width: 25 }
     ];
+    
+    // Apply header style
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.style = headerStyle;
+    });
     
     // Add data rows
     studentResults.forEach((student, index) => {
-      worksheet.addRow({
+      const row = worksheet.addRow({
         rank: index + 1,
         name: student.studentName,
         code: student.studentCode,
-        grade: student.grade,
+        grade: student.grade === 'Grade1' ? 'الأول الثانوي' : student.grade === 'Grade2' ? 'الثاني الثانوي' : 'الثالث الثانوي',
         phoneNumber: student.phoneNumber,
         parentPhoneNumber: student.parentPhoneNumber,
-        quizScore: student.quizScore,
-        totalScore: student.totalScore,
-        endTime: student.quizEndTime ? student.quizEndTime.toLocaleString() : ''
+        status: student.status,
+        quizScore: student.quizScoreDisplay,
+        endTime: student.quizEndTime ? new Date(student.quizEndTime).toLocaleString('ar-EG', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : '-'
       });
+      
+      // Center align rank and score columns
+      row.getCell('rank').alignment = { horizontal: 'center' };
+      row.getCell('code').alignment = { horizontal: 'center' };
+      row.getCell('quizScore').alignment = { horizontal: 'center' };
+      row.getCell('totalScore').alignment = { horizontal: 'center' };
+      row.getCell('status').alignment = { horizontal: 'center' };
     });
     
     // Set headers for download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=quiz-results-${quiz.quizName}.xlsx`);
+    const filename = `نتائج-${quiz.quizName}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     
     // Write to response
     await workbook.xlsx.write(res);

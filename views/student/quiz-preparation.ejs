@@ -318,6 +318,18 @@
     }
 
    async function confirmStart() {
+      // Clear localStorage before starting quiz (ensures clean state for retakes)
+      const quizId = '<%= quiz._id %>';
+      console.log('Clearing localStorage before starting quiz:', quizId);
+      localStorage.removeItem('quizAnswers_' + quizId);
+      localStorage.removeItem('quizProgress_' + quizId);
+      // Clear any other quiz-related data
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('quiz_' + quizId) || key.includes(quizId)) {
+          localStorage.removeItem(key);
+        }
+      });
+      
       // Show loading state
       const startBtn = document.querySelector('#startModal .btn-primary');
       startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البدء...';
@@ -335,6 +347,13 @@
         const data = await response.json();
         
         if (data.success) {
+          // Clear localStorage again after server confirms start (in case of retake)
+          if (data.isRetake) {
+            console.log('Retake detected - ensuring localStorage is cleared');
+            localStorage.removeItem('quizAnswers_' + quizId);
+            localStorage.removeItem('quizProgress_' + quizId);
+          }
+          
           // Navigate to quiz taking page
           window.location.href = '/student/quiz-taking/<%= quiz._id %>?qNumber=1';
         } else {

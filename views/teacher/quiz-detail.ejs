@@ -131,6 +131,9 @@
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 800px;
     }
     
     .table-header {
@@ -138,14 +141,88 @@
       color: white;
       padding: 15px 20px;
       font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .table-body-container {
+      overflow-y: auto;
+      overflow-x: auto;
+      flex: 1;
+      max-height: calc(800px - 70px);
+      min-height: 300px;
+    }
+    
+    .table-body-container::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    
+    .table-body-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 5px;
+    }
+    
+    .table-body-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 5px;
+    }
+    
+    .table-body-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    
+    .table-header-row {
+      display: grid;
+      grid-template-columns: 0.6fr 1.3fr 1fr 0.8fr 1fr 1fr 1fr 0.8fr 1.2fr 1fr;
+      padding: 15px 20px;
+      background: #f8f9fa;
+      font-weight: bold;
+      border-bottom: 2px solid #dee2e6;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
     }
     
     .student-row {
       display: grid;
-      grid-template-columns: 1.3fr 1fr 0.8fr 1fr 1fr 1fr 0.8fr 1.2fr 1fr;
+      grid-template-columns: 0.6fr 1.3fr 1fr 0.8fr 1fr 1fr 1fr 0.8fr 1.2fr 1fr;
       padding: 15px 20px;
       border-bottom: 1px solid #eee;
       align-items: center;
+      min-width: fit-content;
+    }
+    
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: white;
+    }
+    
+    .rank-badge.rank-1 {
+      background: linear-gradient(135deg, #ffd700, #ffed4e);
+      color: #8b6914;
+    }
+    
+    .rank-badge.rank-2 {
+      background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+      color: #5a5a5a;
+    }
+    
+    .rank-badge.rank-3 {
+      background: linear-gradient(135deg, #cd7f32, #e6a55d);
+      color: white;
+    }
+    
+    .rank-badge.other {
+      background: #e2e8f0;
+      color: #4a5568;
     }
     
     .student-row:hover {
@@ -188,6 +265,53 @@
     
     .btn-export:hover {
       background: #28a745;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .students-table {
+        max-height: 600px;
+      }
+      
+      .table-body-container {
+        max-height: calc(600px - 70px);
+        min-height: 200px;
+      }
+      
+      .student-row,
+      .table-header-row {
+        grid-template-columns: 1.2fr 0.8fr 0.7fr 1fr 1fr 0.9fr 0.8fr 1fr 0.8fr;
+        padding: 12px 15px;
+        font-size: 0.9rem;
+      }
+      
+      .table-header {
+        padding: 12px 15px;
+      }
+      
+      .table-header > div {
+        flex-direction: column;
+        align-items: flex-start !important;
+      }
+      
+      .table-header form {
+        width: 100%;
+        margin-top: 10px;
+      }
+      
+      .table-header input[type="text"] {
+        width: 100% !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .students-table {
+        max-height: 500px;
+      }
+      
+      .table-body-container {
+        max-height: calc(500px - 70px);
+      }
     }
   </style>
 </head>
@@ -243,7 +367,7 @@
             </a>
             <a href="/teacher/quizzes/<%= quiz._id %>/export" class="btn-export">
               <i class="fas fa-download"></i>
-              تصدير النتائج
+              تصدير النتائج (Excel)
             </a>
           </div>
           
@@ -330,103 +454,186 @@
           <!-- Students Table -->
           <div class="students-table">
             <div class="table-header">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>قائمة الطلاب</span>
-                <form method="get" style="display: flex; gap: 10px; align-items: center;">
-                  <input type="hidden" name="page" value="1">
-                  <input type="text" name="search" value="<%= typeof search !== 'undefined' ? search : '' %>" placeholder="البحث بالاسم/الكود/الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 280px;">
-                  <button type="submit" class="btn btn-outline">
-                    <i class="fas fa-search"></i>
-                    بحث
-                  </button>
-                  <% if (search && search.trim() !== '') { %>
-                  <a href="?" class="btn btn-outline"><i class="fas fa-times"></i></a>
-                  <% } %>
-                </form>
-              </div>
-            </div>
-            <div class="student-row" style="background: #f8f9fa; font-weight: bold;">
-              <div>اسم الطالب</div>
-              <div>كود الطالب</div>
-              <div>الصف</div>
-              <div>رقم الهاتف</div>
-              <div>هاتف الوالد</div>
-              <div>الحالة</div>
-              <div>الدرجة</div>
-              <div>وقت الانتهاء</div>
-              <div style="text-align:center;">إعادة فتح</div>
-            </div>
-            <% students.forEach(function(student) { %>
-              <div class="student-row">
-                <div><%= student.studentName %></div>
-                <div><%= student.studentCode %></div>
-                <div><%= student.grade %></div>
-                <div><%= student.phoneNumber || '-' %></div>
-                <div><%= student.parentPhoneNumber || '-' %></div>
-                <div>
-                  <% if (student.quizInProgress) { %>
-                    <span class="status-badge status-in-progress">قيد التنفيذ</span>
-                  <% } else if (student.quizAttempted) { %>
-                    <span class="status-badge status-completed">مكتمل</span>
-                  <% } else { %>
-                    <span class="status-badge status-not-attempted">لم يحاول</span>
-                  <% } %>
-                </div>
-                <div>
-                  <% if (student.quizAttempted && !student.quizInProgress) { %>
-                    <strong style="color: var(--primary-color);"><%= student.quizScoreDisplay %></strong>
-                  <% } else { %>
-                    -
-                  <% } %>
-                </div>
-                <div>
-                  <% if (student.quizEndTime) { %>
-                    <%= new Date(student.quizEndTime).toLocaleString('ar-EG') %>
-                  <% } else { %>
-                    -
-                  <% } %>
-                </div>
-                <div style="text-align:center;">
-                  <% if (student.quizAttempted || student.quizInProgress) { %>
-                    <button class="btn btn-outline" data-reopen data-student-id="<%= student.studentId %>" style="padding:6px 10px;">
-                      <i class="fas fa-redo"></i>
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <span>قائمة الطلاب (<%= totalStudents %> طالب)</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <form method="get" style="display: flex; gap: 10px; align-items: center;">
+                    <input type="hidden" name="page" value="1">
+                    <% if (typeof pageSize !== 'undefined') { %>
+                    <input type="hidden" name="pageSize" value="<%= pageSize %>">
+                    <% } %>
+                    <input type="text" name="search" value="<%= typeof search !== 'undefined' ? search : '' %>" placeholder="البحث بالاسم/الكود/الهاتف..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 280px;">
+                    <button type="submit" class="btn btn-outline">
+                      <i class="fas fa-search"></i>
+                      بحث
                     </button>
-                  <% } else { %>
-                    -
-                  <% } %>
+                    <% if (search && search.trim() !== '') { %>
+                    <a href="?pageSize=<%= typeof pageSize !== 'undefined' ? pageSize : '100' %>" class="btn btn-outline"><i class="fas fa-times"></i></a>
+                    <% } %>
+                  </form>
+                  <form method="get" style="display: flex; gap: 5px; align-items: center;">
+                    <% if (search && search.trim() !== '') { %>
+                    <input type="hidden" name="search" value="<%= search %>">
+                    <% } %>
+                    <label style="color: white; font-size: 0.9rem;">عدد النتائج:</label>
+                    <select name="pageSize" onchange="this.form.submit()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer;">
+                      <option value="50" <%= pageSize === '50' ? 'selected' : '' %>>50</option>
+                      <option value="100" <%= pageSize === '100' || typeof pageSize === 'undefined' ? 'selected' : '' %>>100</option>
+                      <option value="200" <%= pageSize === '200' ? 'selected' : '' %>>200</option>
+                      <option value="all" <%= pageSize === 'all' ? 'selected' : '' %>>الكل</option>
+                    </select>
+                  </form>
                 </div>
               </div>
-            <% }); %>
-            
-            <% if (students.length === 0) { %>
-              <div class="student-row">
-                <div colspan="8" style="text-align: center; color: var(--text-secondary);">
-                  لا توجد بيانات متاحة
-                </div>
+            </div>
+            <div class="table-body-container">
+              <div class="table-header-row">
+                <div>الترتيب</div>
+                <div>اسم الطالب</div>
+                <div>كود الطالب</div>
+                <div>الصف</div>
+                <div>رقم الهاتف</div>
+                <div>هاتف الوالد</div>
+                <div>الحالة</div>
+                <div>الدرجة</div>
+                <div>وقت الانتهاء</div>
+                <div style="text-align:center;">إعادة فتح</div>
               </div>
-            <% } %>
+              <% if (students.length === 0) { %>
+                <div class="student-row">
+                  <div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">
+                    لا توجد بيانات متاحة
+                  </div>
+                </div>
+              <% } else { %>
+                <% 
+                  // Calculate rank for each student (only for completed quizzes)
+                  // Since students are already sorted by score, we just need to assign ranks
+                  let currentRank = 0;
+                  let lastScore = null;
+                  let studentRank = 0;
+                %>
+                <% students.forEach(function(student, index) { %>
+                  <% 
+                    // Only rank completed quizzes
+                    if (student.quizAttempted && !student.quizInProgress) {
+                      // If score is different from previous, increment rank
+                      if (lastScore === null || student.quizScore !== lastScore) {
+                        currentRank = currentRank + 1;
+                        studentRank = currentRank;
+                        lastScore = student.quizScore;
+                      } else {
+                        // Same score as previous student - same rank
+                        studentRank = currentRank;
+                      }
+                    } else {
+                      studentRank = 0; // No rank for incomplete quizzes
+                    }
+                  %>
+                  <div class="student-row">
+                    <div style="text-align: center;">
+                      <% if (studentRank > 0) { %>
+                        <% if (studentRank === 1) { %>
+                          <span class="rank-badge rank-1" title="المركز الأول"><%= studentRank %></span>
+                        <% } else if (studentRank === 2) { %>
+                          <span class="rank-badge rank-2" title="المركز الثاني"><%= studentRank %></span>
+                        <% } else if (studentRank === 3) { %>
+                          <span class="rank-badge rank-3" title="المركز الثالث"><%= studentRank %></span>
+                        <% } else { %>
+                          <span class="rank-badge other" title="المركز <%= studentRank %>"><%= studentRank %></span>
+                        <% } %>
+                      <% } else { %>
+                        <span style="color: #cbd5e1;">-</span>
+                      <% } %>
+                    </div>
+                    <div><%= student.studentName %></div>
+                    <div><%= student.studentCode %></div>
+                    <div><%= student.grade === 'Grade1' ? 'الأول الثانوي' : student.grade === 'Grade2' ? 'الثاني الثانوي' : student.grade === 'Grade3' ? 'الثالث الثانوي' : student.grade %></div>
+                    <div><%= student.phoneNumber || '-' %></div>
+                    <div><%= student.parentPhoneNumber || '-' %></div>
+                    <div>
+                      <% if (student.quizInProgress) { %>
+                        <span class="status-badge status-in-progress">قيد التنفيذ</span>
+                      <% } else if (student.quizAttempted) { %>
+                        <span class="status-badge status-completed">مكتمل</span>
+                      <% } else { %>
+                        <span class="status-badge status-not-attempted">لم يحاول</span>
+                      <% } %>
+                    </div>
+                    <div>
+                      <% if (student.quizAttempted && !student.quizInProgress) { %>
+                        <strong style="color: var(--primary-color);"><%= student.quizScoreDisplay %></strong>
+                      <% } else { %>
+                        -
+                      <% } %>
+                    </div>
+                    <div>
+                      <% if (student.quizEndTime) { %>
+                        <%= new Date(student.quizEndTime).toLocaleString('ar-EG') %>
+                      <% } else { %>
+                        -
+                      <% } %>
+                    </div>
+                    <div style="text-align:center;">
+                      <% if (student.quizAttempted || student.quizInProgress) { %>
+                        <button class="btn btn-outline" data-reopen data-student-id="<%= student.studentId %>" style="padding:6px 10px;">
+                          <i class="fas fa-redo"></i>
+                        </button>
+                      <% } else { %>
+                        -
+                      <% } %>
+                    </div>
+                  </div>
+                <% }); %>
+              <% } %>
+            </div>
           </div>
           
           <!-- Pagination -->
-          <% if (totalPages > 1) { %>
-            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 20px;">
-              <% const qs = (search && search.trim() !== '') ? `&search=${encodeURIComponent(search)}` : ''; %>
+          <% 
+            const pageSizeParam = typeof pageSize !== 'undefined' ? `&pageSize=${pageSize}` : '';
+            const searchParam = (search && search.trim() !== '') ? `&search=${encodeURIComponent(search)}` : '';
+            const queryParams = pageSizeParam + searchParam;
+          %>
+          <% if (totalPages > 1 || pageSize === 'all') { %>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 20px; flex-wrap: wrap;">
               <% if (currentPage > 1) { %>
-                <a href="?page=<%= currentPage - 1 %><%- qs %>" class="btn btn-outline">
+                <a href="?page=<%= currentPage - 1 %><%- queryParams %>" class="btn btn-outline">
                   <i class="fas fa-chevron-right"></i>
                   السابق
                 </a>
               <% } %>
               
-              <span style="color: var(--text-secondary);">
-                صفحة <%= currentPage %> من <%= totalPages %>
+              <span style="color: var(--text-secondary); padding: 0 15px;">
+                <% if (pageSize === 'all') { %>
+                  عرض جميع الطلاب (<%= students.length %>)
+                <% } else { %>
+                  صفحة <%= currentPage %> من <%= totalPages %> (<%= students.length %> طالب في هذه الصفحة)
+                <% } %>
               </span>
               
               <% if (currentPage < totalPages) { %>
-                <a href="?page=<%= currentPage + 1 %><%- qs %>" class="btn btn-outline">
+                <a href="?page=<%= currentPage + 1 %><%- queryParams %>" class="btn btn-outline">
                   التالي
                   <i class="fas fa-chevron-left"></i>
                 </a>
+              <% } %>
+              
+              <!-- Page number input for quick navigation -->
+              <% if (totalPages > 5) { %>
+                <form method="get" style="display: flex; gap: 5px; align-items: center;">
+                  <% if (typeof pageSize !== 'undefined') { %>
+                  <input type="hidden" name="pageSize" value="<%= pageSize %>">
+                  <% } %>
+                  <% if (search && search.trim() !== '') { %>
+                  <input type="hidden" name="search" value="<%= search %>">
+                  <% } %>
+                  <label style="color: var(--text-secondary); font-size: 0.9rem;">انتقل إلى:</label>
+                  <input type="number" name="page" min="1" max="<%= totalPages %>" value="<%= currentPage %>" style="width: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 5px; text-align: center;">
+                  <button type="submit" class="btn btn-outline" style="padding: 6px 12px;">
+                    <i class="fas fa-arrow-left"></i>
+                  </button>
+                </form>
               <% } %>
             </div>
           <% } %>
