@@ -679,14 +679,10 @@
                   </div>
 
                   <div class="quiz-actions">
-                    <a href="/student/quiz-taking/<%= exam._id %>?qNumber=1" class="btn btn-primary" onclick="clearQuizProgress('<%= exam._id %>')">
+                    <a href="/student/quiz-taking/<%= exam._id %>?qNumber=1" class="btn btn-primary">
                       <i class="fas fa-play"></i>
                       متابعة الامتحان
                     </a>
-                    <button class="btn btn-secondary" onclick="restartQuiz('<%= exam._id %>')" style="flex: 0.5;">
-                      <i class="fas fa-redo"></i>
-                      إعادة البدء
-                    </button>
                   </div>
 
                 <% } else if (isCompleted) { %>
@@ -1024,50 +1020,6 @@
         el.style.width = width + '%';
       });
     });
-
-    // Clear quiz progress from localStorage
-    function clearQuizProgress(quizId) {
-      console.log('Clearing quiz progress for:', quizId);
-      localStorage.removeItem('quizAnswers_' + quizId);
-      localStorage.removeItem('quizProgress_' + quizId);
-      // Continue to quiz - the page will detect retake and clear
-    }
-
-    // Restart quiz completely
-    async function restartQuiz(quizId) {
-      if (!confirm('هل أنت متأكد من إعادة بدء الامتحان؟ سيتم حذف جميع الإجابات المحفوظة.')) {
-        return;
-      }
-      
-      // Clear localStorage
-      localStorage.removeItem('quizAnswers_' + quizId);
-      localStorage.removeItem('quizProgress_' + quizId);
-      
-      try {
-        // Call server to reset quiz (this will be handled by quizWillStart)
-        const response = await fetch(`/student/quizWillStart/${quizId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          showToast('success', 'تم إعادة بدء الامتحان بنجاح');
-          // Redirect to quiz preparation page to start fresh
-          setTimeout(() => {
-            window.location.href = `/student/quiz-preparation/${quizId}`;
-          }, 1000);
-        } else {
-          showToast('error', data.message || 'حدث خطأ أثناء إعادة بدء الامتحان');
-        }
-      } catch (error) {
-        console.error('Error restarting quiz:', error);
-        showToast('error', 'حدث خطأ في الاتصال');
-      }
-    }
   </script>
 </body>
 </html>

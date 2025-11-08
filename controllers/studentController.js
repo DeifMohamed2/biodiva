@@ -1215,7 +1215,7 @@ const quizWillStart = async (req, res) => {
         (q) => q._id.toString() === quiz._id.toString()
       );
 
-    // If quiz is completed (passed with 60%+), don't allow retake
+    // If quiz is completed, don't allow retake
     if (quizUser && quizUser.isEnterd && !quizUser.inProgress) {
       return res
         .status(400)
@@ -1228,11 +1228,6 @@ const quizWillStart = async (req, res) => {
 
     console.log('Starting quiz:', quiz.quizName);
     console.log('Quiz user exists:', !!quizUser);
-    console.log('Quiz user state:', quizUser ? {
-      isEnterd: quizUser.isEnterd,
-      inProgress: quizUser.inProgress,
-      Score: quizUser.Score
-    } : 'none');
     console.log('Start time:', startTime);
     console.log('End time:', endTime);
 
@@ -1260,9 +1255,6 @@ const quizWillStart = async (req, res) => {
       randomIndices: randomQuestionIndices
     });
 
-    // Check if this is a retake (quiz exists but not completed, or failed previously)
-    const isRetake = quizUser && (!quizUser.isEnterd || (quizUser.Score === 0 && !quizUser.inProgress));
-
     if (!quizUser) {
       // Create new quiz info for user
       console.log('Creating new quiz info for user');
@@ -1274,10 +1266,9 @@ const quizWillStart = async (req, res) => {
         inProgress: true,
         Score: 0,
         answers: [],
-        randomQuestionIndices: randomQuestionIndices,
+        randomQuestionIndices: randomQuestionIndices, // Set random indices immediately
         startTime: startTime,
         endTime: endTime,
-        solvedAt: null,
         quizPurchaseStatus: !quiz.prepaidStatus || isFreeQuiz || hasSpecificQuizAccess,
       };
 
@@ -1286,16 +1277,11 @@ const quizWillStart = async (req, res) => {
       });
 
       console.log('Quiz started with random indices:', randomQuestionIndices);
-      return res.json({ 
-        success: true, 
-        message: 'Quiz started successfully',
-        isRetake: false
-      });
-    } else {
-      // RESET EVERYTHING for retake - complete reset as if first time
-      console.log('Resetting quiz for retake - clearing all data');
-      console.log('Is retake:', isRetake);
-      
+      return res.json({ success: true, message: 'Quiz started successfully' });
+    } else if (!quizUser.endTime || !quizUser.inProgress) {
+      // Update existing quiz info with start time and new random indices
+      console.log('Updating existing quiz info with start time and new random indices');
+
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
         {
@@ -1304,21 +1290,32 @@ const quizWillStart = async (req, res) => {
             'quizesInfo.$.endTime': endTime,
             'quizesInfo.$.inProgress': true,
             'quizesInfo.$.isEnterd': false,
-            'quizesInfo.$.answers': [], // Clear ALL previous answers
-            'quizesInfo.$.Score': 0, // Reset score to zero
-            'quizesInfo.$.randomQuestionIndices': randomQuestionIndices, // Generate NEW random indices
-            'quizesInfo.$.solvedAt': null, // Clear solved timestamp
+            'quizesInfo.$.answers': [], // Clear previous answers
+            'quizesInfo.$.Score': 0, // Reset score
+            'quizesInfo.$.randomQuestionIndices': randomQuestionIndices, // Set new random indices
           },
         }
       );
 
-      console.log('Quiz reset complete - all data cleared for retake');
-      console.log('New random indices:', randomQuestionIndices);
+      console.log('Quiz timer updated with new random indices:', randomQuestionIndices);
       return res.json({
         success: true,
-        message: isRetake ? 'Quiz reset for retake' : 'Quiz timer updated successfully',
-        isRetake: isRetake
+        message: 'Quiz timer updated successfully',
       });
+    } else {
+      // Check if existing quiz time is still valid
+      const currentTime = new Date().getTime();
+      const existingEndTime = new Date(quizUser.endTime).getTime();
+
+      if (currentTime >= existingEndTime) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'Quiz time has expired' });
+      }
+
+      // Quiz already started and still valid, continue
+      console.log('Quiz already started, continuing');
+      return res.json({ success: true, message: 'Quiz already in progress' });
     }
   } catch (error) {
     console.error('Quiz will start error:', error);
@@ -1389,33 +1386,24 @@ const quiz_start = async (req, res) => {
       return res.redirect('/student/exams');
     }
 
-    // If quiz is completed (passed with 60%+), don't allow retake
+    // If quiz is completed, don't allow retake
     if (userQuizInfo && userQuizInfo.isEnterd && !userQuizInfo.inProgress) {
       console.log('Quiz already completed');
       return res.redirect('/student/exams');
     }
 
-    // If quiz user exists but quiz not started or expired, allow restart
-    if (!userQuizInfo || !userQuizInfo.endTime || !userQuizInfo.inProgress) {
-      // If user has quiz info but quiz not in progress, redirect to preparation page to restart
-      if (userQuizInfo && !userQuizInfo.inProgress && !userQuizInfo.isEnterd) {
-        console.log('Quiz exists but not started - redirecting to preparation');
-        return res.redirect('/student/quiz-preparation/' + quizId);
-      }
-      // If no quiz info at all, redirect to preparation
-      if (!userQuizInfo) {
-        console.log('No quiz info found - redirecting to preparation');
-        return res.redirect('/student/quiz-preparation/' + quizId);
-      }
+    // Redirect if quiz is not yet started
+    if (!userQuizInfo || !userQuizInfo.endTime) {
+      return res.redirect('/student/exams');
     }
 
     // Check if quiz time has expired
     const currentTime = new Date().getTime();
     const endTime = new Date(userQuizInfo.endTime).getTime();
 
-    if (currentTime >= endTime && userQuizInfo.inProgress) {
-      console.log('Quiz time expired, resetting for retake');
-      // Auto-reset the quiz if time is up and not completed - allow retake
+    if (currentTime >= endTime) {
+      console.log('Quiz time expired, auto-finishing quiz');
+      // Auto-finish the quiz if time is up - reset for retake since no answers were submitted
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
         {
@@ -1451,13 +1439,6 @@ const quiz_start = async (req, res) => {
         : 'undefined'
     );
 
-    // Check if this is a retake (quiz exists but failed or not completed properly)
-    const isRetake = userQuizInfo && (
-      (!userQuizInfo.isEnterd && !userQuizInfo.inProgress) || // Not entered and not in progress = retake
-      (userQuizInfo.Score === 0 && !userQuizInfo.inProgress) || // Failed (score 0) = retake
-      (!userQuizInfo.randomQuestionIndices || userQuizInfo.randomQuestionIndices.length === 0) // Missing indices = retake
-    );
-
     // Always check and generate random indices if needed (regenerate if empty or invalid)
     const questionsToShow = quiz.questionsToShow || quiz.questionsCount;
     let needsRandomGeneration = false;
@@ -1466,20 +1447,18 @@ const quiz_start = async (req, res) => {
       !userQuizInfo.randomQuestionIndices ||
       !Array.isArray(userQuizInfo.randomQuestionIndices) ||
       userQuizInfo.randomQuestionIndices.length === 0 ||
-      userQuizInfo.randomQuestionIndices.length !== questionsToShow ||
-      isRetake // Always regenerate on retake
+      userQuizInfo.randomQuestionIndices.length !== questionsToShow
     ) {
       needsRandomGeneration = true;
       console.log('Random indices need to be generated:', {
         exists: !!userQuizInfo.randomQuestionIndices,
         isArray: Array.isArray(userQuizInfo.randomQuestionIndices),
         length: userQuizInfo.randomQuestionIndices?.length,
-        expectedLength: questionsToShow,
-        isRetake: isRetake
+        expectedLength: questionsToShow
       });
     }
 
-    if (needsRandomGeneration || isRetake) {
+    if (needsRandomGeneration) {
       let randomIndices = [];
 
       // Always generate randomized indices, then take first questionsToShow
@@ -1503,21 +1482,8 @@ const quiz_start = async (req, res) => {
         quizId: quiz._id,
         totalQuestions: quiz.Questions.length,
         questionsToShow: questionsToShow,
-        randomIndices: randomIndices,
-        isRetake: isRetake
+        randomIndices: randomIndices
       });
-
-      // If retake, also clear answers and reset score
-      const updateData = {
-        'quizesInfo.$.randomQuestionIndices': randomIndices
-      };
-      
-      if (isRetake) {
-        updateData['quizesInfo.$.answers'] = [];
-        updateData['quizesInfo.$.Score'] = 0;
-        updateData['quizesInfo.$.solvedAt'] = null;
-        console.log('Clearing answers and score for retake');
-      }
 
       // Save these indices to the user's quiz info with explicit user ID filter
       console.log('Saving random indices to database for user:', req.userData._id);
@@ -1527,7 +1493,7 @@ const quiz_start = async (req, res) => {
           'quizesInfo._id': quiz._id 
         },
         { 
-          $set: updateData
+          $set: { 'quizesInfo.$.randomQuestionIndices': randomIndices } 
         },
         { new: true }
       );
@@ -1542,11 +1508,6 @@ const quiz_start = async (req, res) => {
           );
           if (quizInfoIndex !== -1) {
             user.quizesInfo[quizInfoIndex].randomQuestionIndices = randomIndices;
-            if (isRetake) {
-              user.quizesInfo[quizInfoIndex].answers = [];
-              user.quizesInfo[quizInfoIndex].Score = 0;
-              user.quizesInfo[quizInfoIndex].solvedAt = null;
-            }
             await user.save();
             console.log('Fallback: Updated randomQuestionIndices via save()');
           }
@@ -1563,40 +1524,22 @@ const quiz_start = async (req, res) => {
         );
         if (refreshedQuizInfo && refreshedQuizInfo.randomQuestionIndices) {
           userQuizInfo.randomQuestionIndices = refreshedQuizInfo.randomQuestionIndices;
-          if (isRetake) {
-            userQuizInfo.answers = [];
-            userQuizInfo.Score = 0;
-            userQuizInfo.solvedAt = null;
-          }
-          console.log('Refreshed userQuizInfo from database:', {
-            randomQuestionIndices: userQuizInfo.randomQuestionIndices,
-            answers: userQuizInfo.answers,
-            Score: userQuizInfo.Score
-          });
+          console.log('Refreshed userQuizInfo.randomQuestionIndices from database:', 
+            userQuizInfo.randomQuestionIndices
+          );
         } else {
           // If refresh failed, use the generated indices
           userQuizInfo.randomQuestionIndices = randomIndices;
-          if (isRetake) {
-            userQuizInfo.answers = [];
-            userQuizInfo.Score = 0;
-          }
           console.log('Using locally generated randomIndices:', randomIndices);
         }
       } else {
         // Fallback: use locally generated indices
         userQuizInfo.randomQuestionIndices = randomIndices;
-        if (isRetake) {
-          userQuizInfo.answers = [];
-          userQuizInfo.Score = 0;
-        }
         console.log('Fallback: Using locally generated randomIndices:', randomIndices);
       }
     } else {
       console.log('Using existing randomQuestionIndices:', userQuizInfo.randomQuestionIndices);
     }
-    
-    // Pass isRetake flag to the view
-    const isRetakeFlag = isRetake;
 
     // Final safety check for randomQuestionIndices
     if (

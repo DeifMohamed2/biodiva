@@ -1319,11 +1319,9 @@
       // Clear localStorage for clean retake
       console.log('Clearing localStorage for retake');
       localStorage.removeItem('quizAnswers_' + quizId);
-      localStorage.removeItem('quizProgress_' + quizId);
       
       // Redirect to the quiz preparation page to start retake
-      // This will trigger quizWillStart which resets everything server-side
-      window.location.href = '/student/quiz-preparation/' + quizId;
+      window.location.href = '/student/quiz/' + quizId;
     }
 
     // Image preview functions
@@ -1380,26 +1378,17 @@
       console.log('End Time:', new Date(endTime));
       
       // Check if this is a retake and clear localStorage if needed
-      const isRetake = <%= typeof isRetake !== 'undefined' ? JSON.stringify(isRetake) : 'false' %>;
+      const isRetake = <%= JSON.stringify(userQuizInfo.isRetake || false) %>;
       console.log('Is retake:', isRetake);
       
-      // Always clear localStorage on page load if retake
-      // This ensures clean state for retakes - like they never entered before
       if (isRetake) {
-        console.log('RETAKE DETECTED - Clearing all localStorage data for fresh start');
+        console.log('Clearing localStorage for retake');
         localStorage.removeItem('quizAnswers_' + quizId);
-        localStorage.removeItem('quizProgress_' + quizId);
-        // Clear any other quiz-related data
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('quiz_' + quizId) || key.includes(quizId)) {
-            localStorage.removeItem(key);
-          }
-        });
       }
       
-      // Load saved answer for current question (only if not retake)
+      // Load saved answer for current question
       const questionIndex = currentQuestionNumber - 1;
-      let userAnswers = isRetake ? [] : JSON.parse(localStorage.getItem('quizAnswers_' + quizId) || '[]');
+      let userAnswers = JSON.parse(localStorage.getItem('quizAnswers_' + quizId) || '[]');
       
       // Ensure array is properly sized
       while (userAnswers.length < totalQuestions) {
