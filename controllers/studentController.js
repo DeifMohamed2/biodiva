@@ -2027,10 +2027,8 @@ const quiz_review = async (req, res) => {
       userQuizInfo.answers ? userQuizInfo.answers.length : 0
     );
 
-    // Calculate statistics based on the questions the user actually saw
-    let correctAnswers = 0;
-    let incorrectAnswers = 0;
-    let unansweredQuestions = 0;
+    // Calculate answered count based on saved answers only (summary will trust saved Score)
+    let answeredCount = 0;
 
     userQuestions.forEach((question, index) => {
       const questionId = question._id
@@ -2062,29 +2060,17 @@ const quiz_review = async (req, res) => {
         )}, correctAnswer=${question.ranswer}`
       );
 
-      if (!userAnswerObj || !userAnswerObj.selectedAnswer) {
-        unansweredQuestions++;
-        console.log(`Question ${index + 1}: UNANSWERED`);
+      if (userAnswerObj && userAnswerObj.selectedAnswer) {
+        answeredCount++;
       } else {
-        const selectedAnswer = userAnswerObj.selectedAnswer;
-        const answerIndex = parseInt(selectedAnswer.replace('answer', ''));
-        if (question.ranswer === answerIndex) {
-          correctAnswers++;
-          console.log(
-            `Question ${index + 1}: CORRECT (chose ${selectedAnswer})`
-          );
-        } else {
-          incorrectAnswers++;
-          console.log(
-            `Question ${
-              index + 1
-            }: INCORRECT (chose ${selectedAnswer}, correct was answer${
-              question.ranswer
-            })`
-          );
-        }
+        console.log(`Question ${index + 1}: UNANSWERED`);
       }
     });
+
+    // Summary consistency: trust saved score and derive incorrect/unanswered from answered count
+    const correctAnswers = userQuizInfo.Score || 0;
+    const unansweredQuestions = Math.max(0, questionsShown - answeredCount);
+    const incorrectAnswers = Math.max(0, answeredCount - correctAnswers);
 
     console.log('Final stats:', {
       correctAnswers,

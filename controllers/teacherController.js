@@ -5325,7 +5325,6 @@ const quiz_export = async (req, res) => {
       row.getCell('rank').alignment = { horizontal: 'center' };
       row.getCell('code').alignment = { horizontal: 'center' };
       row.getCell('quizScore').alignment = { horizontal: 'center' };
-      row.getCell('totalScore').alignment = { horizontal: 'center' };
       row.getCell('status').alignment = { horizontal: 'center' };
     });
     
