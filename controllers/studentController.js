@@ -2142,10 +2142,26 @@ const saveQuizAnswer = async (req, res) => {
         .json({ success: false, message: 'Quiz not started' });
     }
 
+    // Get the actual question ID from the quiz if not provided
+    let actualQuestionId = questionId;
+    if (!actualQuestionId && userQuizInfo.randomQuestionIndices) {
+      // Get the question from the randomized indices
+      const poolIndex = userQuizInfo.randomQuestionIndices[questionIndex];
+      if (poolIndex !== undefined && quiz.Questions[poolIndex]) {
+        const question = quiz.Questions[poolIndex];
+        actualQuestionId = question.id || question._id?.toString() || `q_${poolIndex}`;
+      }
+    }
+    
+    // Fallback to index-based ID if still not found
+    if (!actualQuestionId) {
+      actualQuestionId = `q_${questionIndex}`;
+    }
+    
     // Create or update answer object
     const answerObj = {
-      questionId: questionId || `q_${questionIndex}`,
-      questionIndex: questionIndex,
+      questionId: actualQuestionId, // Use stable question ID
+      questionIndex: questionIndex, // Display index for quick lookup
       selectedAnswer: answer,
       answeredAt: new Date(),
     };

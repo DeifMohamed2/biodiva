@@ -526,14 +526,22 @@
               const questionId = question._id ? question._id.toString() : `q_${question.originalIndex}`;
               
               // Find the user's answer for this specific question
+              // Priority: match by display index (questionIndex) first, then by questionId
               let userAnswerObj = null;
               if (userQuizInfo.answers && Array.isArray(userQuizInfo.answers)) {
                 // New format: array of objects
-                userAnswerObj = userQuizInfo.answers.find(a => 
-                  a.questionId === questionId || 
-                  a.questionIndex === index ||
-                  (a.questionIndex === question.originalIndex)
-                );
+                // First try to match by display index (most reliable for randomized questions)
+                userAnswerObj = userQuizInfo.answers.find(a => a.questionIndex === index);
+                
+                // If not found by display index, try other matching methods
+                if (!userAnswerObj) {
+                  userAnswerObj = userQuizInfo.answers.find(a => 
+                    a.questionId === questionId || 
+                    (question._id && a.questionId === question._id.toString()) ||
+                    a.questionId === `q_${index}` ||
+                    a.questionId === `q_${question.originalIndex}`
+                  );
+                }
               } else if (userQuizInfo.answers && userQuizInfo.answers[index]) {
                 // Legacy format: simple array
                 userAnswerObj = {
@@ -542,9 +550,14 @@
               }
               
               const userAnswer = userAnswerObj ? userAnswerObj.selectedAnswer : null;
-              const correctAnswerIndex = question.ranswer; // 1-based
+              // Ensure correctAnswerIndex is a number (ranswer is 1-based: 1, 2, 3, or 4)
+              const correctAnswerIndex = typeof question.ranswer === 'number' 
+                ? question.ranswer 
+                : parseInt(question.ranswer, 10);
               const isAnswered = !!userAnswer;
-              const isCorrect = isAnswered && parseInt(userAnswer.replace('answer', '')) === correctAnswerIndex;
+              // Compare user's answer (extracted from "answer1", "answer2", etc.) with correct answer index
+              const userAnswerIndex = userAnswer ? parseInt(userAnswer.replace('answer', ''), 10) : null;
+              const isCorrect = isAnswered && userAnswerIndex !== null && userAnswerIndex === correctAnswerIndex;
               
               let resultClass = 'result-unanswered';
               let resultText = 'لم تُجب';

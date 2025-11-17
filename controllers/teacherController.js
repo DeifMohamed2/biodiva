@@ -3049,13 +3049,15 @@ const quiz_create_post = async (req, res) => {
     
     // Normalize question field names for consistency
     if (Array.isArray(parsedQuestions)) {
+      const baseTimestamp = Date.now();
       parsedQuestions = parsedQuestions.map((question, index) => {
-        // Generate unique ID for each question
-        const questionId = question.id || Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        // Generate stable unique ID for each question
+        // Use provided ID if available, otherwise generate one that includes index for uniqueness
+        const questionId = question.id || `${baseTimestamp}_${index}_${Math.random().toString(36).substr(2, 9)}`;
         
         // Convert from frontend format to Quiz schema format
         const normalizedQuestion = {
-          id: questionId,
+          id: questionId, // Stable ID that will be preserved across edits
           title: question.question || question.title || question.questionText || '',
           questionPhoto: question.image || question.questionPhoto || '',
           answer1: question.answers && question.answers[0] ? question.answers[0] : (question.answer1 || ''),
@@ -4368,8 +4370,22 @@ const chapter_quiz_create_post = async (req, res) => {
     
     // Normalize question field names for consistency
     if (Array.isArray(parsedQuestions)) {
-      parsedQuestions = parsedQuestions.map(question => {
-        const normalizedQuestion = { ...question };
+      const baseTimestamp = Date.now();
+      parsedQuestions = parsedQuestions.map((question, index) => {
+        // Generate stable unique ID for each question
+        const questionId = question.id || `${baseTimestamp}_${index}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const normalizedQuestion = {
+          id: questionId, // Stable ID that will be preserved across edits
+          title: question.question || question.title || question.questionText || '',
+          questionPhoto: question.image || question.questionPhoto || '',
+          answer1: question.answers && question.answers[0] ? question.answers[0] : (question.answer1 || ''),
+          answer2: question.answers && question.answers[1] ? question.answers[1] : (question.answer2 || ''),
+          answer3: question.answers && question.answers[2] ? question.answers[2] : (question.answer3 || ''),
+          answer4: question.answers && question.answers[3] ? question.answers[3] : (question.answer4 || ''),
+          ranswer: (question.correctAnswer !== undefined ? question.correctAnswer + 1 : (question.ranswer || 1))
+        };
+        
         // Ensure both image and questionPhoto fields exist for backward compatibility
         if (normalizedQuestion.questionPhoto && !normalizedQuestion.image) {
           normalizedQuestion.image = normalizedQuestion.questionPhoto;
@@ -4866,6 +4882,19 @@ const quiz_edit_get = async (req, res) => {
       return res.status(404).send('Quiz not found');
     }
     
+    // Check if quiz has been taken by any students
+    const studentsWhoAttempted = await User.countDocuments({
+      isTeacher: false,
+      'quizesInfo._id': quizId,
+      'quizesInfo.isEnterd': true
+    });
+    
+    const studentsInProgress = await User.countDocuments({
+      isTeacher: false,
+      'quizesInfo._id': quizId,
+      'quizesInfo.inProgress': true
+    });
+    
     // Get chapters for dropdown
     const chapters = await Chapter.find({ }).select('chapterName chapterGrade');
     
@@ -4900,6 +4929,16 @@ const quiz_edit_get = async (req, res) => {
       }
     }
     
+    // Ensure all questions have stable IDs (for backward compatibility)
+    if (quiz.Questions && Array.isArray(quiz.Questions)) {
+      quiz.Questions = quiz.Questions.map((q, index) => {
+        if (!q.id) {
+          q.id = q._id?.toString() || `q_${Date.now()}_${index}`;
+        }
+        return q;
+      });
+    }
+    
     res.render('teacher/quiz-edit', {
       title: `تعديل ${quiz.quizName}`,
       path: req.path,
@@ -4907,7 +4946,13 @@ const quiz_edit_get = async (req, res) => {
       quiz,
       chapters,
       videos,
-      error: req.query.error
+      quizStats: {
+        studentsAttempted: studentsWhoAttempted,
+        studentsInProgress: studentsInProgress,
+        hasAttempts: studentsWhoAttempted > 0
+      },
+      error: req.query.error,
+      forceUpdate: req.query.forceUpdate === 'true'
     });
   } catch (error) {
     console.error('Quiz edit get error:', error);
@@ -4930,8 +4975,24 @@ const quiz_edit_post = async (req, res) => {
       isQuizActive,
       permissionToShow,
       showAnswersAfterQuiz,
-      questions
+      questions,
+      forceUpdate // Flag to allow updates even if quiz has been taken
     } = req.body;
+    
+    // Get the existing quiz to preserve question IDs
+    const existingQuiz = await Quiz.findById(quizId);
+    if (!existingQuiz) {
+      return res.redirect(`/teacher/quizzes/${quizId}/edit?error=quiz_not_found`);
+    }
+    
+    // Check if quiz has been taken by any students
+    const studentsWhoAttempted = await User.countDocuments({
+      isTeacher: false,
+      'quizesInfo._id': quizId,
+      'quizesInfo.isEnterd': true
+    });
+    
+    const hasAttempts = studentsWhoAttempted > 0;
     
     // Parse questions if it's a string
     let parsedQuestions = questions;
@@ -4956,15 +5017,51 @@ const quiz_edit_post = async (req, res) => {
       return res.redirect(`/teacher/quizzes/${quizId}/edit?error=too_many_questions_to_show`);
     }
     
-    // Normalize question field names for consistency
+    // Create a map of existing questions by their ID for ID preservation
+    const existingQuestionsMap = new Map();
+    if (existingQuiz.Questions && Array.isArray(existingQuiz.Questions)) {
+      existingQuiz.Questions.forEach((q, index) => {
+        // Use id field if available, otherwise use index-based ID
+        const qId = q.id || q._id?.toString() || `q_${index}`;
+        existingQuestionsMap.set(qId, { question: q, index });
+      });
+    }
+    
+    // Normalize question field names and preserve IDs
+    let questionIdWarnings = [];
     if (Array.isArray(parsedQuestions)) {
       parsedQuestions = parsedQuestions.map((question, index) => {
-        // Generate unique ID for each question
-        const questionId = question.id || Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        // Try to preserve existing question ID
+        let questionId = question.id;
+        
+        // If no ID provided, try to match by content (title/text) to preserve ID
+        if (!questionId && hasAttempts) {
+          const questionText = question.question || question.title || question.questionText || '';
+          // Try to find matching question by text similarity
+          for (const [existingId, existingData] of existingQuestionsMap.entries()) {
+            const existingText = existingData.question.title || existingData.question.question || '';
+            if (existingText.trim() === questionText.trim()) {
+              questionId = existingId;
+              break;
+            }
+          }
+        }
+        
+        // If still no ID found, generate new one (only if quiz hasn't been taken)
+        if (!questionId) {
+          if (hasAttempts && !forceUpdate) {
+            // Generate ID but warn about potential data loss
+            questionIdWarnings.push({
+              index: index + 1,
+              text: questionText.substring(0, 50) + '...'
+            });
+          }
+          questionId = Date.now().toString() + Math.random().toString(36).substr(2, 9) + '_' + index;
+        }
         
         // Convert from frontend format to Quiz schema format
         const normalizedQuestion = {
-          id: questionId,
+          id: questionId, // Preserve or assign stable ID
           title: question.question || question.title || question.questionText || '',
           questionPhoto: question.image || question.questionPhoto || '',
           answer1: question.answers && question.answers[0] ? question.answers[0] : (question.answer1 || ''),
@@ -4986,6 +5083,27 @@ const quiz_edit_post = async (req, res) => {
       });
     }
     
+    // If quiz has attempts and there are warnings, require confirmation
+    if (hasAttempts && questionIdWarnings.length > 0 && !forceUpdate) {
+      return res.redirect(`/teacher/quizzes/${quizId}/edit?error=questions_changed&attempts=${studentsWhoAttempted}&warnings=${questionIdWarnings.length}`);
+    }
+    
+    // Check for deleted questions (questions that existed but are no longer in the new set)
+    const newQuestionIds = new Set(parsedQuestions.map(q => q.id));
+    const deletedQuestionIds = [];
+    if (hasAttempts) {
+      for (const [existingId] of existingQuestionsMap.entries()) {
+        if (!newQuestionIds.has(existingId)) {
+          deletedQuestionIds.push(existingId);
+        }
+      }
+    }
+    
+    // If questions were deleted and quiz has attempts, warn
+    if (hasAttempts && deletedQuestionIds.length > 0 && !forceUpdate) {
+      return res.redirect(`/teacher/quizzes/${quizId}/edit?error=questions_deleted&attempts=${studentsWhoAttempted}&deleted=${deletedQuestionIds.length}`);
+    }
+    
     const updateData = {
       quizName,
       Grade,
@@ -5005,7 +5123,12 @@ const quiz_edit_post = async (req, res) => {
     
     await Quiz.findByIdAndUpdate(quizId, updateData);
     
-    res.redirect(`/teacher/quizzes/${quizId}?success=quiz_updated`);
+    // Log the update for audit purposes
+    if (hasAttempts) {
+      console.log(`Quiz ${quizId} updated: ${studentsWhoAttempted} students have attempted this quiz. Question IDs preserved: ${newQuestionIds.size}/${existingQuestionsMap.size}`);
+    }
+    
+    res.redirect(`/teacher/quizzes/${quizId}?success=quiz_updated${hasAttempts ? '&has_attempts=' + studentsWhoAttempted : ''}`);
   } catch (error) {
     console.error('Quiz edit error:', error);
     res.redirect(`/teacher/quizzes/${req.params.quizId}/edit?error=update_failed`);
