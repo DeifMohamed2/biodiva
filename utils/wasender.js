@@ -6,7 +6,7 @@ const BASE_URL = 'https://wasenderapi.com/api';
 const ACCESS_TOKEN = '1185|Ly6teYxxGMI3zNdw6MDN4i5eg3D1bPW6j821KhSh321a51ed';
 
 // Session API Key for sending messages (replace with your actual session API key)
-const SESSION_API_KEY = '14da9136572ff1920fc31e36b7e3c66d99ad4c03efff05391afe83762658222c';
+const SESSION_API_KEY = '068eda0749574b388ad97baaa455e685fad977965ae9615ff7b33c9599737b0e';
 
 class WasenderClient {
   constructor(accessToken = ACCESS_TOKEN) {
