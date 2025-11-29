@@ -3,7 +3,7 @@ const axios = require('axios');
 // Wasender API configuration
 const BASE_URL = 'https://wasenderapi.com/api';
 // Access Token for authentication (this is used to access the API)
-const ACCESS_TOKEN = '1185|Ly6teYxxGMI3zNdw6MDN4i5eg3D1bPW6j821KhSh321a51ed';
+const ACCESS_TOKEN = '2067|VX1Zz3u0ObOqdpM8Y21yx37zm0Z1D3YBNoKKStBM19f7435b';
 
 // Session API Key for sending messages (replace with your actual session API key)
 const SESSION_API_KEY = '068eda0749574b388ad97baaa455e685fad977965ae9615ff7b33c9599737b0e';
