@@ -328,6 +328,26 @@ const buyChapter = async (req, res) => {
       return res.redirect('/student/chapters?error=invalid_code');
     }
 
+    // IMPORTANT: If this is a GeneralChapter code, check if specific codes exist for this chapter
+    // General codes should NOT work if specific codes exist for the chapter
+    const isGeneralCode = codeData.codeType === 'GeneralChapter' || 
+                          (codeData.isGeneralCode && (!codeData.chapterId || codeData.chapterId === null));
+    
+    if (isGeneralCode) {
+      console.log('This is a general chapter code, checking if specific codes exist for chapter:', chapterId);
+      // Check if any specific Chapter codes exist for this chapter (codeType='Chapter' with matching chapterId)
+      const specificCodeExists = await Code.findOne({
+        codeType: 'Chapter',
+        chapterId: new mongoose.Types.ObjectId(chapterId),
+        isActive: true
+      });
+
+      if (specificCodeExists) {
+        console.log('Specific code exists for this chapter, rejecting general code');
+        return res.redirect('/student/chapters?error=specific_code_required');
+      }
+    }
+
     // Validate code can be used by this user
     const codeValidation = codeData.canBeUsedBy(req.userData);
     if (!codeValidation.valid) {
@@ -1021,6 +1041,30 @@ const buyQuiz = async (req, res) => {
         message: 'Invalid or used code',
         redirect: `${redirectBase}?error=invalid_code`,
       });
+    }
+
+    // IMPORTANT: If this is a GeneralQuiz code, check if specific codes exist for this quiz
+    // General codes should NOT work if specific codes exist for the quiz
+    const isGeneralCode = codeData.codeType === 'GeneralQuiz' || 
+                          (codeData.isGeneralCode && (!codeData.contentId || codeData.contentId === null));
+    
+    if (isGeneralCode) {
+      console.log('This is a general quiz code, checking if specific codes exist for quiz:', quizId);
+      // Check if any specific Quiz codes exist for this quiz (codeType='Quiz' with matching contentId)
+      const specificCodeExists = await Code.findOne({
+        codeType: 'Quiz',
+        contentId: new mongoose.Types.ObjectId(quizId),
+        isActive: true
+      });
+
+      if (specificCodeExists) {
+        console.log('Specific code exists for this quiz, rejecting general code');
+        return res.status(400).json({
+          success: false,
+          message: 'This quiz requires a specific code. General codes cannot be used for quizzes with specific codes.',
+          redirect: `${redirectBase}?error=specific_code_required`,
+        });
+      }
     }
 
     // Check if code is for this specific quiz (only for non-general codes)
@@ -2408,6 +2452,26 @@ const buyPDF = async (req, res) => {
       return res.redirect('/student/PDFs?error=invalid_code');
     }
 
+    // IMPORTANT: If this is a GeneralPDF code, check if specific codes exist for this PDF
+    // General codes should NOT work if specific codes exist for the PDF
+    const isGeneralCode = codeData.codeType === 'GeneralPDF' || 
+                          (codeData.isGeneralCode && (!codeData.contentId || codeData.contentId === null));
+    
+    if (isGeneralCode) {
+      console.log('This is a general PDF code, checking if specific codes exist for PDF:', pdfId);
+      // Check if any specific PDF codes exist for this PDF (codeType='PDF' with matching contentId)
+      const specificCodeExists = await Code.findOne({
+        codeType: 'PDF',
+        contentId: new mongoose.Types.ObjectId(pdfId),
+        isActive: true
+      });
+
+      if (specificCodeExists) {
+        console.log('Specific code exists for this PDF, rejecting general code');
+        return res.redirect('/student/PDFs?error=specific_code_required');
+      }
+    }
+
     // Validate code can be used by this user
     const codeValidation = codeData.canBeUsedBy(req.userData);
     if (!codeValidation.valid) {
@@ -2698,6 +2762,35 @@ const buyVideo = async (req, res) => {
         message: 'Invalid or used code',
         redirect: `/student/chapter/${chapterId}?error=invalid_code`,
       });
+    }
+
+    // IMPORTANT: If this is a GeneralVideo code, check if specific codes exist for this video
+    // General codes should NOT work if specific codes exist for the video
+    const isGeneralCode = codeData.codeType === 'GeneralVideo' || 
+                          (codeData.isGeneralCode && (!codeData.contentId || codeData.contentId === null));
+    
+    if (isGeneralCode) {
+      console.log('This is a general code, checking if specific codes exist for video:', videoId);
+      // Check if any specific Video codes exist for this video (codeType='Video' with matching contentId)
+      const specificCodeExists = await Code.findOne({
+        codeType: 'Video',
+        contentId: new mongoose.Types.ObjectId(videoId),
+        isActive: true
+      });
+
+      if (specificCodeExists) {
+        console.log('Specific code exists for this video, rejecting general code');
+        console.log('Found specific code:', {
+          code: specificCodeExists.Code,
+          contentId: specificCodeExists.contentId,
+          isGeneralCode: specificCodeExists.isGeneralCode
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'This video requires a specific code. General codes cannot be used for videos with specific codes.',
+          redirect: `/student/chapter/${chapterId}?error=specific_code_required`,
+        });
+      }
     }
 
     // Check if code is for this specific video (if contentId is specified)
