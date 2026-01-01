@@ -361,8 +361,8 @@
         .modal-content-custom {
             background: white;
             border-radius: 16px;
-            padding: 2rem;
-            max-width: 400px;
+            padding: 2.5rem;
+            max-width: 550px;
             width: 90%;
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
@@ -1104,11 +1104,29 @@
     <div class="code-input-modal" id="codeModal">
         <div class="modal-content-custom">
             <h4 class="mb-3" id="modalTitle">أدخل الكود</h4>
+            
+            <!-- Code Instructions Alert -->
+            <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem;">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-info-circle me-2 mt-1"></i>
+                    <div>
+                        <strong>طريقة إدخال الكود الصحيحة:</strong>
+                        <ul class="mb-0 mt-2" style="padding-right: 1.2rem;">
+                            <li>أدخل الكود فقط بدون أي رموز إضافية</li>
+                            <li>لا تضع علامات اقتباس (" ") حول الكود</li>
+                            <li>لا تضع نقاط (.) في الكود</li>
+                            <li>لا تضع مسافات قبل أو بعد الكود</li>
+                            <li><strong>مثال صحيح:</strong><code style="background: #f8f9fa; padding: 0.2rem 0.4rem; border-radius: 4px;">38174144771</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
             <form id="codeForm">
                 <input type="hidden" id="purchaseType">
                 <input type="hidden" id="itemId">
                 <input type="hidden" id="chapterId" value="<%= chapter._id %>">
-                <input type="text" class="form-control mb-3" id="codeInput" placeholder="أدخل الكود هنا" required style="text-align: center; font-family: monospace; letter-spacing: 2px;">
+                <input type="text" dir="ltr" class="form-control mb-3" id="codeInput" placeholder="أدخل الكود هنا (مثال: 38174144771)" required style="text-align: center; font-family: monospace; letter-spacing: 2px; text-transform: uppercase;">
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-secondary flex-fill" onclick="hideCodeModal()">إلغاء</button>
                     <button type="submit" class="btn btn-primary flex-fill">
@@ -1127,13 +1145,39 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Function to clean code input (client-side)
+        function cleanCodeInput(code) {
+            if (!code || typeof code !== 'string') {
+                return '';
+            }
+            
+            // Remove leading/trailing whitespace
+            let cleaned = code.trim();
+            
+            // Remove quotation marks (both single and double, from start and end)
+            cleaned = cleaned.replace(/^["']+|["']+$/g, '');
+            
+            // Remove dots
+            cleaned = cleaned.replace(/\./g, '');
+            
+            // Remove spaces
+            cleaned = cleaned.replace(/\s/g, '');
+            
+            // Convert to uppercase
+            cleaned = cleaned.toUpperCase();
+            
+            return cleaned;
+        }
+
         function showCodeModal(type, id, title, chapterId = null) {
             document.getElementById('purchaseType').value = type;
             document.getElementById('itemId').value = id;
             if (chapterId) document.getElementById('chapterId').value = chapterId;
             document.getElementById('modalTitle').textContent = `شراء: ${title}`;
             document.getElementById('codeModal').style.display = 'flex';
-            document.getElementById('codeInput').focus();
+            const codeInput = document.getElementById('codeInput');
+            codeInput.value = ''; // Clear previous input
+            codeInput.focus();
         }
 
         function hideCodeModal() {
@@ -1147,9 +1191,17 @@
             const type = document.getElementById('purchaseType').value;
             const itemId = document.getElementById('itemId').value;
             const chapterId = document.getElementById('chapterId').value;
-            const code = document.getElementById('codeInput').value;
+            const rawCode = document.getElementById('codeInput').value;
+            // Clean the code before sending
+            const code = cleanCodeInput(rawCode);
             const submitBtn = this.querySelector('button[type="submit"]');
             const spinner = submitBtn.querySelector('.spinner-border');
+            
+            // Validate code is not empty after cleaning
+            if (!code || code.length === 0) {
+                alert('يرجى إدخال كود صحيح');
+                return;
+            }
             
             submitBtn.disabled = true;
             spinner.classList.remove('d-none');
@@ -1219,6 +1271,21 @@
 
         window.addEventListener('resize', handleResize);
         handleResize();
+
+        // Set up real-time code cleaning on input field
+        const codeInput = document.getElementById('codeInput');
+        if (codeInput) {
+            codeInput.addEventListener('input', function(e) {
+                const cleaned = cleanCodeInput(e.target.value);
+                if (cleaned !== e.target.value) {
+                    const cursorPos = e.target.selectionStart;
+                    e.target.value = cleaned;
+                    // Try to maintain cursor position (approximate)
+                    const newPos = Math.min(cursorPos, cleaned.length);
+                    e.target.setSelectionRange(newPos, newPos);
+                }
+            });
+        }
     </script>
 </body>
 </html> 

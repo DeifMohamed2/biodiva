@@ -11,6 +11,43 @@ const wasender = require('../utils/wasender');
 
 // Note: Using frontend Cloudinary upload instead of server-side processing
 
+// ==================  Code Cleaning Helper Function  ====================== //
+
+/**
+ * Cleans and normalizes code input by removing:
+ * - Leading/trailing whitespace
+ * - Dots (.)
+ * - Quotation marks (", ')
+ * - Other special characters
+ * - Converts to uppercase
+ * @param {string} code - Raw code input from user
+ * @returns {string} - Cleaned code
+ */
+function cleanCodeInput(code) {
+  if (!code || typeof code !== 'string') {
+    return '';
+  }
+  
+  // Remove leading/trailing whitespace
+  let cleaned = code.trim();
+  
+  // Remove quotation marks (both single and double, from start and end)
+  cleaned = cleaned.replace(/^["']+|["']+$/g, '');
+  
+  // Remove dots
+  cleaned = cleaned.replace(/\./g, '');
+  
+  // Remove spaces
+  cleaned = cleaned.replace(/\s/g, '');
+  
+  // Convert to uppercase
+  cleaned = cleaned.toUpperCase();
+  
+  return cleaned;
+}
+
+// ==================  END Code Cleaning Helper Function  ====================== //
+
 // ==================  WhatsApp Helper Functions  ====================== //
 
 async function sendWasenderMessage(
@@ -298,7 +335,8 @@ const chapters_get = async (req, res) => {
 const buyChapter = async (req, res) => {
   try {
     const chapterId = req.params.chapterId;
-    const code = req.body.code;
+    // Clean and normalize the code input
+    const code = cleanCodeInput(req.body.code);
 
     // Validate chapter exists and user can access it
     const chapterData = await Chapter.findById(chapterId);
@@ -985,7 +1023,8 @@ const buyQuiz = async (req, res) => {
   try {
     const quizId = req.params.quizId;
     const chapterId = req.params.chapterId;
-    const code = req.body.code;
+    // Clean and normalize the code input
+    const code = cleanCodeInput(req.body.code);
 
     // For legacy route support (if no chapterId)
     const redirectBase = chapterId
@@ -2427,7 +2466,8 @@ const getPDF = async (req, res) => {
 const buyPDF = async (req, res) => {
   try {
     const pdfId = req.params.PDFID;
-    const code = req.body.code;
+    // Clean and normalize the code input
+    const code = cleanCodeInput(req.body.code);
 
     // Validate PDF exists
     const pdf = await PDFs.findById(pdfId);
@@ -2558,9 +2598,10 @@ const buyVideo = async (req, res) => {
   try {
     const videoId = req.params.videoId;
     const chapterId = req.params.chapterId;
-    const code = req.body.code;
+    // Clean and normalize the code input
+    const code = cleanCodeInput(req.body.code);
 
-    console.log('Buy video request:', { videoId, chapterId, code });
+    console.log('Buy video request:', { videoId, chapterId, code: code });
 
     // Validate chapter and video exist
     const chapter = await Chapter.findById(chapterId);
