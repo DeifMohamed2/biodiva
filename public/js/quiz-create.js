@@ -330,8 +330,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const uploadWidget = cloudinary.createUploadWidget({
-            cloudName: 'dusod9wxt', // From the chapter-create.ejs file
-            uploadPreset: 'order_project', // From the chapter-create.ejs file
+            cloudName: 'dnuukgxin', // From the chapter-create.ejs file
+            uploadPreset: 'NewUpload', // From the chapter-create.ejs file
             sources: ['local', 'url', 'camera'],
             multiple: false,
             maxFileSize: 10000000, // 10MB
