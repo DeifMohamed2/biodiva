@@ -2,10 +2,62 @@ const mongoose = require('mongoose')
 const { required } = require('nodemon/lib/config')
 const Schema = mongoose.Schema
 
+// Schema for individual question - ensures consistent structure
+const QuestionSchema = new Schema({
+    id: {
+        type: String,
+        required: true
+    },
+    title: {
+        type: String,
+        required: true
+    },
+    questionPhoto: {
+        type: String,
+        default: ''
+    },
+    image: {
+        type: String,
+        default: ''
+    },
+    answer1: {
+        type: String,
+        required: true
+    },
+    answer2: {
+        type: String,
+        required: true
+    },
+    answer3: {
+        type: String,
+        default: ''
+    },
+    answer4: {
+        type: String,
+        default: ''
+    },
+    ranswer: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 4
+    }
+}, { _id: false });
+
 const quizSchema = new Schema({
     quizName: {
         type: String, 
         required: true, 
+    },
+    // Version number - increments on each edit to track changes
+    version: {
+        type: Number,
+        default: 1
+    },
+    // Timestamp of last version update
+    versionUpdatedAt: {
+        type: Date,
+        default: Date.now
     },
     timeOfQuiz: {
         type: Number,
@@ -22,7 +74,7 @@ const quizSchema = new Schema({
         }
     },
     Questions: {
-        type: Array,
+        type: [QuestionSchema],
         required: true, 
     },
     isQuizActive: {

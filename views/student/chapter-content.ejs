@@ -151,6 +151,44 @@
             justify-content: center;
         }
         
+        .video-card.expired-video {
+            opacity: 0.9;
+            border-color: #6c757d;
+            background: linear-gradient(135deg, rgba(108, 117, 125, 0.03) 0%, white 100%);
+        }
+        
+        .video-card.expired-video .video-thumbnail::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(108, 117, 125, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .expired-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #e9ecef;
+            color: #6c757d;
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .expired-badge:hover {
+            background: #dee2e6;
+        }
+        
         /* Prerequisites section styling */
         .prerequisites-section {
             animation: fadeIn 0.3s ease-in-out;
@@ -227,6 +265,46 @@
             color: #0066cc;
             border: 1px solid #cce7ff;
             font-weight: 500;
+        }
+
+        .time-remaining {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            color: #667eea;
+            border: 1px solid #667eea40;
+            font-weight: 600;
+            padding: 0.4rem 0.8rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        .time-remaining.warning {
+            background: linear-gradient(135deg, #ff630015 0%, #ff990015 100%);
+            color: #e65100;
+            border: 1px solid #ff630040;
+        }
+
+        .time-remaining.danger {
+            background: linear-gradient(135deg, #ff000015 0%, #ff444415 100%);
+            color: #d32f2f;
+            border: 1px solid #ff000040;
+            animation: pulse 2s infinite;
+        }
+
+        .time-remaining.expired {
+            background: #f5f5f5;
+            color: #9e9e9e;
+            border: 1px solid #e0e0e0;
+        }
+
+        .time-remaining.not-started {
+            background: linear-gradient(135deg, #4caf5015 0%, #8bc34a15 100%);
+            color: #2e7d32;
+            border: 1px solid #4caf5040;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         
         .status-badge {
@@ -356,16 +434,436 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(5px);
         }
         
         .modal-content-custom {
             background: white;
-            border-radius: 16px;
-            padding: 2.5rem;
-            max-width: 550px;
+            border-radius: 24px;
+            padding: 0;
+            max-width: 480px;
             width: 90%;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+            overflow: hidden;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: relative;
+        }
+
+        .modal-header-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body-custom {
+            padding: 2rem;
+            background: #f8f9ff;
+        }
+
+        .code-input-wrapper-new {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .code-label-new {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+
+        .code-label-new i {
+            color: #667eea;
+        }
+
+        .code-input-new {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 3px;
+            font-weight: 600;
+            font-family: monospace;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .code-input-new:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            outline: none;
+        }
+
+        .code-hint-new {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: #6c757d;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .modal-footer-custom {
+            padding: 1.5rem 2rem;
+            background: white;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-cancel-new {
+            flex: 1;
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel-new:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-purchase-new {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-purchase-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-purchase-new:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Alert Modal Styles */
+        .alert-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-modal-content {
+            background: white;
+            border-radius: 24px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            animation: modalSlideIn 0.3s ease-out;
+            position: relative;
+        }
+
+        .alert-close-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .alert-close-btn:hover {
+            background: rgba(0, 0, 0, 0.15);
+            color: #495057;
+        }
+
+        .alert-modal-body {
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+        }
+
+        .alert-icon-wrapper {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+        }
+
+        .alert-icon-wrapper.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .alert-icon-wrapper.warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(255, 193, 7, 0.4);
+        }
+
+        .alert-icon-wrapper.info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(23, 162, 184, 0.4);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+
+        .alert-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+        }
+
+        .alert-message {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .alert-details {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: #495057;
+            border-right: 4px solid #ff6b6b;
+            text-align: right;
+        }
+
+        .alert-details:empty {
+            display: none;
+        }
+
+        .alert-modal-footer {
+            padding: 1.5rem 2rem;
+            background: white;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-alert-ok {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.875rem 3rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-alert-ok:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Success Modal Styles */
+        .success-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .success-modal-content {
+            background: white;
+            border-radius: 24px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            animation: modalSlideIn 0.3s ease-out;
+            position: relative;
+        }
+
+        .success-close-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .success-close-btn:hover {
+            background: rgba(0, 0, 0, 0.15);
+            color: #495057;
+        }
+
+        .success-modal-body {
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, #f0fff4 0%, #ffffff 100%);
+        }
+
+        .success-icon-wrapper {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+            color: white;
+            box-shadow: 0 15px 40px rgba(40, 167, 69, 0.4);
+            animation: successPop 0.5s ease-out;
+        }
+
+        @keyframes successPop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .success-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #28a745;
+            margin-bottom: 0.75rem;
+        }
+
+        .success-message {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+
+        .success-modal-footer {
+            padding: 1.5rem 2rem;
+            background: white;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-success-watch {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 0.875rem 2.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-success-watch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4);
         }
         
         .btn-modern {
@@ -592,6 +1090,40 @@
                             const watchesLeft = videoInfo ? videoInfo.videoAllowedAttemps : 3;
                             const hasAccess = lecture.paymentStatus === 'Free' || (userData.videosPaid && userData.videosPaid.includes(lecture._id.toString())) || hasChapterAccess;
                             
+                            // Calculate time remaining
+                            let timeRemainingText = '';
+                            let timeRemainingClass = 'not-started';
+                            let accessDays = videoInfo ? (videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4) : 4;
+                            
+                            if (videoInfo && videoInfo.accessExpiryDate) {
+                                const now = new Date();
+                                const expiry = new Date(videoInfo.accessExpiryDate);
+                                const diffMs = expiry - now;
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const diffDays = Math.floor(diffHours / 24);
+                                const remainingHours = diffHours % 24;
+                                
+                                if (diffMs <= 0) {
+                                    timeRemainingText = 'انتهت المدة';
+                                    timeRemainingClass = 'expired';
+                                } else if (diffDays >= 1) {
+                                    timeRemainingText = diffDays === 1 ? 'باقي يوم واحد' : `باقي ${diffDays} يوم`;
+                                    if (remainingHours > 0 && diffDays < 3) {
+                                        timeRemainingText += ` و ${remainingHours} ساعة`;
+                                    }
+                                    timeRemainingClass = diffDays <= 1 ? 'warning' : '';
+                                } else {
+                                    timeRemainingText = diffHours === 1 ? 'باقي ساعة واحدة' : `باقي ${diffHours} ساعة`;
+                                    timeRemainingClass = diffHours <= 6 ? 'danger' : 'warning';
+                                }
+                            } else if (videoInfo && videoInfo.videoPurchaseStatus && !videoInfo.accessStartDate) {
+                                timeRemainingText = `${accessDays} يوم (لم تبدأ)`;
+                                timeRemainingClass = 'not-started';
+                            } else if (hasAccess) {
+                                timeRemainingText = `${accessDays} يوم متاحة`;
+                                timeRemainingClass = 'not-started';
+                            }
+                            
                             // Check prerequisites
                             let videoPrerequisitesName = null;
                             let quizName = null;
@@ -641,9 +1173,10 @@
                                 }
                             }
                             
-                            const canWatch = hasAccess && isUserCanEnter;
+                            const isExpired = timeRemainingClass === 'expired';
+                            const canWatch = hasAccess && isUserCanEnter && !isExpired;
                         %>
-                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %>">
+                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %> <%= isExpired ? 'expired-video' : '' %>">
                             <div class="video-thumbnail">
                                 <% if (lecture.imgURL && lecture.imgURL.trim() !== '') { %>
                                     <img src="<%= lecture.imgURL %>" alt="<%= lecture.lectureName || lecture.videoName %>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -659,10 +1192,12 @@
                                         <i class="fas fa-eye"></i>
                                         <span><%= lecture.views || 0 %></span>
                                     </div>
-                                    <% if (hasAccess && videoInfo) { %>
-                                    <div class="meta-item watches-remaining">
-                                        <i class="fas fa-redo"></i>
-                                        <span><%= watchesLeft %> متبقية</span>
+                                    <% if (hasAccess && timeRemainingText) { %>
+                                    <div class="meta-item time-remaining <%= timeRemainingClass %>" 
+                                         data-expiry="<%= videoInfo && videoInfo.accessExpiryDate ? new Date(videoInfo.accessExpiryDate).toISOString() : '' %>"
+                                         data-class="<%= timeRemainingClass %>">
+                                        <i class="fas fa-<%= timeRemainingClass === 'expired' ? 'times-circle' : timeRemainingClass === 'not-started' ? 'clock' : 'hourglass-half' %>"></i>
+                                        <span class="countdown-text"><%= timeRemainingText %></span>
                                     </div>
                                     <% } %>
                                     <div class="ms-auto">
@@ -712,6 +1247,11 @@
                                             <i class="fas fa-lock ms-2"></i>
                                             مقفل - راجع المتطلبات أعلاه
                                         </div>
+                                    <% } else if (isExpired) { %>
+                                        <button class="expired-badge" onclick="showExpiredMessage()">
+                                            <i class="fas fa-hourglass-end"></i>
+                                            انتهت ايام المشاهدة
+                                        </button>
                                     <% } %>
                                     <button class="btn-video btn-info" title="معلومات الدرس">
                                         <i class="fas fa-info"></i>
@@ -739,6 +1279,40 @@
                             const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === summary._id.toString()) : null;
                             const watchesLeft = videoInfo ? Math.max(0, (videoInfo.videoAllowedAttemps || 3) - (videoInfo.numberOfWatches || 0)) : 3;
                             const hasAccess = summary.paymentStatus === 'Free' || (userData.videosPaid && userData.videosPaid.includes(summary._id.toString())) || hasChapterAccess;
+                            
+                            // Calculate time remaining
+                            let timeRemainingText = '';
+                            let timeRemainingClass = 'not-started';
+                            let accessDays = videoInfo ? (videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4) : 4;
+                            
+                            if (videoInfo && videoInfo.accessExpiryDate) {
+                                const now = new Date();
+                                const expiry = new Date(videoInfo.accessExpiryDate);
+                                const diffMs = expiry - now;
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const diffDays = Math.floor(diffHours / 24);
+                                const remainingHours = diffHours % 24;
+                                
+                                if (diffMs <= 0) {
+                                    timeRemainingText = 'انتهت المدة';
+                                    timeRemainingClass = 'expired';
+                                } else if (diffDays >= 1) {
+                                    timeRemainingText = diffDays === 1 ? 'باقي يوم واحد' : `باقي ${diffDays} يوم`;
+                                    if (remainingHours > 0 && diffDays < 3) {
+                                        timeRemainingText += ` و ${remainingHours} ساعة`;
+                                    }
+                                    timeRemainingClass = diffDays <= 1 ? 'warning' : '';
+                                } else {
+                                    timeRemainingText = diffHours === 1 ? 'باقي ساعة واحدة' : `باقي ${diffHours} ساعة`;
+                                    timeRemainingClass = diffHours <= 6 ? 'danger' : 'warning';
+                                }
+                            } else if (videoInfo && videoInfo.videoPurchaseStatus && !videoInfo.accessStartDate) {
+                                timeRemainingText = `${accessDays} يوم (لم تبدأ)`;
+                                timeRemainingClass = 'not-started';
+                            } else if (hasAccess) {
+                                timeRemainingText = `${accessDays} يوم متاحة`;
+                                timeRemainingClass = 'not-started';
+                            }
                             
                             // Check prerequisites
                             let videoPrerequisitesName = null;
@@ -822,9 +1396,10 @@
                                 }
                             }
                             
-                            const canWatch = hasAccess && isUserCanEnter;
+                            const isExpired = timeRemainingClass === 'expired';
+                            const canWatch = hasAccess && isUserCanEnter && !isExpired;
                         %>
-                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %>">
+                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %> <%= isExpired ? 'expired-video' : '' %>">
                             <div class="video-thumbnail">
                                 <% if (summary.imgURL && summary.imgURL.trim() !== '') { %>
                                     <img src="<%= summary.imgURL %>" alt="<%= summary.lectureName || summary.videoName %>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -840,10 +1415,12 @@
                                         <i class="fas fa-eye"></i>
                                         <span><%= summary.views || 0 %></span>
                                     </div>
-                                    <% if (hasAccess && videoInfo) { %>
-                                    <div class="meta-item watches-remaining">
-                                        <i class="fas fa-redo"></i>
-                                        <span><%= watchesLeft %> متبقية</span>
+                                    <% if (hasAccess && timeRemainingText) { %>
+                                    <div class="meta-item time-remaining <%= timeRemainingClass %>" 
+                                         data-expiry="<%= videoInfo && videoInfo.accessExpiryDate ? new Date(videoInfo.accessExpiryDate).toISOString() : '' %>"
+                                         data-class="<%= timeRemainingClass %>">
+                                        <i class="fas fa-<%= timeRemainingClass === 'expired' ? 'times-circle' : timeRemainingClass === 'not-started' ? 'clock' : 'hourglass-half' %>"></i>
+                                        <span class="countdown-text"><%= timeRemainingText %></span>
                                     </div>
                                     <% } %>
                                     <div class="ms-auto">
@@ -893,6 +1470,11 @@
                                             <i class="fas fa-lock ms-2"></i>
                                             مقفل - راجع المتطلبات أعلاه
                                         </div>
+                                    <% } else if (isExpired) { %>
+                                        <button class="expired-badge" onclick="showExpiredMessage()">
+                                            <i class="fas fa-hourglass-end"></i>
+                                            انتهت ايام المشاهدة
+                                        </button>
                                     <% } %>
                                     <button class="btn-video btn-info" title="معلومات الملخص">
                                         <i class="fas fa-info"></i>
@@ -920,6 +1502,40 @@
                             const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === solving._id.toString()) : null;
                             const watchesLeft = videoInfo ? Math.max(0, (videoInfo.videoAllowedAttemps || 3) - (videoInfo.numberOfWatches || 0)) : 3;
                             const hasAccess = solving.paymentStatus === 'Free' || (userData.videosPaid && userData.videosPaid.includes(solving._id.toString())) || hasChapterAccess;
+                            
+                            // Calculate time remaining
+                            let timeRemainingText = '';
+                            let timeRemainingClass = 'not-started';
+                            let accessDays = videoInfo ? (videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4) : 4;
+                            
+                            if (videoInfo && videoInfo.accessExpiryDate) {
+                                const now = new Date();
+                                const expiry = new Date(videoInfo.accessExpiryDate);
+                                const diffMs = expiry - now;
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const diffDays = Math.floor(diffHours / 24);
+                                const remainingHours = diffHours % 24;
+                                
+                                if (diffMs <= 0) {
+                                    timeRemainingText = 'انتهت المدة';
+                                    timeRemainingClass = 'expired';
+                                } else if (diffDays >= 1) {
+                                    timeRemainingText = diffDays === 1 ? 'باقي يوم واحد' : `باقي ${diffDays} يوم`;
+                                    if (remainingHours > 0 && diffDays < 3) {
+                                        timeRemainingText += ` و ${remainingHours} ساعة`;
+                                    }
+                                    timeRemainingClass = diffDays <= 1 ? 'warning' : '';
+                                } else {
+                                    timeRemainingText = diffHours === 1 ? 'باقي ساعة واحدة' : `باقي ${diffHours} ساعة`;
+                                    timeRemainingClass = diffHours <= 6 ? 'danger' : 'warning';
+                                }
+                            } else if (videoInfo && videoInfo.videoPurchaseStatus && !videoInfo.accessStartDate) {
+                                timeRemainingText = `${accessDays} يوم (لم تبدأ)`;
+                                timeRemainingClass = 'not-started';
+                            } else if (hasAccess) {
+                                timeRemainingText = `${accessDays} يوم متاحة`;
+                                timeRemainingClass = 'not-started';
+                            }
                             
                             // Check prerequisites
                             let videoPrerequisitesName = null;
@@ -1003,9 +1619,10 @@
                                 }
                             }
                             
-                            const canWatch = hasAccess && isUserCanEnter;
+                            const isExpired = timeRemainingClass === 'expired';
+                            const canWatch = hasAccess && isUserCanEnter && !isExpired;
                         %>
-                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %>">
+                        <div class="video-card <%= !canWatch && hasAccess ? 'locked' : '' %> <%= isExpired ? 'expired-video' : '' %>">
                             <div class="video-thumbnail">
                                 <% if (solving.imgURL && solving.imgURL.trim() !== '') { %>
                                     <img src="<%= solving.imgURL %>" alt="<%= solving.lectureName || solving.videoName %>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -1021,10 +1638,12 @@
                                         <i class="fas fa-eye"></i>
                                         <span><%= solving.views || 0 %></span>
                                     </div>
-                                    <% if (hasAccess && videoInfo) { %>
-                                    <div class="meta-item watches-remaining">
-                                        <i class="fas fa-redo"></i>
-                                        <span><%= watchesLeft %> متبقية</span>
+                                    <% if (hasAccess && timeRemainingText) { %>
+                                    <div class="meta-item time-remaining <%= timeRemainingClass %>" 
+                                         data-expiry="<%= videoInfo && videoInfo.accessExpiryDate ? new Date(videoInfo.accessExpiryDate).toISOString() : '' %>"
+                                         data-class="<%= timeRemainingClass %>">
+                                        <i class="fas fa-<%= timeRemainingClass === 'expired' ? 'times-circle' : timeRemainingClass === 'not-started' ? 'clock' : 'hourglass-half' %>"></i>
+                                        <span class="countdown-text"><%= timeRemainingText %></span>
                                     </div>
                                     <% } %>
                                     <div class="ms-auto">
@@ -1074,6 +1693,11 @@
                                             <i class="fas fa-lock ms-2"></i>
                                             مقفل - راجع المتطلبات أعلاه
                                         </div>
+                                    <% } else if (isExpired) { %>
+                                        <button class="expired-badge" onclick="showExpiredMessage()">
+                                            <i class="fas fa-hourglass-end"></i>
+                                            انتهت ايام المشاهدة
+                                        </button>
                                     <% } %>
                                     <button class="btn-video btn-info" title="معلومات التطبيق">
                                         <i class="fas fa-info"></i>
@@ -1100,41 +1724,98 @@
         </main>
     </div>
 
-    <!-- Code Input Modal -->
+    <!-- Code Input Modal - Enhanced Design -->
     <div class="code-input-modal" id="codeModal">
         <div class="modal-content-custom">
-            <h4 class="mb-3" id="modalTitle">أدخل الكود</h4>
+            <div class="modal-header-custom">
+                <button type="button" class="modal-close-btn" onclick="hideCodeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="modal-header-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <h4 class="mb-0" id="modalTitle">شراء الفيديو</h4>
+            </div>
             
-            <!-- Code Instructions Alert -->
-            <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem;">
-                <div class="d-flex align-items-start">
-                    <i class="fas fa-info-circle me-2 mt-1"></i>
-                    <div>
-                        <strong>طريقة إدخال الكود الصحيحة:</strong>
-                        <ul class="mb-0 mt-2" style="padding-right: 1.2rem;">
-                            <li>أدخل الكود فقط بدون أي رموز إضافية</li>
-                            <li>لا تضع علامات اقتباس (" ") حول الكود</li>
-                            <li>لا تضع نقاط (.) في الكود</li>
-                            <li>لا تضع مسافات قبل أو بعد الكود</li>
-                            <li><strong>مثال صحيح:</strong><code style="background: #f8f9fa; padding: 0.2rem 0.4rem; border-radius: 4px;">38174144771</code></li>
-                        </ul>
+            <div class="modal-body-custom">
+                <div class="code-input-wrapper-new">
+                    <label class="code-label-new">
+                        <i class="fas fa-key"></i>
+                        ادخل الكود
+                    </label>
+                    <input type="text" 
+                           id="codeInput" 
+                           class="code-input-new" 
+                           placeholder="اكتب الكود هنا..."
+                           autocomplete="off"
+                           dir="ltr">
+                    <div class="code-hint-new">
+                        <i class="fas fa-info-circle"></i>
+                        الكود بيتكون من حروف وأرقام
                     </div>
                 </div>
             </div>
             
-            <form id="codeForm">
-                <input type="hidden" id="purchaseType">
-                <input type="hidden" id="itemId">
-                <input type="hidden" id="chapterId" value="<%= chapter._id %>">
-                <input type="text" dir="ltr" class="form-control mb-3" id="codeInput" placeholder="أدخل الكود هنا (مثال: 38174144771)" required style="text-align: center; font-family: monospace; letter-spacing: 2px; text-transform: uppercase;">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary flex-fill" onclick="hideCodeModal()">إلغاء</button>
-                    <button type="submit" class="btn btn-primary flex-fill">
-                        <span class="spinner-border spinner-border-sm d-none me-2"></span>
-                        تفعيل
-                    </button>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-cancel-new" onclick="hideCodeModal()">
+                    <i class="fas fa-times"></i>
+                    إلغاء
+                </button>
+                <button type="button" class="btn-purchase-new" id="confirmPurchaseBtn">
+                    <i class="fas fa-check" id="purchaseBtnIcon"></i>
+                    <span id="purchaseBtnText">تأكيد الشراء</span>
+                    <span class="spinner-border spinner-border-sm d-none" id="purchaseSpinner"></span>
+                </button>
+            </div>
+            
+            <input type="hidden" id="purchaseType">
+            <input type="hidden" id="itemId">
+            <input type="hidden" id="chapterId" value="<%= chapter._id %>">
+        </div>
+    </div>
+
+    <!-- Alert Modal - Egyptian Arabic -->
+    <div class="alert-modal" id="alertModal">
+        <div class="alert-modal-content">
+            <button type="button" class="alert-close-btn" onclick="hideAlertModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="alert-modal-body">
+                <div class="alert-icon-wrapper error" id="alertIconWrapper">
+                    <i class="fas fa-exclamation-circle" id="alertIcon"></i>
                 </div>
-            </form>
+                <h4 class="alert-title" id="alertTitle">خطأ</h4>
+                <p class="alert-message" id="alertMessage">حصلت مشكلة</p>
+                <div class="alert-details" id="alertDetails"></div>
+            </div>
+            <div class="alert-modal-footer">
+                <button type="button" class="btn-alert-ok" onclick="hideAlertModal()">
+                    <i class="fas fa-check"></i>
+                    فهمت
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="success-modal" id="successModal">
+        <div class="success-modal-content">
+            <button type="button" class="success-close-btn" onclick="hideSuccessModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="success-modal-body">
+                <div class="success-icon-wrapper">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h4 class="success-title">تم بنجاح! 🎉</h4>
+                <p class="success-message" id="successMessage">تم الشراء بنجاح</p>
+            </div>
+            <div class="success-modal-footer">
+                <button type="button" class="btn-success-watch" id="watchNowBtn">
+                    <i class="fas fa-play"></i>
+                    شاهد دلوقتي
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1145,30 +1826,141 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Function to clean code input (client-side)
+        // Egyptian Arabic error messages
+        const errorMessages = {
+            'invalid_code': {
+                title: 'الكود مش صح! ❌',
+                message: 'الكود ده مش موجود في النظام خالص',
+                details: 'تأكد إنك كاتب الكود صح من غير مسافات أو أي غلطات'
+            },
+            'code_used': {
+                title: 'الكود مستخدم! 🔄',
+                message: 'الكود ده اتستخدم قبل كده',
+                details: 'لو انت اللي استخدمته، الفيديو المفروض يكون عندك. لو حد تاني استخدمه، محتاج كود جديد'
+            },
+            'code_video_mismatch': {
+                title: 'كود غلط! 🎯',
+                message: 'الكود ده مش للفيديو ده',
+                details: 'كل فيديو ليه كود خاص بيه. تأكد إنك بتستخدم الكود الصح للفيديو اللي عايزه'
+            },
+            'specific_code_required': {
+                title: 'محتاج كود خاص! 🔐',
+                message: 'الفيديو ده محتاج كود خاص بيه',
+                details: 'الأكواد العامة مش بتشتغل مع الفيديو ده. لازم تجيب الكود الخاص بالفيديو'
+            },
+            'grade_mismatch': {
+                title: 'سنة دراسية مختلفة! 📚',
+                message: 'الكود ده مش للسنة الدراسية بتاعتك',
+                details: 'كل سنة دراسية ليها أكواد خاصة بيها'
+            },
+            'prerequisites_not_met': {
+                title: 'فيه متطلبات! ⚠️',
+                message: 'لازم تخلص حاجات معينة الأول',
+                details: ''
+            },
+            'prerequisites_not_found': {
+                title: 'المتطلبات مش مكتملة! 📝',
+                message: 'لازم تشوف الفيديو اللي قبله الأول',
+                details: 'ده فيديو مترتب على فيديو تاني، لازم تخلص اللي قبله'
+            },
+            'already_owned': {
+                title: 'الفيديو عندك! ✅',
+                message: 'انت عندك الفيديو ده بالفعل',
+                details: 'ممكن تشوفه من صفحة الفيديوهات'
+            },
+            'chapter_not_found': {
+                title: 'الباب مش موجود! 📖',
+                message: 'مش لاقيين الباب ده',
+                details: 'جرب ترجع للصفحة الرئيسية وتدخل تاني'
+            },
+            'video_not_found': {
+                title: 'الفيديو مش موجود! 🎬',
+                message: 'مش لاقيين الفيديو ده',
+                details: 'ممكن يكون اتشال أو الرابط غلط'
+            },
+            'purchase_failed': {
+                title: 'حصلت مشكلة! 😕',
+                message: 'معرفناش نتم عملية الشراء',
+                details: 'جرب تاني بعد شوية. لو المشكلة فضلت، كلم الدعم الفني'
+            },
+            'empty_code': {
+                title: 'فين الكود؟ 🤔',
+                message: 'مكتبتش الكود!',
+                details: 'لازم تكتب الكود الأول عشان نفعّل الفيديو'
+            },
+            'code_expired': {
+                title: 'الكود انتهى! ⏰',
+                message: 'صلاحية الكود ده خلصت',
+                details: 'الكود ده كان ليه وقت محدد وخلص. محتاج كود جديد'
+            },
+            'code_inactive': {
+                title: 'الكود مش شغال! 🚫',
+                message: 'الكود ده مش نشط',
+                details: 'الكود ده متوقف مؤقتاً. تواصل مع الدعم للمساعدة'
+            },
+            'expired_video': {
+                title: 'انتهت ايام المشاهدة! ⏰',
+                message: 'لو عايز ايام مشاهدة زيادة كلم الاسستنت',
+                details: 'تواصل مع الاسستنت عشان يجددلك المدة'
+            },
+            'default': {
+                title: 'حصلت مشكلة! 😕',
+                message: 'حاجة غلط حصلت',
+                details: 'جرب تاني أو كلم الدعم الفني'
+            }
+        };
+
+        let redirectUrl = '';
+
+        // Function to clean code input
         function cleanCodeInput(code) {
             if (!code || typeof code !== 'string') {
                 return '';
             }
-            
-            // Remove leading/trailing whitespace
             let cleaned = code.trim();
-            
-            // Remove quotation marks (both single and double, from start and end)
             cleaned = cleaned.replace(/^["']+|["']+$/g, '');
-            
-            // Remove dots
             cleaned = cleaned.replace(/\./g, '');
-            
-            // Remove spaces
             cleaned = cleaned.replace(/\s/g, '');
-            
-            // Convert to uppercase
             cleaned = cleaned.toUpperCase();
-            
             return cleaned;
         }
 
+        // Get error type from server response
+        function getErrorType(response, message) {
+            const lowerMessage = (message || '').toLowerCase();
+            
+            if (lowerMessage.includes('invalid') || lowerMessage.includes('not found') || lowerMessage.includes('not in system')) {
+                return 'invalid_code';
+            }
+            if (lowerMessage.includes('used') || lowerMessage.includes('مستخدم')) {
+                return 'code_used';
+            }
+            if (lowerMessage.includes('not for this video') || lowerMessage.includes('mismatch') || lowerMessage.includes('video_mismatch')) {
+                return 'code_video_mismatch';
+            }
+            if (lowerMessage.includes('specific code') || lowerMessage.includes('specific_code_required')) {
+                return 'specific_code_required';
+            }
+            if (lowerMessage.includes('grade')) {
+                return 'grade_mismatch';
+            }
+            if (lowerMessage.includes('prerequisite') || lowerMessage.includes('متطلب') || lowerMessage.includes('اختبار') || lowerMessage.includes('واجب')) {
+                return 'prerequisites_not_met';
+            }
+            if (lowerMessage.includes('already') || lowerMessage.includes('access')) {
+                return 'already_owned';
+            }
+            if (lowerMessage.includes('expired') || lowerMessage.includes('انتهت')) {
+                return 'code_expired';
+            }
+            if (lowerMessage.includes('inactive') || lowerMessage.includes('غير نشط')) {
+                return 'code_inactive';
+            }
+            
+            return 'default';
+        }
+
+        // Show code modal
         function showCodeModal(type, id, title, chapterId = null) {
             document.getElementById('purchaseType').value = type;
             document.getElementById('itemId').value = id;
@@ -1176,40 +1968,100 @@
             document.getElementById('modalTitle').textContent = `شراء: ${title}`;
             document.getElementById('codeModal').style.display = 'flex';
             const codeInput = document.getElementById('codeInput');
-            codeInput.value = ''; // Clear previous input
-            codeInput.focus();
+            codeInput.value = '';
+            setTimeout(() => codeInput.focus(), 300);
         }
 
+        // Hide code modal
         function hideCodeModal() {
             document.getElementById('codeModal').style.display = 'none';
-            document.getElementById('codeForm').reset();
+            document.getElementById('codeInput').value = '';
         }
 
-        document.getElementById('codeForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Show expired video message
+        function showExpiredMessage() {
+            showAlertModal('expired_video');
+        }
+
+        // Show alert modal
+        function showAlertModal(type, customMessage = null) {
+            const errorInfo = errorMessages[type] || errorMessages['default'];
             
+            const iconWrapper = document.getElementById('alertIconWrapper');
+            const alertIcon = document.getElementById('alertIcon');
+            const alertTitle = document.getElementById('alertTitle');
+            const alertMessage = document.getElementById('alertMessage');
+            const alertDetails = document.getElementById('alertDetails');
+            
+            // Set icon and styling based on type
+            iconWrapper.className = 'alert-icon-wrapper error';
+            alertIcon.className = 'fas fa-exclamation-circle';
+            
+            if (type === 'already_owned') {
+                iconWrapper.className = 'alert-icon-wrapper info';
+                alertIcon.className = 'fas fa-info-circle';
+            } else if (type === 'expired_video') {
+                iconWrapper.className = 'alert-icon-wrapper info';
+                alertIcon.className = 'fas fa-clock';
+            } else if (type === 'prerequisites_not_met' || type === 'prerequisites_not_found') {
+                iconWrapper.className = 'alert-icon-wrapper warning';
+                alertIcon.className = 'fas fa-exclamation-triangle';
+            }
+            
+            alertTitle.textContent = errorInfo.title;
+            alertMessage.textContent = customMessage || errorInfo.message;
+            alertDetails.textContent = errorInfo.details;
+            
+            document.getElementById('alertModal').style.display = 'flex';
+        }
+
+        // Hide alert modal
+        function hideAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+
+        // Show success modal
+        function showSuccessModal(url, message = 'تم الشراء بنجاح') {
+            redirectUrl = url;
+            document.getElementById('successMessage').textContent = message;
+            document.getElementById('successModal').style.display = 'flex';
+        }
+
+        // Hide success modal
+        function hideSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
+            }
+        }
+
+        // Handle purchase
+        document.getElementById('confirmPurchaseBtn').addEventListener('click', async function() {
             const type = document.getElementById('purchaseType').value;
             const itemId = document.getElementById('itemId').value;
             const chapterId = document.getElementById('chapterId').value;
             const rawCode = document.getElementById('codeInput').value;
-            // Clean the code before sending
             const code = cleanCodeInput(rawCode);
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const spinner = submitBtn.querySelector('.spinner-border');
             
-            // Validate code is not empty after cleaning
             if (!code || code.length === 0) {
-                alert('يرجى إدخال كود صحيح');
+                hideCodeModal();
+                showAlertModal('empty_code');
                 return;
             }
             
-            submitBtn.disabled = true;
-            spinner.classList.remove('d-none');
+            // Show loading state
+            const btn = this;
+            const btnIcon = document.getElementById('purchaseBtnIcon');
+            const btnText = document.getElementById('purchaseBtnText');
+            const btnSpinner = document.getElementById('purchaseSpinner');
+            
+            btn.disabled = true;
+            btnIcon.classList.add('d-none');
+            btnText.textContent = 'جاري الشراء...';
+            btnSpinner.classList.remove('d-none');
             
             try {
-                let url, formData = new FormData();
-                formData.append('code', code);
-                
+                let url;
                 if (type === 'chapter') {
                     url = `/student/chapters/${chapterId}/buy`;
                 } else if (type === 'video') {
@@ -1218,25 +2070,57 @@
                 
                 const response = await fetch(url, {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
                 });
                 
                 const result = await response.json();
                 
+                // Hide code modal
+                hideCodeModal();
+                
                 if (result.success) {
-                    window.location.href = result.redirect || window.location.href;
+                    // Show success modal
+                    const successMsg = type === 'chapter' ? 'تم شراء الباب بنجاح! 🎊' : 'تم شراء الفيديو بنجاح! 🎬';
+                    showSuccessModal(result.redirect || window.location.href, successMsg);
                 } else {
-                    alert(result.message || 'فشل في عملية الشراء');
-                    if (result.redirect) {
-                        window.location.href = result.redirect;
+                    // Determine error type and show appropriate message
+                    const errorType = getErrorType(response, result.message);
+                    let customMessage = null;
+                    
+                    // Use server message for prerequisites
+                    if (errorType === 'prerequisites_not_met' && result.message) {
+                        customMessage = result.message;
                     }
+                    
+                    showAlertModal(errorType, customMessage);
                 }
             } catch (error) {
                 console.error('Purchase error:', error);
-                alert('حدث خطأ في عملية الشراء');
+                hideCodeModal();
+                showAlertModal('purchase_failed');
             } finally {
-                submitBtn.disabled = false;
-                spinner.classList.add('d-none');
+                // Reset button state
+                btn.disabled = false;
+                btnIcon.classList.remove('d-none');
+                btnText.textContent = 'تأكيد الشراء';
+                btnSpinner.classList.add('d-none');
+            }
+        });
+
+        // Handle watch now button
+        document.getElementById('watchNowBtn').addEventListener('click', function() {
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
+            }
+        });
+
+        // Handle Enter key in code input
+        document.getElementById('codeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('confirmPurchaseBtn').click();
             }
         });
 
@@ -1249,6 +2133,8 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 hideCodeModal();
+                hideAlertModal();
+                hideSuccessModal();
             }
         });
 
@@ -1256,6 +2142,18 @@
         document.getElementById('codeModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 hideCodeModal();
+            }
+        });
+
+        document.getElementById('alertModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideAlertModal();
+            }
+        });
+
+        document.getElementById('successModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideSuccessModal();
             }
         });
 
@@ -1272,6 +2170,66 @@
         window.addEventListener('resize', handleResize);
         handleResize();
 
+        // Live Countdown Timer for videos with less than 24 hours remaining
+        function updateCountdowns() {
+            const countdownElements = document.querySelectorAll('.time-remaining[data-expiry]');
+            
+            countdownElements.forEach(el => {
+                const expiryStr = el.dataset.expiry;
+                if (!expiryStr) return;
+                
+                const expiry = new Date(expiryStr);
+                const now = new Date();
+                const diffMs = expiry - now;
+                
+                if (diffMs <= 0) {
+                    // Expired
+                    el.querySelector('.countdown-text').textContent = 'انتهت المدة';
+                    el.classList.remove('warning', 'danger');
+                    el.classList.add('expired');
+                    el.querySelector('i').className = 'fas fa-times-circle';
+                    return;
+                }
+                
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+                const diffDays = Math.floor(diffHours / 24);
+                const remainingHours = diffHours % 24;
+                
+                let text = '';
+                
+                if (diffHours < 24) {
+                    // Show countdown with hours:minutes:seconds when less than 24 hours
+                    if (diffHours > 0) {
+                        text = `${diffHours}:${diffMinutes.toString().padStart(2, '0')}:${diffSeconds.toString().padStart(2, '0')}`;
+                    } else {
+                        text = `${diffMinutes}:${diffSeconds.toString().padStart(2, '0')} دقيقة`;
+                    }
+                    
+                    // Update class based on remaining time
+                    el.classList.remove('warning', 'expired');
+                    el.classList.add(diffHours <= 6 ? 'danger' : 'warning');
+                    el.querySelector('i').className = 'fas fa-hourglass-half';
+                } else if (diffDays >= 1) {
+                    text = diffDays === 1 ? 'باقي يوم واحد' : `باقي ${diffDays} يوم`;
+                    if (remainingHours > 0 && diffDays < 3) {
+                        text += ` و ${remainingHours} ساعة`;
+                    }
+                    el.classList.remove('danger', 'expired', 'warning');
+                    if (diffDays <= 1) {
+                        el.classList.add('warning');
+                    }
+                }
+                
+                el.querySelector('.countdown-text').textContent = text;
+            });
+        }
+        
+        // Update countdown every second
+        updateCountdowns();
+        setInterval(updateCountdowns, 1000);
+
         // Set up real-time code cleaning on input field
         const codeInput = document.getElementById('codeInput');
         if (codeInput) {
@@ -1280,7 +2238,6 @@
                 if (cleaned !== e.target.value) {
                     const cursorPos = e.target.selectionStart;
                     e.target.value = cleaned;
-                    // Try to maintain cursor position (approximate)
                     const newPos = Math.min(cursorPos, cleaned.length);
                     e.target.setSelectionRange(newPos, newPos);
                 }

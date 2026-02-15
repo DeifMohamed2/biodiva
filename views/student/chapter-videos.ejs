@@ -257,6 +257,440 @@
                 align-items: stretch;
             }
         }
+
+        /* ============ Purchase Modal Styles ============ */
+        .purchase-modal-content {
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+        }
+
+        .purchase-modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1.5rem 2rem;
+            position: relative;
+        }
+
+        .modal-header-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .btn-close-custom {
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+        }
+
+        .btn-close-custom:hover {
+            opacity: 1;
+        }
+
+        .purchase-modal-body {
+            padding: 2rem;
+            background: #f8f9ff;
+        }
+
+        .video-preview-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .video-icon-wrapper {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .video-name-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+        }
+
+        .price-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .code-input-section {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .code-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.75rem;
+        }
+
+        .code-label i {
+            color: #667eea;
+        }
+
+        .code-input-wrapper {
+            position: relative;
+        }
+
+        .code-input {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem 1rem 1rem 3rem;
+            font-size: 1.1rem;
+            text-align: center;
+            letter-spacing: 2px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .code-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        .code-input-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #adb5bd;
+            font-size: 1.25rem;
+        }
+
+        .code-hint {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6c757d;
+            margin-top: 0.75rem;
+        }
+
+        .purchase-modal-footer {
+            background: white;
+            border: none;
+            padding: 1.5rem 2rem;
+            gap: 1rem;
+        }
+
+        .btn-cancel-modern {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel-modern:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-purchase-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .btn-purchase-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-purchase-modern:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ============ Alert Modal Styles ============ */
+        .alert-modal-content {
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+            position: relative;
+        }
+
+        .btn-close-alert {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .btn-close-alert:hover {
+            background: rgba(0, 0, 0, 0.15);
+            color: #495057;
+        }
+
+        .alert-modal-body {
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, #fff5f5 0%, #ffffff 100%);
+        }
+
+        .alert-icon-wrapper {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+            position: relative;
+        }
+
+        .alert-icon-wrapper.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .alert-icon-wrapper.warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(255, 193, 7, 0.4);
+        }
+
+        .alert-icon-wrapper.info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(23, 162, 184, 0.4);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+
+        .alert-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+        }
+
+        .alert-message {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .alert-details {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: #495057;
+            border-right: 4px solid #ff6b6b;
+            text-align: right;
+        }
+
+        .alert-details:empty {
+            display: none;
+        }
+
+        .alert-modal-footer {
+            padding: 1.5rem 2rem;
+            background: white;
+            border: none;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-alert-close {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.875rem 2.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-alert-close:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* ============ Success Modal Styles ============ */
+        .success-modal-content {
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+            position: relative;
+        }
+
+        .btn-close-success {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .btn-close-success:hover {
+            background: rgba(0, 0, 0, 0.15);
+            color: #495057;
+        }
+
+        .success-modal-body {
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, #f0fff4 0%, #ffffff 100%);
+        }
+
+        .success-icon-wrapper {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+            color: white;
+            box-shadow: 0 15px 40px rgba(40, 167, 69, 0.4);
+            position: relative;
+            animation: successPop 0.5s ease-out;
+        }
+
+        @keyframes successPop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .success-particles span {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: particle 1s ease-out forwards;
+        }
+
+        .success-particles span:nth-child(1) { animation-delay: 0.1s; }
+        .success-particles span:nth-child(2) { animation-delay: 0.2s; }
+        .success-particles span:nth-child(3) { animation-delay: 0.3s; }
+        .success-particles span:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes particle {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--x, 50px), var(--y, -50px)) scale(0); }
+        }
+
+        .success-particles span:nth-child(1) { --x: 60px; --y: -40px; }
+        .success-particles span:nth-child(2) { --x: -60px; --y: -40px; }
+        .success-particles span:nth-child(3) { --x: 50px; --y: 40px; }
+        .success-particles span:nth-child(4) { --x: -50px; --y: 40px; }
+
+        .success-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #28a745;
+            margin-bottom: 0.75rem;
+        }
+
+        .success-message {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+
+        .success-modal-footer {
+            padding: 1.5rem 2rem;
+            background: white;
+            border: none;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-success-watch {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 0.875rem 2.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success-watch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4);
+            color: white;
+        }
     </style>
 </head>
   <body>
@@ -307,8 +741,21 @@
                 <div class="video-grid">
                     <% chapter.chapterLectures.forEach((lecture, index) => { 
                         const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === lecture._id.toString()) : null;
-                        const watchesLeft = videoInfo ? Math.max(0, (videoInfo.videoAllowedAttemps || 3) - (videoInfo.numberOfWatches || 0)) : 3;
+                        // Calculate days remaining for access
+                        let daysRemaining = videoInfo ? (videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4) : 4;
+                        let accessStatus = 'not_started';
+                        if (videoInfo && videoInfo.accessExpiryDate) {
+                            const expiryDate = new Date(videoInfo.accessExpiryDate);
+                            const now = new Date();
+                            const diffTime = expiryDate - now;
+                            daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            accessStatus = daysRemaining > 0 ? 'active' : 'expired';
+                            if (daysRemaining < 0) daysRemaining = 0;
+                        } else if (videoInfo && videoInfo.videoPurchaseStatus && !videoInfo.accessStartDate) {
+                            accessStatus = 'not_started';
+                        }
                         const hasAccess = hasChapterAccess || (userData.videosPaid && userData.videosPaid.includes(lecture._id.toString()));
+                        const canWatch = hasAccess && accessStatus !== 'expired';
                     %>
                         <div class="video-card">
                         <div class="video-thumbnail">
@@ -324,17 +771,22 @@
                                 </div>
                                 <% if (hasAccess && videoInfo) { %>
                                 <div class="stat-item">
-                                    <i class="fas fa-redo"></i>
-                                    <span><%= watchesLeft %></span>
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span><%= daysRemaining %> يوم</span>
                                 </div>
                                 <% } %>
                             </div>
                             <div class="video-overlay">
-                                <% if (hasAccess) { %>
+                                <% if (canWatch) { %>
                                     <a href="/student/chapter/<%= chapterId %>/video/<%= lecture._id %>" class="btn btn-primary-modern btn-lg">
                                   <i class="fas fa-play"></i>
                                         مشاهدة الآن
                                 </a>
+                              <% } else if (accessStatus === 'expired') { %>
+                                    <button class="btn btn-danger-modern btn-lg" disabled>
+                                        <i class="fas fa-hourglass-end"></i>
+                                        انتهت المدة
+                                    </button>
                               <% } else { %>
                                     <button class="btn btn-warning-modern btn-lg" onclick="showPurchaseModal('<%= lecture._id %>', '<%= lecture.lectureName || lecture.videoTitle %>', '<%= lecture.lecturePrice || lecture.price || '25' %>')">
                                         <i class="fas fa-lock"></i>
@@ -365,19 +817,23 @@
                                 <% } %>
                             </div>
                             <div class="video-actions">
-                                <% if (hasAccess) { %>
-                                    <% if (watchesLeft<=0) { %>
-                                    
-                                        <div class="text-success small">
-                                        <i class="fas fa-check-circle"></i>
-                                        تم المشاهدة
-                                    </div>
+                                <% if (canWatch) { %>
+                                    <% if (accessStatus === 'not_started') { %>
+                                        <a href="/student/chapter/<%= chapterId %>/video/<%= lecture._id %>" class="btn btn-primary-modern flex-fill">
+                                            <i class="fas fa-play"></i>
+                                            مشاهدة (<%= daysRemaining %> يوم)
+                                        </a>
                                     <% } else { %>
-                                   <a href="/student/chapter/<%= chapterId %>/video/<%= solving._id %>" class="btn btn-warning-modern flex-fill">
-                                        <i class="fas fa-play"></i>
-                                        مشاهدة
-                                    </a>
+                                        <a href="/student/chapter/<%= chapterId %>/video/<%= lecture._id %>" class="btn btn-warning-modern flex-fill">
+                                            <i class="fas fa-play"></i>
+                                            مشاهدة (<%= daysRemaining %> يوم متبقي)
+                                        </a>
                                     <% } %>
+                                <% } else if (accessStatus === 'expired') { %>
+                                    <div class="text-danger small">
+                                        <i class="fas fa-hourglass-end"></i>
+                                        انتهت المدة
+                                    </div>
                                 <% } else { %>
                                     <button class="btn btn-outline-modern flex-fill" onclick="showPurchaseModal('<%= lecture._id %>', '<%= lecture.lectureName || lecture.videoTitle %>', '<%= lecture.lecturePrice || lecture.price || '25' %>')">
                                         <i class="fas fa-shopping-cart"></i>
@@ -403,8 +859,21 @@
                 <div class="video-grid">
                     <% chapter.chapterSummaries.forEach((summary, index) => { 
                         const videoInfo = userData.videosInfo ? userData.videosInfo.find(v => v._id.toString() === summary._id.toString()) : null;
-                        const watchesLeft = videoInfo ? Math.max(0, (videoInfo.videoAllowedAttemps || 3) - (videoInfo.numberOfWatches || 0)) : 3;
+                        // Calculate days remaining for access
+                        let daysRemaining = videoInfo ? (videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4) : 4;
+                        let accessStatus = 'not_started';
+                        if (videoInfo && videoInfo.accessExpiryDate) {
+                            const expiryDate = new Date(videoInfo.accessExpiryDate);
+                            const now = new Date();
+                            const diffTime = expiryDate - now;
+                            daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            accessStatus = daysRemaining > 0 ? 'active' : 'expired';
+                            if (daysRemaining < 0) daysRemaining = 0;
+                        } else if (videoInfo && videoInfo.videoPurchaseStatus && !videoInfo.accessStartDate) {
+                            accessStatus = 'not_started';
+                        }
                         const hasAccess = hasChapterAccess || (userData.videosPaid && userData.videosPaid.includes(summary._id.toString()));
+                        const canWatch = hasAccess && accessStatus !== 'expired';
                     %>
                         <div class="video-card">
                         <div class="video-thumbnail">
@@ -420,17 +889,22 @@
                                 </div>
                                 <% if (hasAccess && videoInfo) { %>
                                 <div class="stat-item">
-                                    <i class="fas fa-redo"></i>
-                                    <span><%= watchesLeft %></span>
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span><%= daysRemaining %> يوم</span>
                                 </div>
                                 <% } %>
                             </div>
                             <div class="video-overlay">
-                                <% if (hasAccess) { %>
+                                <% if (canWatch) { %>
                                     <a href="/student/chapter/<%= chapterId %>/video/<%= summary._id %>" class="btn btn-success-modern btn-lg">
                                   <i class="fas fa-play"></i>
                                         مشاهدة الآن
                                 </a>
+                              <% } else if (accessStatus === 'expired') { %>
+                                    <button class="btn btn-danger-modern btn-lg" disabled>
+                                        <i class="fas fa-hourglass-end"></i>
+                                        انتهت المدة
+                                    </button>
                               <% } else { %>
                                     <button class="btn btn-warning-modern btn-lg" onclick="showPurchaseModal('<%= summary._id %>', '<%= summary.lectureName || summary.videoTitle %>', '<%= summary.lecturePrice || summary.price || '15' %>')">
                                         <i class="fas fa-lock"></i>
@@ -597,26 +1071,115 @@
           </main>
     </div>
 
-    <!-- Purchase Modal -->
+    <!-- Purchase Modal - Enhanced Design -->
     <div class="modal fade" id="purchaseModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">شراء الفيديو</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body text-center">
-                    <i class="fas fa-video fa-3x text-primary mb-3"></i>
-            <h5 id="videoName"></h5>
-            <p class="text-muted">هل تريد شراء هذا الفيديو؟</p>
-                    <div class="h4 text-primary" id="videoPrice"></div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-            <button type="button" class="btn btn-primary" id="confirmPurchase">شراء</button>
-          </div>
+            <div class="modal-content purchase-modal-content">
+                <div class="modal-header purchase-modal-header">
+                    <div class="modal-header-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <h5 class="modal-title">شراء الفيديو</h5>
+                    <button type="button" class="btn-close btn-close-custom" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body purchase-modal-body">
+                    <div class="video-preview-card">
+                        <div class="video-icon-wrapper">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <h5 id="videoName" class="video-name-title"></h5>
+                        <div class="price-badge" id="videoPrice"></div>
+                    </div>
+                    
+                    <div class="code-input-section">
+                        <label for="purchaseCode" class="code-label">
+                            <i class="fas fa-key"></i>
+                            ادخل الكود
+                        </label>
+                        <div class="code-input-wrapper">
+                            <input type="text" 
+                                   id="purchaseCode" 
+                                   class="form-control code-input" 
+                                   placeholder="اكتب الكود هنا..."
+                                   autocomplete="off"
+                                   dir="ltr">
+                            <div class="code-input-icon">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                        </div>
+                        <small class="code-hint">
+                            <i class="fas fa-info-circle"></i>
+                            الكود بيتكون من حروف وأرقام
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer purchase-modal-footer">
+                    <button type="button" class="btn btn-cancel-modern" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i>
+                        إلغاء
+                    </button>
+                    <button type="button" class="btn btn-purchase-modern" id="confirmPurchase">
+                        <i class="fas fa-check"></i>
+                        تأكيد الشراء
+                        <span class="btn-loading-spinner d-none">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
+    </div>
+
+    <!-- Alert Modal - Modern Design with Egyptian Arabic -->
+    <div class="modal fade" id="alertModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content alert-modal-content">
+                <button type="button" class="btn-close-alert" data-bs-dismiss="modal" aria-label="إغلاق">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="alert-modal-body">
+                    <div class="alert-icon-wrapper" id="alertIconWrapper">
+                        <i class="fas fa-exclamation-circle" id="alertIcon"></i>
+                    </div>
+                    <h4 class="alert-title" id="alertTitle">خطأ</h4>
+                    <p class="alert-message" id="alertMessage">حصل مشكلة</p>
+                    <div class="alert-details" id="alertDetails"></div>
+                </div>
+                <div class="alert-modal-footer">
+                    <button type="button" class="btn btn-alert-close" data-bs-dismiss="modal">
+                        <i class="fas fa-check"></i>
+                        فهمت
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content success-modal-content">
+                <button type="button" class="btn-close-success" data-bs-dismiss="modal" aria-label="إغلاق">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="success-modal-body">
+                    <div class="success-icon-wrapper">
+                        <i class="fas fa-check-circle"></i>
+                        <div class="success-particles">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                    </div>
+                    <h4 class="success-title">تم بنجاح! 🎉</h4>
+                    <p class="success-message" id="successMessage">تم شراء الفيديو بنجاح</p>
+                </div>
+                <div class="success-modal-footer">
+                    <button type="button" class="btn btn-success-watch" id="watchNowBtn">
+                        <i class="fas fa-play"></i>
+                        شاهد دلوقتي
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Mobile Menu Toggle -->
@@ -627,23 +1190,262 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     let selectedVideoId = '';
+    let purchaseModal = null;
+    let alertModal = null;
+    let successModal = null;
+    let redirectUrl = '';
 
-    function showPurchaseModal(videoId, videoName, price) {
-      selectedVideoId = videoId;
-      document.getElementById('videoName').textContent = videoName;
-      document.getElementById('videoPrice').textContent = price + ' جنيه';
-      new bootstrap.Modal(document.getElementById('purchaseModal')).show();
+    // Egyptian Arabic error messages mapping
+    const errorMessages = {
+        'invalid_code': {
+            title: 'الكود مش صح! ❌',
+            message: 'الكود ده مش موجود في النظام خالص',
+            details: 'تأكد إنك كاتب الكود صح من غير مسافات أو أي غلطات'
+        },
+        'code_used': {
+            title: 'الكود مستخدم! 🔄',
+            message: 'الكود ده اتستخدم قبل كده',
+            details: 'لو انت اللي استخدمته، الفيديو المفروض يكون عندك. لو حد تاني استخدمه، محتاج كود جديد'
+        },
+        'code_video_mismatch': {
+            title: 'كود غلط! 🎯',
+            message: 'الكود ده مش للفيديو ده',
+            details: 'كل فيديو ليه كود خاص بيه. تأكد إنك بتستخدم الكود الصح للفيديو اللي عايزه'
+        },
+        'specific_code_required': {
+            title: 'محتاج كود خاص! 🔐',
+            message: 'الفيديو ده محتاج كود خاص بيه',
+            details: 'الأكواد العامة مش بتشتغل مع الفيديو ده. لازم تجيب الكود الخاص بالفيديو'
+        },
+        'grade_mismatch': {
+            title: 'سنة دراسية مختلفة! 📚',
+            message: 'الكود ده مش للسنة الدراسية بتاعتك',
+            details: 'كل سنة دراسية ليها أكواد خاصة بيها'
+        },
+        'prerequisites_not_met': {
+            title: 'فيه متطلبات! ⚠️',
+            message: 'لازم تخلص حاجات معينة الأول',
+            details: ''
+        },
+        'prerequisites_not_found': {
+            title: 'المتطلبات مش مكتملة! 📝',
+            message: 'لازم تشوف الفيديو اللي قبله الأول',
+            details: 'ده فيديو مترتب على فيديو تاني، لازم تخلص اللي قبله'
+        },
+        'already_owned': {
+            title: 'الفيديو عندك! ✅',
+            message: 'انت عندك الفيديو ده بالفعل',
+            details: 'ممكن تشوفه من صفحة الفيديوهات'
+        },
+        'chapter_not_found': {
+            title: 'الباب مش موجود! 📖',
+            message: 'مش لاقيين الباب ده',
+            details: 'جرب ترجع للصفحة الرئيسية وتدخل تاني'
+        },
+        'video_not_found': {
+            title: 'الفيديو مش موجود! 🎬',
+            message: 'مش لاقيين الفيديو ده',
+            details: 'ممكن يكون اتشال أو الرابط غلط'
+        },
+        'purchase_failed': {
+            title: 'حصلت مشكلة! 😕',
+            message: 'معرفناش نتم عملية الشراء',
+            details: 'جرب تاني بعد شوية. لو المشكلة فضلت، كلم الدعم الفني'
+        },
+        'empty_code': {
+            title: 'فين الكود؟ 🤔',
+            message: 'مكتبتش الكود!',
+            details: 'لازم تكتب الكود الأول عشان نفعّل الفيديو'
+        },
+        'code_expired': {
+            title: 'الكود انتهى! ⏰',
+            message: 'صلاحية الكود ده خلصت',
+            details: 'الكود ده كان ليه وقت محدد وخلص. محتاج كود جديد'
+        },
+        'code_inactive': {
+            title: 'الكود مش شغال! 🚫',
+            message: 'الكود ده مش نشط',
+            details: 'الكود ده متوقف مؤقتاً. تواصل مع الدعم للمساعدة'
+        },
+        'default': {
+            title: 'حصلت مشكلة! 😕',
+            message: 'حاجة غلط حصلت',
+            details: 'جرب تاني أو كلم الدعم الفني'
+        }
+    };
+
+    // Parse error from server response or redirect URL
+    function getErrorType(response, message) {
+        const lowerMessage = (message || '').toLowerCase();
+        
+        if (lowerMessage.includes('invalid') || lowerMessage.includes('not found') || lowerMessage.includes('not in system')) {
+            return 'invalid_code';
+        }
+        if (lowerMessage.includes('used') || lowerMessage.includes('مستخدم')) {
+            return 'code_used';
+        }
+        if (lowerMessage.includes('not for this video') || lowerMessage.includes('mismatch') || lowerMessage.includes('video_mismatch')) {
+            return 'code_video_mismatch';
+        }
+        if (lowerMessage.includes('specific code') || lowerMessage.includes('specific_code_required')) {
+            return 'specific_code_required';
+        }
+        if (lowerMessage.includes('grade')) {
+            return 'grade_mismatch';
+        }
+        if (lowerMessage.includes('prerequisite') || lowerMessage.includes('متطلب') || lowerMessage.includes('اختبار') || lowerMessage.includes('واجب')) {
+            return 'prerequisites_not_met';
+        }
+        if (lowerMessage.includes('already') || lowerMessage.includes('access')) {
+            return 'already_owned';
+        }
+        if (lowerMessage.includes('expired') || lowerMessage.includes('انتهت')) {
+            return 'code_expired';
+        }
+        if (lowerMessage.includes('inactive') || lowerMessage.includes('غير نشط')) {
+            return 'code_inactive';
+        }
+        
+        return 'default';
     }
 
-    document.getElementById('confirmPurchase').addEventListener('click', function() {
-      if (selectedVideoId) {
-        // Create form and submit
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/student/chapter/<%= chapterId %>/video/${selectedVideoId}/buy`;
-        document.body.appendChild(form);
-        form.submit();
-      }
+    function showPurchaseModal(videoId, videoName, price) {
+        selectedVideoId = videoId;
+        document.getElementById('videoName').textContent = videoName;
+        document.getElementById('videoPrice').textContent = price + ' جنيه';
+        document.getElementById('purchaseCode').value = '';
+        
+        if (!purchaseModal) {
+            purchaseModal = new bootstrap.Modal(document.getElementById('purchaseModal'));
+        }
+        purchaseModal.show();
+        
+        // Focus on code input
+        setTimeout(() => {
+            document.getElementById('purchaseCode').focus();
+        }, 500);
+    }
+
+    function showAlertModal(type, customMessage = null) {
+        const errorInfo = errorMessages[type] || errorMessages['default'];
+        
+        const iconWrapper = document.getElementById('alertIconWrapper');
+        const alertIcon = document.getElementById('alertIcon');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertMessage = document.getElementById('alertMessage');
+        const alertDetails = document.getElementById('alertDetails');
+        
+        // Set icon and styling based on type
+        iconWrapper.className = 'alert-icon-wrapper error';
+        alertIcon.className = 'fas fa-exclamation-circle';
+        
+        if (type === 'already_owned') {
+            iconWrapper.className = 'alert-icon-wrapper info';
+            alertIcon.className = 'fas fa-info-circle';
+        } else if (type === 'prerequisites_not_met' || type === 'prerequisites_not_found') {
+            iconWrapper.className = 'alert-icon-wrapper warning';
+            alertIcon.className = 'fas fa-exclamation-triangle';
+        }
+        
+        alertTitle.textContent = errorInfo.title;
+        alertMessage.textContent = customMessage || errorInfo.message;
+        alertDetails.textContent = errorInfo.details;
+        
+        if (!alertModal) {
+            alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
+        }
+        alertModal.show();
+    }
+
+    function showSuccessModal(videoUrl) {
+        redirectUrl = videoUrl;
+        
+        if (!successModal) {
+            successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        }
+        successModal.show();
+    }
+
+    // Handle purchase confirmation
+    document.getElementById('confirmPurchase').addEventListener('click', async function() {
+        const code = document.getElementById('purchaseCode').value.trim();
+        
+        if (!code) {
+            showAlertModal('empty_code');
+            return;
+        }
+        
+        if (!selectedVideoId) {
+            showAlertModal('default');
+            return;
+        }
+        
+        // Show loading state
+        const btn = this;
+        const btnText = btn.querySelector('i.fa-check');
+        const btnSpinner = btn.querySelector('.btn-loading-spinner');
+        
+        btn.disabled = true;
+        if (btnText) btnText.classList.add('d-none');
+        if (btnSpinner) btnSpinner.classList.remove('d-none');
+        
+        try {
+            const response = await fetch(`/student/chapter/<%= chapterId %>/video/${selectedVideoId}/buy`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: code })
+            });
+            
+            const data = await response.json();
+            
+            // Close purchase modal
+            if (purchaseModal) {
+                purchaseModal.hide();
+            }
+            
+            if (data.success) {
+                // Show success modal
+                showSuccessModal(data.redirect || `/student/chapter/<%= chapterId %>/video/${selectedVideoId}`);
+            } else {
+                // Determine error type and show appropriate message
+                const errorType = getErrorType(response, data.message);
+                let customMessage = null;
+                
+                // Use server message for prerequisites
+                if (errorType === 'prerequisites_not_met' && data.message) {
+                    customMessage = data.message;
+                }
+                
+                showAlertModal(errorType, customMessage);
+            }
+        } catch (error) {
+            console.error('Purchase error:', error);
+            if (purchaseModal) {
+                purchaseModal.hide();
+            }
+            showAlertModal('purchase_failed');
+        } finally {
+            // Reset button state
+            btn.disabled = false;
+            if (btnText) btnText.classList.remove('d-none');
+            if (btnSpinner) btnSpinner.classList.add('d-none');
+        }
+    });
+
+    // Handle watch now button
+    document.getElementById('watchNowBtn').addEventListener('click', function() {
+        if (redirectUrl) {
+            window.location.href = redirectUrl;
+        }
+    });
+
+    // Handle Enter key in code input
+    document.getElementById('purchaseCode').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('confirmPurchase').click();
+        }
     });
 
         // Mobile sidebar toggle

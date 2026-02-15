@@ -428,7 +428,7 @@ const buyChapter = async (req, res) => {
       ...(chapterData.chapterSolvings || []),
     ];
 
-    // Update user's video access
+    // Update user's video access with days-based system
     for (const video of allVideos) {
       const videoInfo = req.userData.videosInfo.find(
         (v) => v._id.toString() === video._id.toString()
@@ -437,6 +437,9 @@ const buyChapter = async (req, res) => {
         videoInfo.videoPurchaseStatus = true;
         videoInfo.purchaseDate = new Date();
         videoInfo.purchaseCode = code;
+        // Set days-based access from video settings or defaults
+        videoInfo.accessDaysAllowed = video.accessDaysAllowed || video.videoAllowedAttemps || 4;
+        videoInfo.videoAllowedAttemps = video.accessDaysAllowed || video.videoAllowedAttemps || 4;
 
         // Ensure videosPaid is an array
         if (!req.userData.videosPaid) {
@@ -1338,6 +1341,34 @@ const quizWillStart = async (req, res) => {
       randomIndices: randomQuestionIndices
     });
 
+    // Create questions snapshot - store the actual questions being shown to this student
+    // This ensures when quiz is reviewed, student sees exactly what they answered
+    const questionsSnapshot = randomQuestionIndices.map((index, displayIndex) => {
+      const questionDoc = quiz.Questions[index];
+      // Convert Mongoose document to plain object if needed
+      const question = questionDoc.toObject ? questionDoc.toObject() : questionDoc;
+      
+      console.log('Creating snapshot for question:', {
+        index,
+        id: question.id,
+        title: question.title,
+        hasAnswer1: !!question.answer1
+      });
+      
+      return {
+        id: question.id || question._id?.toString() || `q_${index}`,
+        title: question.title || question.question || question.questionText || '',
+        questionPhoto: question.questionPhoto || question.image || '',
+        image: question.image || question.questionPhoto || '',
+        answer1: question.answer1 || '',
+        answer2: question.answer2 || '',
+        answer3: question.answer3 || '',
+        answer4: question.answer4 || '',
+        ranswer: question.ranswer,
+        originalIndex: index
+      };
+    });
+
     if (!quizUser) {
       // Create new quiz info for user
       console.log('Creating new quiz info for user');
@@ -1345,6 +1376,8 @@ const quizWillStart = async (req, res) => {
         _id: quiz._id,
         quizName: quiz.quizName,
         chapterId: quiz.chapterId || null,
+        quizVersion: quiz.version || 1, // Store quiz version
+        questionsSnapshot: questionsSnapshot, // Store snapshot of questions
         isEnterd: false,
         inProgress: true,
         Score: 0,
@@ -1359,11 +1392,11 @@ const quizWillStart = async (req, res) => {
         $push: { quizesInfo: newQuizInfo },
       });
 
-      console.log('Quiz started with random indices:', randomQuestionIndices);
+      console.log('Quiz started with snapshot version:', quiz.version || 1);
       return res.json({ success: true, message: 'Quiz started successfully' });
     } else if (!quizUser.endTime || !quizUser.inProgress) {
-      // Update existing quiz info with start time and new random indices
-      console.log('Updating existing quiz info with start time and new random indices');
+      // Update existing quiz info with start time, new random indices, and snapshot
+      console.log('Updating existing quiz info with start time, new random indices, and snapshot');
 
       await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quiz._id },
@@ -1376,11 +1409,13 @@ const quizWillStart = async (req, res) => {
             'quizesInfo.$.answers': [], // Clear previous answers
             'quizesInfo.$.Score': 0, // Reset score
             'quizesInfo.$.randomQuestionIndices': randomQuestionIndices, // Set new random indices
+            'quizesInfo.$.quizVersion': quiz.version || 1, // Update quiz version
+            'quizesInfo.$.questionsSnapshot': questionsSnapshot, // Update snapshot
           },
         }
       );
 
-      console.log('Quiz timer updated with new random indices:', randomQuestionIndices);
+      console.log('Quiz timer updated with new snapshot version:', quiz.version || 1);
       return res.json({
         success: true,
         message: 'Quiz timer updated successfully',
@@ -1499,6 +1534,8 @@ const quiz_start = async (req, res) => {
             'quizesInfo.$.answers': [],
             'quizesInfo.$.Score': 0,
             'quizesInfo.$.randomQuestionIndices': [],
+            'quizesInfo.$.questionsSnapshot': [], // Clear snapshot for fresh questions on retake
+            'quizesInfo.$.quizVersion': null, // Reset version
           },
         }
       );
@@ -1568,15 +1605,39 @@ const quiz_start = async (req, res) => {
         randomIndices: randomIndices
       });
 
-      // Save these indices to the user's quiz info with explicit user ID filter
-      console.log('Saving random indices to database for user:', req.userData._id);
+      // Create questions snapshot for the selected questions
+      const questionsSnapshot = randomIndices.map((index, displayIndex) => {
+        const questionDoc = quiz.Questions[index];
+        // Convert Mongoose document to plain object if needed
+        const question = questionDoc.toObject ? questionDoc.toObject() : questionDoc;
+        
+        return {
+          id: question.id || question._id?.toString() || `q_${index}`,
+          title: question.title || question.question || question.questionText || '',
+          questionPhoto: question.questionPhoto || question.image || '',
+          image: question.image || question.questionPhoto || '',
+          answer1: question.answer1 || '',
+          answer2: question.answer2 || '',
+          answer3: question.answer3 || '',
+          answer4: question.answer4 || '',
+          ranswer: question.ranswer,
+          originalIndex: index
+        };
+      });
+
+      // Save these indices and snapshot to the user's quiz info with explicit user ID filter
+      console.log('Saving random indices and snapshot to database for user:', req.userData._id);
       const updateResult = await User.findOneAndUpdate(
         { 
           _id: req.userData._id, 
           'quizesInfo._id': quiz._id 
         },
         { 
-          $set: { 'quizesInfo.$.randomQuestionIndices': randomIndices } 
+          $set: { 
+            'quizesInfo.$.randomQuestionIndices': randomIndices,
+            'quizesInfo.$.questionsSnapshot': questionsSnapshot,
+            'quizesInfo.$.quizVersion': quiz.version || 1
+          } 
         },
         { new: true }
       );
@@ -1591,12 +1652,14 @@ const quiz_start = async (req, res) => {
           );
           if (quizInfoIndex !== -1) {
             user.quizesInfo[quizInfoIndex].randomQuestionIndices = randomIndices;
+            user.quizesInfo[quizInfoIndex].questionsSnapshot = questionsSnapshot;
+            user.quizesInfo[quizInfoIndex].quizVersion = quiz.version || 1;
             await user.save();
-            console.log('Fallback: Updated randomQuestionIndices via save()');
+            console.log('Fallback: Updated randomQuestionIndices and snapshot via save()');
           }
         }
       } else {
-        console.log('Successfully saved random indices to database');
+        console.log('Successfully saved random indices and snapshot to database');
       }
 
       // Refresh userQuizInfo from database to get the saved indices
@@ -1914,6 +1977,7 @@ const quizFinish = async (req, res) => {
       );
     } else {
       // Student failed - reset quiz for retake
+      // Clear snapshot and indices so they get new questions on next attempt
       updateResult = await User.findOneAndUpdate(
         { _id: req.userData._id, 'quizesInfo._id': quizObjId },
         {
@@ -1926,6 +1990,8 @@ const quizFinish = async (req, res) => {
             'quizesInfo.$.endTime': null,
             'quizesInfo.$.startTime': null,
             'quizesInfo.$.randomQuestionIndices': [],
+            'quizesInfo.$.questionsSnapshot': [], // Clear snapshot for fresh questions on retake
+            'quizesInfo.$.quizVersion': null, // Reset version
           },
         },
         { new: true }
@@ -2049,20 +2115,64 @@ const quiz_review = async (req, res) => {
     }
 
     // Get the questions that were actually shown to the user
+    // PRIORITY: Use questionsSnapshot if available (ensures student sees exactly what they answered)
     let userQuestions = [];
     let questionsShown = 0;
+    let usingSnapshot = false;
 
+    // Check if we have a questions snapshot (new versioning system)
     if (
+      userQuizInfo.questionsSnapshot &&
+      Array.isArray(userQuizInfo.questionsSnapshot) &&
+      userQuizInfo.questionsSnapshot.length > 0
+    ) {
+      // Use the saved snapshot - this is the definitive record of what the student saw
+      console.log('Using questionsSnapshot (version: ' + (userQuizInfo.quizVersion || 'N/A') + ')');
+      usingSnapshot = true;
+      
+      userQuestions = userQuizInfo.questionsSnapshot.map((question, index) => {
+        // Mongoose subdocuments need explicit property access
+        // Using _doc to access raw document data or explicit property access
+        const questionData = question._doc || question;
+        
+        const questionObj = {
+          id: questionData.id || '',
+          title: questionData.title || '',
+          questionPhoto: questionData.questionPhoto || '',
+          image: questionData.image || questionData.questionPhoto || '',
+          answer1: questionData.answer1 || '',
+          answer2: questionData.answer2 || '',
+          answer3: questionData.answer3 || '',
+          answer4: questionData.answer4 || '',
+          ranswer: questionData.ranswer,
+          originalIndex: questionData.originalIndex,
+          displayIndex: index,
+        };
+        
+        // Debug logging
+        console.log(`Question ${index}: title="${questionObj.title}", ranswer=${questionObj.ranswer}`);
+        
+        return questionObj;
+      });
+      questionsShown = userQuestions.length;
+      
+      console.log(`Loaded ${questionsShown} questions from snapshot`);
+    } else if (
       userQuizInfo.randomQuestionIndices &&
       userQuizInfo.randomQuestionIndices.length > 0
     ) {
-      // Use the saved random indices
+      // Fallback for older data: Use the saved random indices with current quiz questions
+      // WARNING: This may show incorrect questions if quiz was edited after student took it
+      console.log(
+        'WARNING: Using randomQuestionIndices fallback (no snapshot available)'
+      );
       console.log(
         'Using saved randomQuestionIndices:',
         userQuizInfo.randomQuestionIndices
       );
+      
       userQuestions = userQuizInfo.randomQuestionIndices
-        .map((index) => {
+        .map((index, displayIndex) => {
           const question = quiz.Questions[index];
           if (question) {
             // Normalize image field names for backward compatibility
@@ -2073,6 +2183,7 @@ const quiz_review = async (req, res) => {
             return {
               ...normalizedQuestion,
               originalIndex: index,
+              displayIndex: displayIndex,
             };
           }
           return null;
@@ -2080,7 +2191,7 @@ const quiz_review = async (req, res) => {
         .filter((q) => q !== null);
       questionsShown = userQuestions.length;
     } else {
-      // Fallback: use sequential questions based on questionsToShow
+      // Last resort: use sequential questions based on questionsToShow
       const questionsToShow = quiz.questionsToShow || quiz.questionsCount;
       console.log(
         'No randomQuestionIndices found, using fallback with questionsToShow:',
@@ -2097,13 +2208,15 @@ const quiz_review = async (req, res) => {
           return {
             ...normalizedQuestion,
             originalIndex: index,
+            displayIndex: index,
           };
         }
       );
       questionsShown = userQuestions.length;
     }
 
-    console.log('Total questions in pool:', quiz.Questions.length);
+    console.log('Using snapshot:', usingSnapshot);
+    console.log('Total questions in current quiz:', quiz.Questions.length);
     console.log('Questions shown to user:', questionsShown);
     console.log(
       'User answers array length:',
@@ -2114,9 +2227,7 @@ const quiz_review = async (req, res) => {
     let answeredCount = 0;
 
     userQuestions.forEach((question, index) => {
-      const questionId = question._id
-        ? question._id.toString()
-        : `q_${question.originalIndex}`;
+      const questionId = question.id || question._id?.toString() || `q_${question.originalIndex || index}`;
 
       // Find the user's answer for this specific question
       let userAnswerObj = null;
@@ -2126,7 +2237,8 @@ const quiz_review = async (req, res) => {
           (a) =>
             a.questionId === questionId ||
             a.questionIndex === index ||
-            a.questionIndex === question.originalIndex
+            a.questionIndex === question.originalIndex ||
+            a.questionIndex === question.displayIndex
         );
       } else if (userQuizInfo.answers && userQuizInfo.answers[index]) {
         // Legacy format: simple array
@@ -2155,12 +2267,21 @@ const quiz_review = async (req, res) => {
     const unansweredQuestions = Math.max(0, questionsShown - answeredCount);
     const incorrectAnswers = Math.max(0, answeredCount - correctAnswers);
 
+    // Check if quiz version matches (for informational purposes)
+    const currentQuizVersion = quiz.version || 1;
+    const studentQuizVersion = userQuizInfo.quizVersion || 1;
+    const versionMismatch = currentQuizVersion !== studentQuizVersion && !usingSnapshot;
+
     console.log('Final stats:', {
       correctAnswers,
       incorrectAnswers,
       unansweredQuestions,
       totalShown: questionsShown,
       userScore: userQuizInfo.Score,
+      usingSnapshot: usingSnapshot,
+      currentQuizVersion: currentQuizVersion,
+      studentQuizVersion: studentQuizVersion,
+      versionMismatch: versionMismatch
     });
     console.log('=== QUIZ REVIEW DEBUG END ===');
 
@@ -2184,7 +2305,11 @@ const quiz_review = async (req, res) => {
       correctAnswers: correctAnswers,
       incorrectAnswers: incorrectAnswers,
       unansweredQuestions: unansweredQuestions,
-      shouldShowAnswers: shouldShowAnswers, // Pass this to the view
+      shouldShowAnswers: shouldShowAnswers,
+      usingSnapshot: usingSnapshot, // Indicates if snapshot was used
+      studentQuizVersion: studentQuizVersion, // Version when student took quiz
+      currentQuizVersion: currentQuizVersion, // Current quiz version
+      versionMismatch: versionMismatch, // Warning if versions don't match and no snapshot
     });
   } catch (error) {
     console.error('Quiz review error:', error);
@@ -2883,6 +3008,9 @@ const buyVideo = async (req, res) => {
       });
     }
 
+    // Get access days from video settings (default 4 days)
+    const accessDays = video.accessDaysAllowed || video.videoAllowedAttemps || 4;
+
     // Grant video access (works for both GeneralVideo and specific Video codes)
     {
       console.log('Adding video purchase:', {
@@ -2890,6 +3018,7 @@ const buyVideo = async (req, res) => {
         videoName: video.videoName || video.lectureName,
         chapterId: chapterId,
         code: code,
+        accessDays: accessDays,
         userId: req.userData._id,
       });
 
@@ -2898,7 +3027,8 @@ const buyVideo = async (req, res) => {
           videoId,
           video.videoName || video.lectureName,
           chapterId,
-          code
+          code,
+          accessDays // Pass access days from video settings
         );
         console.log(
           'Video purchase successful. User videosPaid array length:',
@@ -3142,7 +3272,7 @@ const video_watch_get = async (req, res) => {
     const hasVideoAccess = req.userData.hasVideoAccess(videoId, video);
 
     // Get user video info
-    const userVideoInfo =
+    let userVideoInfo =
       (req.userData.videosInfo &&
         req.userData.videosInfo.find(
           (v) => v._id.toString() === videoId.toString()
@@ -3157,7 +3287,8 @@ const video_watch_get = async (req, res) => {
     console.log('Found userVideoInfo:', userVideoInfo ? 'Yes' : 'No');
     if (userVideoInfo) {
       console.log('UserVideoInfo ID:', userVideoInfo._id);
-      console.log('UserVideoInfo attempts:', userVideoInfo.videoAllowedAttemps);
+      console.log('UserVideoInfo access days:', userVideoInfo.accessDaysAllowed);
+      console.log('UserVideoInfo expiry:', userVideoInfo.accessExpiryDate);
     }
 
     // Check access permissions (including prerequisites)
@@ -3165,33 +3296,91 @@ const video_watch_get = async (req, res) => {
       return res.redirect(`/student/chapter/${chapterId}`);
     }
 
-    // Check if user has remaining attempts
-    if (userVideoInfo && userVideoInfo.videoAllowedAttemps <= 0) {
-      return res.redirect(`/student/chapter/${chapterId}?error=no_attempts`);
+    // Calculate days-based access status
+    const now = new Date();
+    let accessExpired = false;
+    let daysRemaining = 0;
+    let hoursRemaining = 0;
+    let timeRemainingText = '';
+    let timeRemainingClass = 'not-started';
+    
+    if (userVideoInfo) {
+      if (userVideoInfo.accessExpiryDate) {
+        const expiryDate = new Date(userVideoInfo.accessExpiryDate);
+        if (expiryDate < now) {
+          accessExpired = true;
+          timeRemainingText = 'انتهت المدة';
+          timeRemainingClass = 'expired';
+        } else {
+          const diffMs = expiryDate - now;
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffDays = Math.floor(diffHours / 24);
+          const remainingHours = diffHours % 24;
+          
+          daysRemaining = diffDays;
+          hoursRemaining = diffHours;
+          
+          if (diffDays >= 1) {
+            timeRemainingText = diffDays === 1 ? 'باقي يوم واحد' : `باقي ${diffDays} يوم`;
+            if (remainingHours > 0 && diffDays < 3) {
+              timeRemainingText += ` و ${remainingHours} ساعة`;
+            }
+            timeRemainingClass = diffDays <= 1 ? 'warning' : '';
+          } else {
+            timeRemainingText = diffHours === 1 ? 'باقي ساعة واحدة' : `باقي ${diffHours} ساعة`;
+            timeRemainingClass = diffHours <= 6 ? 'danger' : 'warning';
+          }
+        }
+      } else if (!userVideoInfo.accessStartDate && userVideoInfo.videoPurchaseStatus) {
+        // First time watching - access not started yet
+        const accessDays = userVideoInfo.accessDaysAllowed || userVideoInfo.videoAllowedAttemps || 4;
+        daysRemaining = accessDays;
+        timeRemainingText = `${accessDays} يوم (لم تبدأ)`;
+        timeRemainingClass = 'not-started';
+      }
     }
 
-    // Track video watch immediately when user enters the page
-    if (userVideoInfo && userVideoInfo.videoAllowedAttemps > 0) {
-      // Update user's video watch info immediately
-      await User.findOneAndUpdate(
-        { _id: req.userData._id, 'videosInfo._id': videoId },
-        {
-          $set: {
-            'videosInfo.$.lastWatch': Date.now(),
-            'videosInfo.$.hasWatched10Percent': true,
-          },
-          $inc: {
-            'videosInfo.$.numberOfWatches': 1,
-            'videosInfo.$.videoAllowedAttemps': -1,
-          },
-        }
-      );
+    // Check if access has expired (days-based system)
+    if (accessExpired) {
+      return res.redirect(`/student/chapter/${chapterId}?error=access_expired`);
+    }
 
-      // Set first watch if not already set
-      if (!userVideoInfo.fristWatch) {
+    // Track video watch and set access dates if first time watching
+    if (userVideoInfo && userVideoInfo.videoPurchaseStatus) {
+      if (!userVideoInfo.accessStartDate) {
+        // First time watching - set access start and expiry dates
+        const accessDays = userVideoInfo.accessDaysAllowed || userVideoInfo.videoAllowedAttemps || 4;
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + accessDays);
+        
         await User.findOneAndUpdate(
           { _id: req.userData._id, 'videosInfo._id': videoId },
-          { $set: { 'videosInfo.$.fristWatch': Date.now() } }
+          {
+            $set: {
+              'videosInfo.$.accessStartDate': now,
+              'videosInfo.$.accessExpiryDate': expiryDate,
+              'videosInfo.$.fristWatch': now,
+              'videosInfo.$.lastWatch': now,
+              'videosInfo.$.hasWatched10Percent': true,
+            },
+            $inc: {
+              'videosInfo.$.numberOfWatches': 1,
+            },
+          }
+        );
+      } else {
+        // Subsequent watches - just update last watch and count
+        await User.findOneAndUpdate(
+          { _id: req.userData._id, 'videosInfo._id': videoId },
+          {
+            $set: {
+              'videosInfo.$.lastWatch': now,
+              'videosInfo.$.hasWatched10Percent': true,
+            },
+            $inc: {
+              'videosInfo.$.numberOfWatches': 1,
+            },
+          }
         );
       }
     }
@@ -3231,6 +3420,10 @@ const video_watch_get = async (req, res) => {
       chapterId: chapterId,
       videoId: videoId,
       watchProgress: watchProgress,
+      daysRemaining: daysRemaining,
+      hoursRemaining: hoursRemaining,
+      timeRemainingText: timeRemainingText,
+      timeRemainingClass: timeRemainingClass,
       videoViewsCount: video.views || 0,
       homeworkSubmission: homeworkSubmission,
     });

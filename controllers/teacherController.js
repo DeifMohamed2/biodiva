@@ -590,7 +590,7 @@ const video_create_post = async (req, res) => {
       prerequisites,
       permissionToShow,
       AccessibleAfterViewing,
-      videoAllowedAttemps,
+      accessDaysAllowed, // Changed from videoAllowedAttemps
       videoPrice,
       imgURL,
       videoURL,
@@ -624,7 +624,8 @@ const video_create_post = async (req, res) => {
       const videoId = new mongoose.Types.ObjectId();
       const currentDate = new Date();
       
-
+      // Default to 4 days access
+      const daysAllowed = parseInt(accessDaysAllowed) || 4;
 
       
       const videoObject = {
@@ -635,7 +636,8 @@ const video_create_post = async (req, res) => {
         prerequisites: prerequisites || '',
         permissionToShow: permissionToShow === 'true',
         AccessibleAfterViewing: AccessibleAfterViewing || '',
-        videoAllowedAttemps: parseInt(videoAllowedAttemps) || 3,
+        accessDaysAllowed: daysAllowed, // Days-based access
+        videoAllowedAttemps: daysAllowed, // Legacy field for compatibility
         videoPrice: parseFloat(videoPrice) || 0,
         videoURL: videoURL || '',
         imgURL: imgURL || '',
@@ -677,8 +679,13 @@ const video_create_post = async (req, res) => {
         videoType: videoType,
         fristWatch: null,
         lastWatch: null,
+        // Days-based access system
+        accessDaysAllowed: daysAllowed,
+        accessStartDate: null,
+        accessExpiryDate: null,
+        // Legacy fields for compatibility
         numberOfWatches: 0,
-        videoAllowedAttemps: parseInt(videoAllowedAttemps) || 3,
+        videoAllowedAttemps: daysAllowed,
         videoPurchaseStatus: paymentStatus === 'Free' ? true : false,
         purchaseDate: null,
         purchaseCode: null,
@@ -797,9 +804,32 @@ const allStudents = await User.find({
       videosInfo: { $elemMatch: { _id: new mongoose.Types.ObjectId(videoId) } }
     });
     
-    // Prepare student stats
+    // Prepare student stats with days-based access information
     const studentsStats = allStudents.map(student => {
       const videoInfo = student.videosInfo && student.videosInfo[0];
+      
+      // Calculate days remaining for access
+      let daysRemaining = 0;
+      let accessStatus = 'not_started';
+      let accessExpiryDate = null;
+      
+      if (videoInfo && videoInfo.accessExpiryDate) {
+        accessExpiryDate = new Date(videoInfo.accessExpiryDate);
+        const now = new Date();
+        const diffTime = accessExpiryDate - now;
+        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (daysRemaining > 0) {
+          accessStatus = 'active';
+        } else {
+          accessStatus = 'expired';
+          daysRemaining = 0;
+        }
+      } else if (videoInfo && videoInfo.videoPurchaseStatus) {
+        // Has access but hasn't started watching
+        accessStatus = 'not_started';
+        daysRemaining = videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4;
+      }
       
       return {
         studentId: student._id,
@@ -809,8 +839,15 @@ const allStudents = await User.find({
         phone: student.phone || 'غير متوفر',
         parentPhone: student.parentPhone || 'غير متوفر',
         place: student.place || 'online',
+        // Days-based access info
+        accessDaysAllowed: videoInfo ? videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4 : 4,
+        accessStartDate: videoInfo ? videoInfo.accessStartDate : null,
+        accessExpiryDate: accessExpiryDate,
+        daysRemaining: daysRemaining,
+        accessStatus: accessStatus,
+        // Legacy fields for compatibility
         numberOfWatches: videoInfo ? videoInfo.numberOfWatches || 0 : 0,
-        videoAllowedAttemps: videoInfo ? videoInfo.videoAllowedAttemps || 3 : 3,
+        videoAllowedAttemps: videoInfo ? videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4 : 4,
         fristWatch: videoInfo ? videoInfo.fristWatch : null,
         lastWatch: videoInfo ? videoInfo.lastWatch : null,
         purchaseStatus: videoInfo ? videoInfo.videoPurchaseStatus : false
@@ -819,6 +856,8 @@ const allStudents = await User.find({
     
     // Calculate statistics
     const totalWatches = studentsStats.reduce((sum, s) => sum + s.numberOfWatches, 0);
+    const activeViewers = studentsStats.filter(s => s.accessStatus === 'active').length;
+    const expiredViewers = studentsStats.filter(s => s.accessStatus === 'expired').length;
     const uniqueViewers = studentsStats.filter(s => s.numberOfWatches > 0).length;
     const unwatchedCount = studentsStats.filter(s => s.numberOfWatches === 0).length;
     
@@ -945,7 +984,7 @@ const video_edit_post = async (req, res) => {
       prerequisites,
       permissionToShow,
       AccessibleAfterViewing,
-      videoAllowedAttemps,
+      accessDaysAllowed, // Changed from videoAllowedAttemps
       videoPrice,
       imgURL,
       videoURL,
@@ -964,6 +1003,9 @@ const video_edit_post = async (req, res) => {
     if (!chapter) {
       return res.status(404).send('Chapter not found');
     }
+    
+    // Default to 4 days access
+    const daysAllowed = parseInt(accessDaysAllowed) || 4;
     
     // Update the video based on its type
     let videoArray;
@@ -995,7 +1037,8 @@ const video_edit_post = async (req, res) => {
     videoArray[videoIndex].permissionToShow = permissionToShow === 'true';
     videoArray[videoIndex].AccessibleAfterViewing = AccessibleAfterViewing || '';
     videoArray[videoIndex].externalLink = externalLink || '';
-    videoArray[videoIndex].videoAllowedAttemps = parseInt(videoAllowedAttemps) || 3;
+    videoArray[videoIndex].accessDaysAllowed = daysAllowed; // Days-based access
+    videoArray[videoIndex].videoAllowedAttemps = daysAllowed; // Legacy field for compatibility
     videoArray[videoIndex].videoPrice = parseFloat(videoPrice) || 0;
     videoArray[videoIndex].videoURL = videoURL;
     videoArray[videoIndex].imgURL = imgURL;
@@ -1013,15 +1056,20 @@ const video_edit_post = async (req, res) => {
     chapter.updatedAt = new Date();
     await chapter.save();
     
-    // Propagate the new allowed attempts to all students who have this video in their videosInfo
-    const newAllowedAttempts = parseInt(videoAllowedAttemps) || 10;
+    // Propagate the new access days to all students who have this video in their videosInfo
+    // Only updates students who haven't started watching yet (no accessStartDate)
     try {
       await User.updateMany(
         { isTeacher: false, 'videosInfo._id': new mongoose.Types.ObjectId(videoId) },
-        { $set: { 'videosInfo.$.videoAllowedAttemps': newAllowedAttempts } }
+        { 
+          $set: { 
+            'videosInfo.$.accessDaysAllowed': daysAllowed,
+            'videosInfo.$.videoAllowedAttemps': daysAllowed 
+          } 
+        }
       );
     } catch (propagationError) {
-      console.error('Failed to propagate new allowed attempts to users:', propagationError);
+      console.error('Failed to propagate new access days to users:', propagationError);
     }
     
     res.redirect(`/teacher/videos/${videoId}?success=video_updated`);
@@ -2420,11 +2468,28 @@ const sendTextMessages = async (req, res) => {
         }
 
         try {
-          const XLSX = require('xlsx');
-          const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+          const workbook = new Excel.Workbook();
+          await workbook.xlsx.load(excelFile.data);
+          const worksheet = workbook.worksheets[0];
+          
+          // Convert worksheet to JSON-like format
+          const headers = [];
+          const data = [];
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) {
+              row.eachCell((cell, colNumber) => {
+                headers[colNumber] = cell.value;
+              });
+            } else {
+              const rowData = {};
+              row.eachCell((cell, colNumber) => {
+                if (headers[colNumber]) {
+                  rowData[headers[colNumber]] = cell.value;
+                }
+              });
+              data.push(rowData);
+            }
+          });
 
           const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
           const pCol = normalize(phoneColumn);
@@ -2615,11 +2680,28 @@ const sendImageMessages = async (req, res) => {
       }
 
       try {
-        const XLSX = require('xlsx');
-        const workbook = XLSX.read(excelFile.data, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+        const workbook = new Excel.Workbook();
+        await workbook.xlsx.load(excelFile.data);
+        const worksheet = workbook.worksheets[0];
+        
+        // Convert worksheet to JSON-like format
+        const headers = [];
+        const data = [];
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) {
+            row.eachCell((cell, colNumber) => {
+              headers[colNumber] = cell.value;
+            });
+          } else {
+            const rowData = {};
+            row.eachCell((cell, colNumber) => {
+              if (headers[colNumber]) {
+                rowData[headers[colNumber]] = cell.value;
+              }
+            });
+            data.push(rowData);
+          }
+        });
 
         const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v);
         const normalizedPhoneCol = normalize(phoneColumn);
@@ -2632,9 +2714,9 @@ const sendImageMessages = async (req, res) => {
             return acc;
           }, {});
 
-        const phone = normalizedRow[normalizedPhoneCol];
-        const studentName = normalizedStudentNameCol ? normalizedRow[normalizedStudentNameCol] : null;
-        const parentPhone = normalizedParentPhoneCol ? normalizedRow[normalizedParentPhoneCol] : null;
+          const phone = normalizedRow[normalizedPhoneCol];
+          const studentName = normalizedStudentNameCol ? normalizedRow[normalizedStudentNameCol] : null;
+          const parentPhone = normalizedParentPhoneCol ? normalizedRow[normalizedParentPhoneCol] : null;
 
           if (recipientType === 'students' && phone) {
             targets.push({
@@ -3105,6 +3187,8 @@ const quiz_create_post = async (req, res) => {
       showAnswersAfterQuiz: showAnswersAfterQuiz === 'true',
       Questions: parsedQuestions,
       videoWillbeOpen: videoWillbeOpen || null,
+      version: 1,
+      versionUpdatedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -3116,10 +3200,13 @@ const quiz_create_post = async (req, res) => {
       _id: quiz._id,
       quizName: quiz.quizName,
       chapterId: quiz.chapterId,
+      quizVersion: quiz.version,
+      questionsSnapshot: [], // Will be populated when student starts quiz
       isEnterd: false,
       inProgress: false,
       Score: 0,
       answers: [],
+      randomQuestionIndices: [],
       endTime: null,
       quizPurchaseStatus: !quiz.prepaidStatus
     };
@@ -3253,14 +3340,20 @@ const student_detail_get = async (req, res) => {
         endTime: quiz.endTime
       }));
     
-    // Get videos this student has watched
+    // Get videos this student has watched (include days-based access info)
     const watchedVideos = student.videosInfo
-      .filter(video => video.numberOfWatches > 0)
+      .filter(video => video.numberOfWatches > 0 || video.videoPurchaseStatus)
       .map(video => ({
         videoId: video._id,
         videoName: video.videoName,
-        numberOfWatches: video.numberOfWatches,
-        lastWatch: video.lastWatch
+        numberOfWatches: video.numberOfWatches || 0,
+        lastWatch: video.lastWatch,
+        // Days-based access info
+        accessDaysAllowed: video.accessDaysAllowed || video.videoAllowedAttemps || 4,
+        accessStartDate: video.accessStartDate,
+        accessExpiryDate: video.accessExpiryDate,
+        videoPurchaseStatus: video.videoPurchaseStatus,
+        videoAllowedAttemps: video.videoAllowedAttemps || 4
       }));
     
     res.render('teacher/student-detail', {
@@ -4465,13 +4558,13 @@ const increase_student_watches = async (req, res) => {
   try {
     const videoId = req.params.videoId;
     const studentId = req.params.studentId;
-    const { additionalWatches } = req.body;
+    const { additionalDays } = req.body; // Changed from additionalWatches
     
     // Validate input
-    if (!additionalWatches || isNaN(additionalWatches) || additionalWatches <= 0) {
+    if (!additionalDays || isNaN(additionalDays) || additionalDays <= 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'يرجى تحديد عدد المشاهدات الإضافية بشكل صحيح'
+        message: 'يرجى تحديد عدد الأيام الإضافية بشكل صحيح'
       });
     }
     
@@ -4496,23 +4589,63 @@ const increase_student_watches = async (req, res) => {
       });
     }
     
-    // Increase the videoAllowedAttemps
-    const currentAllowedAttempts = student.videosInfo[videoInfoIndex].videoAllowedAttemps || 3;
-    student.videosInfo[videoInfoIndex].videoAllowedAttemps = currentAllowedAttempts + parseInt(additionalWatches);
+    const videoInfo = student.videosInfo[videoInfoIndex];
+    const daysToAdd = parseInt(additionalDays);
+    
+    // Update days-based access
+    if (videoInfo.accessExpiryDate) {
+      // Extend existing expiry date
+      const currentExpiry = new Date(videoInfo.accessExpiryDate);
+      const now = new Date();
+      
+      // If already expired, start from now; otherwise extend from current expiry
+      const startDate = currentExpiry < now ? now : currentExpiry;
+      const newExpiry = new Date(startDate);
+      newExpiry.setDate(newExpiry.getDate() + daysToAdd);
+      
+      student.videosInfo[videoInfoIndex].accessExpiryDate = newExpiry;
+      student.videosInfo[videoInfoIndex].accessDaysAllowed = (videoInfo.accessDaysAllowed || 4) + daysToAdd;
+      student.videosInfo[videoInfoIndex].videoAllowedAttemps = (videoInfo.videoAllowedAttemps || 4) + daysToAdd;
+    } else if (videoInfo.accessStartDate) {
+      // Has start date but no expiry - calculate and extend
+      const startDate = new Date(videoInfo.accessStartDate);
+      const currentDays = videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4;
+      const newExpiry = new Date(startDate);
+      newExpiry.setDate(newExpiry.getDate() + currentDays + daysToAdd);
+      
+      student.videosInfo[videoInfoIndex].accessExpiryDate = newExpiry;
+      student.videosInfo[videoInfoIndex].accessDaysAllowed = currentDays + daysToAdd;
+      student.videosInfo[videoInfoIndex].videoAllowedAttemps = currentDays + daysToAdd;
+    } else {
+      // No access started yet - just increase the allowed days
+      const currentDays = videoInfo.accessDaysAllowed || videoInfo.videoAllowedAttemps || 4;
+      student.videosInfo[videoInfoIndex].accessDaysAllowed = currentDays + daysToAdd;
+      student.videosInfo[videoInfoIndex].videoAllowedAttemps = currentDays + daysToAdd;
+    }
     
     // Save the updated student record
     await student.save();
     
+    // Calculate remaining days for response
+    let daysRemaining = student.videosInfo[videoInfoIndex].accessDaysAllowed || 4;
+    if (student.videosInfo[videoInfoIndex].accessExpiryDate) {
+      const now = new Date();
+      const expiry = new Date(student.videosInfo[videoInfoIndex].accessExpiryDate);
+      daysRemaining = Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+    }
+    
     return res.json({
       success: true,
-      message: `تم زيادة عدد المشاهدات المسموح بها للطالب بنجاح (+${additionalWatches})`,
-      newAllowedAttempts: student.videosInfo[videoInfoIndex].videoAllowedAttemps
+      message: `تم تمديد فترة الوصول للطالب بنجاح (+${daysToAdd} أيام)`,
+      newAccessDays: student.videosInfo[videoInfoIndex].accessDaysAllowed,
+      daysRemaining: daysRemaining,
+      accessExpiryDate: student.videosInfo[videoInfoIndex].accessExpiryDate
     });
   } catch (error) {
-    console.error('Increase student watches error:', error);
+    console.error('Increase student access days error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'حدث خطأ أثناء زيادة عدد المشاهدات المسموح بها'
+      message: 'حدث خطأ أثناء تمديد فترة الوصول'
     });
   }
 };
@@ -5104,6 +5237,16 @@ const quiz_edit_post = async (req, res) => {
       return res.redirect(`/teacher/quizzes/${quizId}/edit?error=questions_deleted&attempts=${studentsWhoAttempted}&deleted=${deletedQuestionIds.length}`);
     }
     
+    // Determine if questions have changed (for version increment)
+    const questionsChanged = hasAttempts && (
+      questionIdWarnings.length > 0 || 
+      deletedQuestionIds.length > 0 ||
+      parsedQuestions.length !== existingQuiz.Questions.length
+    );
+    
+    // Increment version if questions were modified
+    const newVersion = questionsChanged ? (existingQuiz.version || 1) + 1 : (existingQuiz.version || 1);
+    
     const updateData = {
       quizName,
       Grade,
@@ -5118,6 +5261,8 @@ const quiz_edit_post = async (req, res) => {
       showAnswersAfterQuiz: showAnswersAfterQuiz === 'true',
       Questions: parsedQuestions,
       videoWillbeOpen: videoWillbeOpen || null,
+      version: newVersion,
+      versionUpdatedAt: questionsChanged ? new Date() : existingQuiz.versionUpdatedAt,
       updatedAt: new Date()
     };
     
@@ -5125,7 +5270,7 @@ const quiz_edit_post = async (req, res) => {
     
     // Log the update for audit purposes
     if (hasAttempts) {
-      console.log(`Quiz ${quizId} updated: ${studentsWhoAttempted} students have attempted this quiz. Question IDs preserved: ${newQuestionIds.size}/${existingQuestionsMap.size}`);
+      console.log(`Quiz ${quizId} updated: ${studentsWhoAttempted} students have attempted this quiz. Question IDs preserved: ${newQuestionIds.size}/${existingQuestionsMap.size}. Version: ${existingQuiz.version || 1} -> ${newVersion}`);
     }
     
     res.redirect(`/teacher/quizzes/${quizId}?success=quiz_updated${hasAttempts ? '&has_attempts=' + studentsWhoAttempted : ''}`);

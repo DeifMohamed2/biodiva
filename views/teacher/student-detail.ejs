@@ -628,13 +628,29 @@
                   <tr>
                     <th>اسم الفيديو</th>
                     <th>عدد المشاهدات</th>
+                    <th>الأيام المتبقية</th>
                     <th>آخر مشاهدة</th>
                     <th>الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% if (watchedVideos && watchedVideos.length > 0) { %>
-                    <% watchedVideos.forEach(video => { %>
+                    <% watchedVideos.forEach(video => { 
+                      // Calculate days remaining
+                      let daysRemaining = 0;
+                      let accessStatus = 'not_started';
+                      if (video.accessExpiryDate) {
+                        const expiryDate = new Date(video.accessExpiryDate);
+                        const now = new Date();
+                        const diffTime = expiryDate - now;
+                        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        accessStatus = daysRemaining > 0 ? 'active' : 'expired';
+                        if (daysRemaining < 0) daysRemaining = 0;
+                      } else if (!video.accessStartDate && video.videoPurchaseStatus) {
+                        accessStatus = 'not_started';
+                        daysRemaining = video.accessDaysAllowed || video.videoAllowedAttemps || 4;
+                      }
+                    %>
                       <tr>
                         <td>
                           <div class="table-cell-primary">
@@ -642,6 +658,15 @@
                           </div>
                         </td>
                         <td><%= video.numberOfWatches || 0 %></td>
+                        <td>
+                          <% if (accessStatus === 'active') { %>
+                            <span class="status-badge active"><%= daysRemaining %> يوم</span>
+                          <% } else if (accessStatus === 'expired') { %>
+                            <span class="status-badge inactive">منتهي</span>
+                          <% } else { %>
+                            <span class="status-badge pending"><%= daysRemaining %> يوم</span>
+                          <% } %>
+                        </td>
                         <td><%= video.lastWatch ? new Date(video.lastWatch).toLocaleString('ar-EG') : 'غير معروف' %></td>
                         <td>
                           <div class="table-actions">
@@ -654,7 +679,7 @@
                     <% }); %>
                   <% } else { %>
                     <tr>
-                      <td colspan="4" class="empty-table">
+                      <td colspan="5" class="empty-table">
                         <div class="empty-state">
                           <i class="fas fa-video"></i>
                           <p>هذا الطالب لم يشاهد أي فيديوهات بعد</p>

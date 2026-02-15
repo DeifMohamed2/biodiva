@@ -260,9 +260,9 @@
                 
                 <div>
                   <div style="margin-bottom: 1rem;">
-                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">عدد المشاهدات المسموح بها</p>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">عدد أيام الوصول</p>
                     <p style="margin: 0; font-weight: 600;">
-                      <i class="fas fa-play-circle" style="color: var(--primary-color); margin-left: 0.5rem;"></i> <%= video.videoAllowedAttemps || 3 %> مشاهدات
+                      <i class="fas fa-calendar-alt" style="color: var(--primary-color); margin-left: 0.5rem;"></i> <%= video.accessDaysAllowed || video.videoAllowedAttemps || 4 %> أيام
                     </p>
                   </div>
                   
@@ -342,12 +342,11 @@
                       <th style="width: 8%;">الكود</th>
                       <th style="width: 8%;">الصف</th>
                       <th style="width: 12%;">رقم الهاتف</th>
-                      <th style="width: 12%;">هاتف ولي الأمر</th>
+                      <th style="width: 10%;">هاتف ولي الأمر</th>
                       <th style="width: 8%;">المشاهدات</th>
-                      <th style="width: 8%;">المتبقي</th>
+                      <th style="width: 8%;">الأيام المتبقية</th>
                       <th style="width: 10%;">آخر مشاهدة</th>
-                      <th style="width: 8%;">المكان</th>
-                      <th style="width: 8%;">حالة الدفع</th>
+                      <th style="width: 8%;">حالة الوصول</th>
                       <th style="width: 10%;">الإجراءات</th>
                     </tr>
                   </thead>
@@ -362,25 +361,32 @@
                         <td><%= student.phone %></td>
                         <td><%= student.parentPhone %></td>
                         <td><%= student.numberOfWatches %></td>
-                        <td><%= student.videoAllowedAttemps - student.numberOfWatches %></td>
+                        <td>
+                          <% if (student.accessStatus === 'active') { %>
+                            <span class="status-badge active"><%= student.daysRemaining %> يوم</span>
+                          <% } else if (student.accessStatus === 'expired') { %>
+                            <span class="status-badge inactive">منتهي</span>
+                          <% } else { %>
+                            <span class="status-badge pending"><%= student.accessDaysAllowed %> يوم</span>
+                          <% } %>
+                        </td>
                         <td><%= student.lastWatch ? new Date(student.lastWatch).toLocaleString('ar-EG') : 'غير متوفر' %></td>
-                        <td data-place="<%= student.place %>">
-                          <span class="status-badge <%= student.place === 'center' ? 'active' : 'pending' %>">
-                            <%= student.place === 'center' ? 'المركز' : 'أونلاين' %>
-                          </span>
+                        <td>
+                          <% if (student.accessStatus === 'active') { %>
+                            <span class="status-badge active">نشط</span>
+                          <% } else if (student.accessStatus === 'expired') { %>
+                            <span class="status-badge inactive">منتهي</span>
+                          <% } else { %>
+                            <span class="status-badge pending">لم يبدأ</span>
+                          <% } %>
                         </td>
                         <td>
-                          <span class="status-badge <%= student.purchaseStatus ? 'active' : 'pending' %>">
-                            <%= student.purchaseStatus ? 'مدفوع' : 'غير مدفوع' %>
-                          </span>
-                        </td>
-                        <td>
-                          <button class="btn btn-sm btn-primary increase-watches" 
+                          <button class="btn btn-sm btn-primary extend-access" 
                                   data-student-id="<%= student.studentId %>" 
                                   data-student-name="<%= student.studentName %>"
-                                  data-current-attempts="<%= student.videoAllowedAttemps %>">
+                                  data-current-days="<%= student.accessStatus === 'expired' ? 0 : (student.daysRemaining || 0) %>">
                             <i class="fas fa-plus"></i>
-                            زيادة المشاهدات
+                            تمديد الوصول
                           </button>
                         </td>
                       </tr>
@@ -430,7 +436,7 @@
                       <th style="width: 8%;">الصف</th>
                       <th style="width: 12%;">رقم الهاتف</th>
                       <th style="width: 12%;">هاتف ولي الأمر</th>
-                      <th style="width: 10%;">المشاهدات المتاحة</th>
+                      <th style="width: 10%;">أيام الوصول</th>
                       <th style="width: 8%;">المكان</th>
                       <th style="width: 8%;">حالة الدفع</th>
                       <th style="width: 20%;">الإجراءات</th>
@@ -446,7 +452,7 @@
                         <td><%= student.grade %></td>
                         <td><%= student.phone %></td>
                         <td><%= student.parentPhone %></td>
-                        <td><%= student.videoAllowedAttemps %></td>
+                        <td><%= student.accessDaysAllowed || 4 %> يوم</td>
                         <td data-place="<%= student.place %>">
                           <span class="status-badge <%= student.place === 'center' ? 'active' : 'pending' %>">
                             <%= student.place === 'center' ? 'المركز' : 'أونلاين' %>
@@ -465,12 +471,12 @@
                               <i class="fas fa-bell"></i>
                               تذكير
                             </button>
-                            <button class="btn btn-sm btn-primary increase-watches" 
+                            <button class="btn btn-sm btn-primary extend-access" 
                                     data-student-id="<%= student.studentId %>" 
                                     data-student-name="<%= student.studentName %>"
-                                    data-current-attempts="<%= student.videoAllowedAttemps %>">
+                                    data-current-days="<%= student.accessStatus === 'expired' ? 0 : (student.daysRemaining || 0) %>">
                               <i class="fas fa-plus"></i>
-                              زيادة المشاهدات
+                              زيادة الأيام
                             </button>
                           </div>
                         </td>
@@ -646,38 +652,38 @@
     </div>
   </div>
   
-  <!-- Increase Watches Modal -->
-  <div class="modal-overlay" id="increaseWatchesModal">
+  <!-- Extend Access Modal (renamed from Increase Watches) -->
+  <div class="modal-overlay" id="extendAccessModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">زيادة عدد المشاهدات</h3>
-        <button class="modal-close" onclick="closeIncreaseWatchesModal()">
+        <h3 class="modal-title">تمديد فترة الوصول</h3>
+        <button class="modal-close" onclick="closeExtendAccessModal()">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="modal-body">
         <div style="margin-bottom: 1.5rem;">
-          <p>إضافة مشاهدات للطالب: <strong id="studentNameDisplay"></strong></p>
+          <p>تمديد فترة الوصول للطالب: <strong id="studentNameDisplay"></strong></p>
           
           <div class="form-group">
-            <label class="form-label">عدد المشاهدات الإضافية</label>
-            <input type="number" class="form-input" id="additionalWatches" min="1" value="1">
+            <label class="form-label">عدد الأيام الإضافية</label>
+            <input type="number" class="form-input" id="additionalDays" min="1" value="1">
           </div>
           
           <div class="form-group">
-            <label class="form-label">عدد المشاهدات الحالي</label>
-            <input type="text" class="form-input" id="currentWatches" readonly>
+            <label class="form-label">الأيام المتبقية حالياً</label>
+            <input type="text" class="form-input" id="currentDays" readonly>
           </div>
           
           <div class="form-group">
-            <label class="form-label">العدد الإجمالي بعد الزيادة</label>
-            <input type="text" class="form-input" id="totalWatches" readonly>
+            <label class="form-label">العدد الإجمالي بعد التمديد</label>
+            <input type="text" class="form-input" id="totalDays" readonly>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeIncreaseWatchesModal()">إلغاء</button>
-        <button class="btn btn-primary" id="confirmIncreaseBtn">تأكيد</button>
+        <button class="btn btn-outline" onclick="closeExtendAccessModal()">إلغاء</button>
+        <button class="btn btn-primary" id="confirmExtendBtn">تأكيد</button>
       </div>
     </div>
   </div>
@@ -848,53 +854,56 @@
       });
     });
     
-    // Increase watches functionality
+    // Extend access functionality (days-based system)
     let currentStudentId = null;
-    const increaseWatchesButtons = document.querySelectorAll('.increase-watches');
-    const additionalWatchesInput = document.getElementById('additionalWatches');
-    const currentWatchesInput = document.getElementById('currentWatches');
-    const totalWatchesInput = document.getElementById('totalWatches');
+    const extendAccessButtons = document.querySelectorAll('.extend-access');
+    const additionalDaysInput = document.getElementById('additionalDays');
+    const currentDaysInput = document.getElementById('currentDays');
+    const totalDaysInput = document.getElementById('totalDays');
     
-    function showIncreaseWatchesModal() {
-      document.getElementById('increaseWatchesModal').classList.add('show');
+    function showExtendAccessModal() {
+      document.getElementById('extendAccessModal').classList.add('show');
     }
     
-    function closeIncreaseWatchesModal() {
-      document.getElementById('increaseWatchesModal').classList.remove('show');
+    function closeExtendAccessModal() {
+      document.getElementById('extendAccessModal').classList.remove('show');
     }
     
-    // Update total watches when additional watches input changes
-    additionalWatchesInput.addEventListener('input', function() {
-      const additional = parseInt(this.value) || 0;
-      const current = parseInt(currentWatchesInput.value) || 0;
-      totalWatchesInput.value = current + additional;
-    });
+    // Update total days when additional days input changes
+    if (additionalDaysInput) {
+      additionalDaysInput.addEventListener('input', function() {
+        const additional = parseInt(this.value) || 0;
+        const current = parseInt(currentDaysInput.value) || 0;
+        totalDaysInput.value = current + additional;
+      });
+    }
     
-    increaseWatchesButtons.forEach(button => {
+    extendAccessButtons.forEach(button => {
       button.addEventListener('click', function() {
         const studentId = this.getAttribute('data-student-id');
         const studentName = this.getAttribute('data-student-name');
-        const currentAttempts = parseInt(this.getAttribute('data-current-attempts')) || 0;
+        const currentDaysAttr = this.getAttribute('data-current-days');
+        const currentDays = currentDaysAttr !== null ? parseInt(currentDaysAttr) : 0;
         
         // Set current student ID for the confirmation button
         currentStudentId = studentId;
         
         // Update modal content
         document.getElementById('studentNameDisplay').textContent = studentName;
-        currentWatchesInput.value = currentAttempts;
-        additionalWatchesInput.value = 1;
-        totalWatchesInput.value = currentAttempts + 1;
+        currentDaysInput.value = currentDays;
+        additionalDaysInput.value = 1;
+        totalDaysInput.value = currentDays + 1;
         
         // Show modal
-        showIncreaseWatchesModal();
+        showExtendAccessModal();
       });
     });
     
-    // Handle confirm increase button click
-    document.getElementById('confirmIncreaseBtn').addEventListener('click', function() {
+    // Handle confirm extend button click
+    document.getElementById('confirmExtendBtn').addEventListener('click', function() {
       if (!currentStudentId) return;
       
-      const additionalWatches = parseInt(additionalWatchesInput.value) || 1;
+      const additionalDays = parseInt(additionalDaysInput.value) || 1;
       
       // Disable button and show loading state
       this.disabled = true;
@@ -905,13 +914,13 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ additionalWatches })
+        body: JSON.stringify({ additionalDays })
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
           // Close modal
-          closeIncreaseWatchesModal();
+          closeExtendAccessModal();
           
           // Show success message
           alert(data.message);
@@ -926,7 +935,7 @@
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء زيادة عدد المشاهدات');
+        alert('حدث خطأ أثناء تمديد فترة الوصول');
         this.disabled = false;
         this.innerHTML = 'تأكيد';
       });

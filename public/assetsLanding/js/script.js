@@ -9,16 +9,16 @@ let darkmode = localStorage.getItem("darkmode");
 // Function to apply dark mode
 const enableDarkmode = () => {
   document.body.classList.add("darkmode");
-  toggleBtn.classList.add("fa-moon");
-  SigninBtn.classList.add("active-btn");
+  if (toggleBtn) toggleBtn.classList.add("fa-moon");
+  if (SigninBtn) SigninBtn.classList.add("active-btn");
   localStorage.setItem("darkmode", "active");
 };
 
 // Function to disable dark mode
 const disableDarkmode = () => {
   document.body.classList.remove("darkmode");
-  toggleBtn.classList.remove("fa-moon");
-  SigninBtn.classList.remove("active-btn");
+  if (toggleBtn) toggleBtn.classList.remove("fa-moon");
+  if (SigninBtn) SigninBtn.classList.remove("active-btn");
   localStorage.setItem("darkmode", null);
 };
 
@@ -28,14 +28,16 @@ const disableDarkmode = () => {
   if (darkmode === "active") enableDarkmode();
 })();
 
-toggleBtn.addEventListener("click", function () {
-  let darkmode = localStorage.getItem("darkmode");
-  if (darkmode !== "active") {
-    enableDarkmode();
-  } else {
-    disableDarkmode();
-  }
-});
+if (toggleBtn) {
+  toggleBtn.addEventListener("click", function () {
+    let darkmode = localStorage.getItem("darkmode");
+    if (darkmode !== "active") {
+      enableDarkmode();
+    } else {
+      disableDarkmode();
+    }
+  });
+}
 
 const handleScroll = () => {
   // Get current scroll position and viewport/page dimensions
@@ -94,22 +96,24 @@ document.addEventListener("click", () => {
   });
 });
 
-showMoreButton.addEventListener("click", function () {
-  // Show the next 6 boxes
-  for (let i = currenListen; i < currenListen + 6; i++) {
-    if (i < boxes.length) {
-      boxes[i].style.display = "inline-block";
+if (showMoreButton) {
+  showMoreButton.addEventListener("click", function () {
+    // Show the next 6 boxes
+    for (let i = currenListen; i < currenListen + 6; i++) {
+      if (i < boxes.length) {
+        boxes[i].style.display = "inline-block";
+      }
     }
-  }
 
-  // Update the current count
-  currenListen += 6;
+    // Update the current count
+    currenListen += 6;
 
-  // Hide the button if all boxes are displayed
-  if (currenListen >= boxes.length) {
-    showMoreButton.style.display = "none";
-  }
-});
+    // Hide the button if all boxes are displayed
+    if (currenListen >= boxes.length) {
+      showMoreButton.style.display = "none";
+    }
+  });
+}
 
 
 // Function to open the video modal
@@ -135,20 +139,27 @@ function closeVideo() {
 
 
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const defaultGrade = 'Grade1'; // Set default grade to Grade 3
-  fetchChaptersByGrade(defaultGrade); // Load Grade 3 chapters on page load
-});
+const gradeSelect = document.getElementById('gradeSelect');
+const courseContainer = document.querySelector('.slider-content-wrapper');
 
-// Fetch and update courses when the grade selection changes
-document.getElementById('gradeSelect').addEventListener('change', (event) => {
-  const selectedGrade = event.target.value;
-  console.log(selectedGrade);
-  fetchChaptersByGrade(selectedGrade);
-});
+// Only run if on landing page with these elements
+if (gradeSelect && courseContainer) {
+  document.addEventListener('DOMContentLoaded', async () => {
+    const defaultGrade = 'Grade1'; // Set default grade to Grade 1
+    fetchChaptersByGrade(defaultGrade); // Load Grade 1 chapters on page load
+  });
+
+  // Fetch and update courses when the grade selection changes
+  gradeSelect.addEventListener('change', (event) => {
+    const selectedGrade = event.target.value;
+    console.log(selectedGrade);
+    fetchChaptersByGrade(selectedGrade);
+  });
+}
 
 // Function to fetch chapters based on the selected grade
 async function fetchChaptersByGrade(grade) {
+  if (!courseContainer) return;
   console.log(grade);
   try {
     const response = await fetch(`/chaptersByGrade?grade=${grade}`);
@@ -162,7 +173,7 @@ async function fetchChaptersByGrade(grade) {
 
 // Function to update the course display dynamically
 function updateCourseList(chapters) {
-  const courseContainer = document.querySelector('.slider-content-wrapper');
+  if (!courseContainer) return;
   courseContainer.innerHTML = ''; // Clear existing courses
 
   // Loop through the fetched chapters and create new HTML elements

@@ -3,6 +3,7 @@ const { required } = require('nodemon/lib/config');
 const Schema = mongoose.Schema;
 
 // Enhanced video info schema for better tracking
+// Using days-based access system instead of watch counts
 const VideoInfoSchema = new Schema(
   {
     _id: {
@@ -30,9 +31,23 @@ const VideoInfoSchema = new Schema(
       type: Date,
       default: null,
     },
+    // NEW: Days-based access system (replaces watch count system)
+    accessDaysAllowed: {
+      type: Number,
+      default: 4, // Default 4 days access
+    },
+    accessStartDate: {
+      type: Date,
+      default: null, // Set when user first accesses video after purchase
+    },
+    accessExpiryDate: {
+      type: Date,
+      default: null, // Calculated: accessStartDate + accessDaysAllowed days
+    },
+    // LEGACY: Keep for backward compatibility during transition
     videoAllowedAttemps: {
       type: Number,
-      default: 3,
+      default: 4, // Now represents days, not watches
     },
     numberOfWatches: {
       type: Number,
@@ -162,6 +177,53 @@ const HomeworkSubmissionSchema = new Schema(
   { _id: false }
 );
 
+// Schema for snapshot of a quiz question (stored when student takes quiz)
+const QuestionSnapshotSchema = new Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    questionPhoto: {
+      type: String,
+      default: '',
+    },
+    image: {
+      type: String,
+      default: '',
+    },
+    answer1: {
+      type: String,
+      required: true,
+    },
+    answer2: {
+      type: String,
+      required: true,
+    },
+    answer3: {
+      type: String,
+      default: '',
+    },
+    answer4: {
+      type: String,
+      default: '',
+    },
+    ranswer: {
+      type: Number,
+      required: true,
+    },
+    originalIndex: {
+      type: Number,
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 // Enhanced quiz info schema
 const QuizInfoSchema = new Schema(
   {
@@ -176,6 +238,16 @@ const QuizInfoSchema = new Schema(
     chapterId: {
       type: Schema.Types.ObjectId,
       ref: 'Chapter',
+    },
+    // Quiz version at the time student took the quiz
+    quizVersion: {
+      type: Number,
+      default: 1,
+    },
+    // Snapshot of questions shown to student (immutable after quiz completion)
+    questionsSnapshot: {
+      type: [QuestionSnapshotSchema],
+      default: [],
     },
     isEnterd: {
       type: Boolean,
@@ -646,10 +718,11 @@ userSchema.methods.addVideoPurchase = function (
   videoId,
   videoName,
   chapterId,
-  code
+  code,
+  accessDays = 4 // Default 4 days access
 ) {
   console.log('=== addVideoPurchase called ===');
-  console.log('Parameters:', { videoId, videoName, chapterId, code });
+  console.log('Parameters:', { videoId, videoName, chapterId, code, accessDays });
   console.log('User ID:', this._id);
   console.log(
     'Current videosPaid length:',
@@ -665,7 +738,11 @@ userSchema.methods.addVideoPurchase = function (
     videoInfo.videoPurchaseStatus = true;
     videoInfo.purchaseDate = new Date();
     videoInfo.purchaseCode = code;
-    console.log('Updated video info with purchase status');
+    // Set access days - access will start when user first watches the video
+    videoInfo.accessDaysAllowed = accessDays;
+    videoInfo.videoAllowedAttemps = accessDays; // Legacy field for compatibility
+    // Note: accessStartDate and accessExpiryDate are set when user first watches
+    console.log('Updated video info with purchase status and access days:', accessDays);
   }
 
   // Ensure videosPaid is an array

@@ -163,8 +163,9 @@
               </div>
               
               <div class="form-group">
-                <label class="form-label">عدد المشاهدات المسموح بها</label>
-                <input type="number" class="form-input" id="videoAllowedAttemps" name="videoAllowedAttemps" min="1" value="<%= video.videoAllowedAttemps || 3 %>">
+                <label class="form-label">عدد أيام الوصول</label>
+                <input type="number" class="form-input" id="accessDaysAllowed" name="accessDaysAllowed" min="1" value="<%= video.accessDaysAllowed || video.videoAllowedAttemps || 4 %>">
+                <small style="color: var(--text-secondary); font-size: 0.75rem; display: block; margin-top: 0.25rem;">الفترة التي سيتمكن فيها الطالب من مشاهدة الفيديو بعد استخدام الكود</small>
               </div>
             </div>
           </div>

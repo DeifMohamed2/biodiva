@@ -506,11 +506,28 @@
           </div>
         </div>
 
+        <!-- Version Warning Notice (if quiz was updated and no snapshot is available) -->
+        <% if (typeof versionMismatch !== 'undefined' && versionMismatch) { %>
+        <div class="random-notice" style="background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%); border-color: #fc8181;">
+          <i class="fas fa-exclamation-triangle icon" style="color: #c53030;"></i>
+          <div class="text" style="color: #742a2a;">
+            <strong>تنبيه:</strong> تم تحديث هذا الامتحان بعد حلك له. بعض الأسئلة المعروضة قد تختلف عما أجبت عليه. 
+            <br>
+            <small>إصدار الامتحان عند حلك: <%= typeof studentQuizVersion !== 'undefined' ? studentQuizVersion : 1 %> | الإصدار الحالي: <%= typeof currentQuizVersion !== 'undefined' ? currentQuizVersion : 1 %></small>
+          </div>
+        </div>
+        <% } %>
+
         <!-- Navigation -->
         <div class="review-nav">
           <div class="nav-info">
             <i class="fas fa-info-circle"></i>
             مراجعة <%= questionsShown %> سؤال من أصل <%= totalQuestionsPool %> سؤال
+            <% if (typeof usingSnapshot !== 'undefined' && usingSnapshot) { %>
+            <span style="margin-right: 0.5rem; color: #48bb78;">
+              <i class="fas fa-check-circle"></i> نسخة محفوظة
+            </span>
+            <% } %>
           </div>
           <a href="/student/exams" class="nav-btn nav-btn-primary">
             <i class="fas fa-arrow-right"></i>
@@ -523,7 +540,8 @@
           <% userQuestions.forEach((question, index) => { %>
             <% 
               const questionNumber = index + 1;
-              const questionId = question._id ? question._id.toString() : `q_${question.originalIndex}`;
+              // Use the question's id field (from snapshot) or fallback to _id or generated id
+              const questionId = question.id || (question._id ? question._id.toString() : `q_${question.originalIndex || index}`);
               
               // Find the user's answer for this specific question
               // Priority: match by display index (questionIndex) first, then by questionId
@@ -538,6 +556,7 @@
                   userAnswerObj = userQuizInfo.answers.find(a => 
                     a.questionId === questionId || 
                     (question._id && a.questionId === question._id.toString()) ||
+                    (question.id && a.questionId === question.id) ||
                     a.questionId === `q_${index}` ||
                     a.questionId === `q_${question.originalIndex}`
                   );

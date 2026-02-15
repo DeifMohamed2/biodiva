@@ -220,7 +220,12 @@ const public_Register_post = async (req, res) => {
             videoType: video.videoType || 'lecture',
             fristWatch: null,
             lastWatch: null,
-            videoAllowedAttemps: 10,
+            // Days-based access system
+            accessDaysAllowed: video.accessDaysAllowed || 4,
+            accessStartDate: null,
+            accessExpiryDate: null,
+            // Legacy fields for compatibility
+            videoAllowedAttemps: video.accessDaysAllowed || 4,
             numberOfWatches: 0,
             videoPurchaseStatus: false,
             purchaseDate: null,
