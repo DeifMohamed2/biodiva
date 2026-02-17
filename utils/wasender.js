@@ -966,6 +966,113 @@ async function regenerateQRCode() {
   }
 }
 
+// ==================  Professional Arabic Notification Templates  ==================
+
+/**
+ * Create a professional formatted notification message in Arabic
+ * @param {Object} options - Message options
+ * @param {string} options.title - Message title (with emoji)
+ * @param {string} options.greeting - Greeting text
+ * @param {string} options.body - Main message body
+ * @param {Array} options.details - Array of { label, value } for details section
+ * @param {string} options.footer - Footer message
+ * @returns {string} - Formatted WhatsApp message
+ */
+function createProfessionalMessage(options) {
+  const { title, greeting = '', body = '', details = [], footer = '' } = options;
+  
+  let message = `━━━━━━━━━━━━━━━━━━━━━\n${title}\n━━━━━━━━━━━━━━━━━━━━━\n`;
+  
+  if (greeting) {
+    message += `\n${greeting}\n`;
+  }
+  
+  if (body) {
+    message += `\n${body}\n`;
+  }
+  
+  if (details.length > 0) {
+    message += '\n━━━━ *التفاصيل* ━━━━\n\n';
+    details.forEach(({ label, value, emoji = '' }) => {
+      message += `${emoji} *${label}:* ${value}\n`;
+    });
+  }
+  
+  if (footer) {
+    message += `\n━━━━━━━━━━━━━━━━━━━━━\n\n${footer}\n\nمع تحيات،\n*فريق Biodiva* 🧬\n━━━━━━━━━━━━━━━━━━━━━`;
+  }
+  
+  return message;
+}
+
+/**
+ * Format current date and time in Arabic (Egypt)
+ * @returns {Object} - { date, time, datetime }
+ */
+function getArabicDateTime() {
+  const now = new Date();
+  const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  const timeOptions = { hour: '2-digit', minute: '2-digit' };
+  
+  return {
+    date: now.toLocaleDateString('ar-EG', dateOptions),
+    time: now.toLocaleTimeString('ar-EG', timeOptions),
+    datetime: now.toLocaleDateString('ar-EG', { ...dateOptions, ...timeOptions })
+  };
+}
+
+/**
+ * Get performance level text and emoji based on percentage
+ * @param {number} percentage - Score percentage
+ * @returns {Object} - { text, emoji }
+ */
+function getPerformanceLevel(percentage) {
+  if (percentage >= 90) return { text: 'ممتاز', emoji: '🏆' };
+  if (percentage >= 80) return { text: 'جيد جداً', emoji: '🌟' };
+  if (percentage >= 70) return { text: 'جيد', emoji: '👍' };
+  if (percentage >= 60) return { text: 'مقبول', emoji: '✅' };
+  return { text: 'يحتاج تحسين', emoji: '📚' };
+}
+
+/**
+ * Send a notification to both student and parent
+ * @param {string} studentMessage - Message for student
+ * @param {string} parentMessage - Message for parent
+ * @param {string} studentPhone - Student phone number
+ * @param {string} parentPhone - Parent phone number
+ * @returns {Object} - Results for both notifications
+ */
+async function sendDualNotification(studentMessage, parentMessage, studentPhone, parentPhone) {
+  const results = {
+    student: { sent: false, error: null },
+    parent: { sent: false, error: null }
+  };
+
+  // Send to student
+  if (studentPhone) {
+    try {
+      const result = await sendTextMessage(studentMessage, studentPhone);
+      results.student.sent = result.success;
+      if (!result.success) results.student.error = result.message;
+    } catch (error) {
+      results.student.error = error.message;
+    }
+  }
+
+  // Send to parent
+  if (parentPhone) {
+    try {
+      const result = await sendTextMessage(parentMessage, parentPhone);
+      results.parent.sent = result.success;
+      if (!result.success) results.parent.error = result.message;
+    } catch (error) {
+      results.parent.error = error.message;
+    }
+  }
+
+  return results;
+}
+
 const wasender = new WasenderClient();
 
 module.exports = {
@@ -980,7 +1087,10 @@ module.exports = {
   getSessionStatus,
   connectSession,
   getQRCode,
-  regenerateQRCode
+  regenerateQRCode,
+  // Professional notification helpers
+  createProfessionalMessage,
+  getArabicDateTime,
+  getPerformanceLevel,
+  sendDualNotification
 };
-
-

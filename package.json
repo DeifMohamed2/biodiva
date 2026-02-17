@@ -12,7 +12,11 @@
     "update-student-status": "node scripts/updateStudentStatus.js",
     "test-student-status": "node scripts/testStudentStatus.js",
     "convert-video-to-general": "node scripts/convertVideoToGeneralVideo.js",
-    "export-students": "node scripts/exportStudentsToExcel.js"
+    "export-students": "node scripts/exportStudentsToExcel.js",
+    "notifications": "node scripts/scheduledNotifications.js",
+    "check-expiring": "node utils/videoExpirationNotifier.js",
+    "check-expiring:dry": "node utils/videoExpirationNotifier.js --dry-run",
+    "expiring-report": "node utils/videoExpirationNotifier.js --report"
   },
   "author": "",
   "license": "ISC",
@@ -35,6 +39,7 @@
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.1",

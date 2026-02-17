@@ -9,6 +9,9 @@ const crypto = require('crypto');
 // Import WhatsApp functionality
 const wasender = require('../utils/wasender');
 
+// Import notification service for per-student alerts
+const { scheduleVideoExpirationNotification } = require('../utils/notificationService');
+
 // Note: Using frontend Cloudinary upload instead of server-side processing
 
 // ==================  Code Cleaning Helper Function  ====================== //
@@ -111,6 +114,26 @@ async function sendQuizCompletionMessage(
     const percentage =
       totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
+    // Determine performance level and emoji
+    let performanceLevel = '';
+    let performanceEmoji = '';
+    if (percentage >= 90) {
+      performanceLevel = 'ممتاز';
+      performanceEmoji = '🏆';
+    } else if (percentage >= 80) {
+      performanceLevel = 'جيد جداً';
+      performanceEmoji = '🌟';
+    } else if (percentage >= 70) {
+      performanceLevel = 'جيد';
+      performanceEmoji = '👍';
+    } else if (percentage >= 60) {
+      performanceLevel = 'مقبول';
+      performanceEmoji = '✅';
+    } else {
+      performanceLevel = 'يحتاج تحسين';
+      performanceEmoji = '📚';
+    }
+
     // Determine if this is a retake and if score improved
     let retakeMessage = '';
     if (isRetake && previousScore !== null) {
@@ -121,40 +144,70 @@ async function sendQuizCompletionMessage(
           : 0;
 
       if (scoreImprovement > 0) {
-        retakeMessage = `\n🔄 *محاولة إعادة* - تحسن الدرجة من ${previousScore}/${totalQuestions} (${previousPercentage}%) إلى ${score}/${totalQuestions} (${percentage}%)`;
+        retakeMessage = `\n🔄 *إعادة الامتحان*\nتحسّنت الدرجة من *${previousPercentage}%* إلى *${percentage}%* 📈`;
       } else if (scoreImprovement < 0) {
-        retakeMessage = `\n🔄 *محاولة إعادة* - انخفضت الدرجة من ${previousScore}/${totalQuestions} (${previousPercentage}%) إلى ${score}/${totalQuestions} (${percentage}%)`;
+        retakeMessage = `\n🔄 *إعادة الامتحان*\nالدرجة السابقة: *${previousPercentage}%* 📉`;
       } else {
-        retakeMessage = `\n🔄 *محاولة إعادة* - نفس الدرجة ${score}/${totalQuestions} (${percentage}%)`;
+        retakeMessage = `\n🔄 *إعادة الامتحان*\nنفس الدرجة السابقة`;
       }
     }
 
     // Determine status message
     let statusMessage = '';
     if (percentage >= 60) {
-      statusMessage = '✅ *نجح الطالب*';
+      statusMessage = '✅ *اجتاز الطالب الامتحان بنجاح*';
     } else {
-      statusMessage = '⚠️ *يمكن للطالب إعادة الامتحان*';
+      statusMessage = '📝 *يمكن للطالب إعادة الامتحان للحصول على درجة أفضل*';
     }
 
-    // Format the message
-    const message = `🎓 *نتيجة الامتحان* 🎓
+    // Format date in Arabic
+    const now = new Date();
+    const dateOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    const timeOptions = { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    };
+    const arabicDate = now.toLocaleDateString('ar-EG', dateOptions);
+    const arabicTime = now.toLocaleTimeString('ar-EG', timeOptions);
 
-الطالب: *${student.Username}*
-الامتحان: *${quiz.quizName}*
-الدرجة: *${score}/${totalQuestions}*
-النسبة: *${percentage}%*
+    // Format the professional message
+    const message = `━━━━━━━━━━━━━━━━━━━━━
+🎓 *نتيجة الامتحان* 🎓
+━━━━━━━━━━━━━━━━━━━━━
+
+السلام عليكم ورحمة الله وبركاته
+
+نُبارك لكم إتمام نجل/نجلتكم للامتحان
+
+👤 *اسم الطالب:* ${student.Username}
+📝 *اسم الامتحان:* ${quiz.quizName}
+
+━━━━ *النتيجة* ━━━━
+
+📊 *الدرجة:* ${score} من ${totalQuestions}
+📈 *النسبة المئوية:* ${percentage}%
+${performanceEmoji} *التقدير:* ${performanceLevel}
 ${retakeMessage}
 
 ${statusMessage}
 
-📅 تاريخ الامتحان: ${new Date().toLocaleDateString('ar-EG')}
-⏰ وقت الامتحان: ${new Date().toLocaleTimeString('ar-EG')}
+━━━━ *معلومات إضافية* ━━━━
 
-نتمنى لطالبك المزيد من التقدم والنجاح 🌟
+📅 *التاريخ:* ${arabicDate}
+⏰ *الوقت:* ${arabicTime}
 
----
-*منصة Biodiva التعليمية*`;
+━━━━━━━━━━━━━━━━━━━━━
+
+نتمنى لطالبكم دوام التفوق والنجاح 🌹
+
+مع تحيات،
+*فريق Biodiva* 🧬
+━━━━━━━━━━━━━━━━━━━━━`;
 
     // Send the message
     const result = await sendWasenderMessage(
@@ -3348,7 +3401,9 @@ const video_watch_get = async (req, res) => {
     // Track video watch and set access dates if first time watching
     if (userVideoInfo && userVideoInfo.videoPurchaseStatus) {
       if (!userVideoInfo.accessStartDate) {
-        // First time watching - set access start and expiry dates
+        // First time accessing - set access start and expiry dates
+        // DON'T count first access as a "watch" - only start the timer
+        // This way if they never come back to watch, alert will be sent (0 watches)
         const accessDays = userVideoInfo.accessDaysAllowed || userVideoInfo.videoAllowedAttemps || 4;
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + accessDays);
@@ -3361,15 +3416,29 @@ const video_watch_get = async (req, res) => {
               'videosInfo.$.accessExpiryDate': expiryDate,
               'videosInfo.$.fristWatch': now,
               'videosInfo.$.lastWatch': now,
-              'videosInfo.$.hasWatched10Percent': true,
             },
-            $inc: {
-              'videosInfo.$.numberOfWatches': 1,
-            },
+            // First access doesn't count as watch - only starts timer
           }
         );
+
+        // Schedule notification 24h before expiry for this specific student
+        // Will only send if numberOfWatches is still 0
+        try {
+          await scheduleVideoExpirationNotification(
+            req.userData,
+            {
+              _id: videoId,
+              videoName: userVideoInfo.videoName,
+              accessExpiryDate: expiryDate,
+              numberOfWatches: 0 // First access doesn't count
+            }
+          );
+          console.log(`📅 Scheduled expiration notification for ${req.userData.Username} - ${userVideoInfo.videoName}`);
+        } catch (notifError) {
+          console.error('Failed to schedule notification:', notifError.message);
+        }
       } else {
-        // Subsequent watches - just update last watch and count
+        // Subsequent access - THIS counts as a real watch
         await User.findOneAndUpdate(
           { _id: req.userData._id, 'videosInfo._id': videoId },
           {

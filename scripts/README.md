@@ -98,3 +98,76 @@ The script provides detailed output including:
 - Distribution of final statuses
 - Any errors encountered
 - Processing time and performance metrics
+
+---
+
+# WhatsApp Notification System
+
+This system provides professional Arabic notifications via WhatsApp for various events.
+
+## How It Works (Per-Student System)
+
+The notification system works **individually for each student**:
+
+1. **When a student first watches a video** → A notification is scheduled for 24 hours before THEIR video expires
+2. **Every minute** → The system checks for any due notifications and sends them
+3. **Each student gets their own alert** → Based on when THEIR specific video expires
+
+### Example:
+- Student A watches video at 10:00 AM Monday → Notification scheduled for 10:00 AM Thursday (24h before 4-day expiry)
+- Student B watches same video at 3:00 PM Tuesday → Notification scheduled for 3:00 PM Friday
+- Each student gets their alert at the exact right time!
+
+## Features
+
+### 1. Quiz Completion Notifications
+Automatically sends a professionally formatted message to parents when their child completes a quiz.
+
+**Message includes:**
+- Student name and quiz name
+- Score and percentage  
+- Performance rating (ممتاز، جيد جداً، جيد، مقبول، يحتاج تحسين)
+- Date and time
+- Pass/fail status
+
+### 2. Video Expiration Alerts (Per-Student)
+Each student gets their own notification exactly 24 hours before THEIR video access expires.
+
+**How it works:**
+- Notification scheduled when student first watches video
+- Stored in database (survives server restarts)
+- Processed every minute
+- Parent also notified if student hasn't watched the video
+
+## Automatic Integration
+
+Everything runs automatically when you start the server with `npm start`:
+
+```
+Server is running on port http://localhost:8000
+🔔 Starting WhatsApp Notification System...
+✅ Notification system active:
+   📬 Queue check: Every minute (per-student)
+   ⏰ Each student notified 24h before THEIR video expires
+   📊 Daily stats: 8:00 AM (Cairo)
+```
+
+No separate scripts needed!
+
+## Database
+
+Notifications are stored in the `NotificationQueue` collection with these fields:
+- `studentId`, `studentPhone`, `parentPhone`
+- `contentId`, `contentName` (video info)
+- `scheduledFor` (when to send)
+- `expiryDate` (when video expires)
+- `status` (pending/sent/failed/cancelled)
+- `watchCount` (watches at time of sending)
+
+## Message Templates
+
+All messages:
+- Arabic language with proper formatting
+- Clear section dividers (━━━━)
+- Emojis for visual appeal
+- End with "مع تحيات، فريق Biodiva 🧬"
